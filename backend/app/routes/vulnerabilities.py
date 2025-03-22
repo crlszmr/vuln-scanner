@@ -1,5 +1,5 @@
 # backend/app/routes/vulnerabilities.py
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Vulnerability
@@ -7,6 +7,9 @@ from app.routes.auth import get_current_user
 from app.schemas import VulnerabilityCreate, VulnerabilityResponse, VulnerabilityUpdate
 from app.config.translations import get_message
 from app.config.endpoints import ENDPOINTS
+from app.services.nvd import fetch_cves_by_keyword
+from app.services.importer import extract_vulnerabilities_from_nvd, store_vulnerabilities
+
 
 router = APIRouter(prefix="/vulnerabilities", tags=["vulnerabilities"])
 
@@ -50,3 +53,10 @@ def delete_vulnerability(vuln_id: int, db: Session = Depends(get_db), user: dict
     db.commit()
     
     return {"message": get_message("vuln_deleted", "en")}
+
+@router.post("/import")
+def import_cves(keyword: str = Query(...), db: Session = Depends(get_db)):
+    data = fetch_cves_by_keyword(keyword)
+    parsed_vulns = extract_vulnerabilities_from_nvd(data)
+    imported = store_vulnerabilities(db, parsed_vulns)
+    return {"imported": imported}
