@@ -1,23 +1,21 @@
 # backend/app/routes/vulnerabilities.py
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Vulnerability
 from app.routes.auth import get_current_user
 from app.schemas import VulnerabilityCreate, VulnerabilityResponse, VulnerabilityUpdate
 from app.config.translations import get_message
-from app.config.endpoints import ENDPOINTS
+from app.config.endpoints import *
 
-router = APIRouter(prefix="/vulnerabilities", tags=["vulnerabilities"])
+router = APIRouter(prefix=VULNERABILITIES_BASE, tags=["vulnerabilities"])
 
-# Lista vulnerabilidades
-@router.get(ENDPOINTS["list_vulnerabilities_short"], response_model=list[VulnerabilityResponse])
+@router.get(LIST_VULNERABILITIES, response_model=list[VulnerabilityResponse])
 def get_vulnerabilities(db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
     vulnerabilities = db.query(Vulnerability).all()
     return vulnerabilities
 
-# Crea vulnerabilidad
-@router.post(ENDPOINTS["create_vulnerability_short"], response_model=VulnerabilityResponse)
+@router.post(CREATE_VULNERABILITY, response_model=VulnerabilityResponse)
 def create_vulnerability(vuln: VulnerabilityCreate, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
     vulnerability = Vulnerability(**vuln.model_dump())
     db.add(vulnerability)
@@ -25,28 +23,26 @@ def create_vulnerability(vuln: VulnerabilityCreate, db: Session = Depends(get_db
     db.refresh(vulnerability)
     return vulnerability
 
-# Modifica vulnerabilidad
-@router.put(ENDPOINTS["update_vulnerability_short"], response_model=VulnerabilityResponse)
-def update_vulnerability(vuln_id: int, vuln_data: VulnerabilityUpdate, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
-    vulnerability = db.query(Vulnerability).filter(Vulnerability.id == vuln_id).first()
+@router.put(UPDATE_VULNERABILITY, response_model=VulnerabilityResponse)
+def update_vulnerability(id: int, vuln_data: VulnerabilityUpdate, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    vulnerability = db.query(Vulnerability).filter(Vulnerability.id == id).first()
     if not vulnerability:
         raise HTTPException(status_code=404, detail=get_message("vuln_not_found", "en"))
-    
+
     for key, value in vuln_data.model_dump(exclude_unset=True).items():
         setattr(vulnerability, key, value)
-    
+
     db.commit()
     db.refresh(vulnerability)
     return vulnerability
 
-# Elimina vulnerabilidad
-@router.delete(ENDPOINTS["delete_vulnerability_short"])
-def delete_vulnerability(vuln_id: int, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
-    vulnerability = db.query(Vulnerability).filter(Vulnerability.id == vuln_id).first()
+@router.delete(DELETE_VULNERABILITY)
+def delete_vulnerability(id: int, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    vulnerability = db.query(Vulnerability).filter(Vulnerability.id == id).first()
     if not vulnerability:
         raise HTTPException(status_code=404, detail=get_message("vuln_not_found", "en"))
 
     db.delete(vulnerability)
     db.commit()
-    
+
     return {"message": get_message("vuln_deleted", "en")}

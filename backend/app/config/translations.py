@@ -1,5 +1,4 @@
 # app/config/translations.py
-
 TRANSLATIONS = {
     "en": {
         "user_created": "User created successfully",
