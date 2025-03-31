@@ -8,12 +8,12 @@ from sqlalchemy.orm import sessionmaker
 from tests.conftest import *
 from app.config.translations import get_message
 from app.config.constants import TEST_CONSTANTS
-from app.config.endpoints import ENDPOINTS
+from app.config.endpoints import *
 
 
 def test_register_user(client, db_session, reset_database):
     response = client.post(
-        ENDPOINTS["register"],
+        AUTH_BASE+REGISTER,
         json={"username": TEST_CONSTANTS["default_username"], "email": TEST_CONSTANTS["default_email"], "password": TEST_CONSTANTS["default_password"]}
     )
 
@@ -23,7 +23,7 @@ def test_register_user(client, db_session, reset_database):
 def test_register_duplicate_username(client, db_session, reset_database, create_user):
     create_user()
     response = client.post(
-        ENDPOINTS["register"],
+        AUTH_BASE+REGISTER,
         json={"username": TEST_CONSTANTS["default_username"], "email": TEST_CONSTANTS["default_email_2"], "password": TEST_CONSTANTS["default_password"]}
     )
     assert response.status_code == 400
@@ -32,7 +32,7 @@ def test_register_duplicate_username(client, db_session, reset_database, create_
 def test_register_duplicate_email(client, db_session, reset_database, create_user):
     create_user()
     response = client.post(
-        ENDPOINTS["register"],
+        AUTH_BASE+REGISTER,
         json={"username": TEST_CONSTANTS["default_username_2"], "email": TEST_CONSTANTS["default_email"], "password": TEST_CONSTANTS["default_password"]}
     )
     assert response.status_code == 400
@@ -42,7 +42,7 @@ def test_register_duplicate_email(client, db_session, reset_database, create_use
 def test_login_user(client, db_session, log_user, reset_database, create_user):
     create_user() # Crea usuario para luego logearlo
     response = client.post(
-        ENDPOINTS["login"],
+        AUTH_BASE+LOGIN,
         data={"username": TEST_CONSTANTS["default_username"], "password": TEST_CONSTANTS["default_password"]},
         headers={"Content-Type": "application/x-www-form-urlencoded"}
     )
@@ -55,7 +55,7 @@ def test_update_user(client, db_session, reset_database, create_user, log_user):
     create_user() # Crea usuario para luego actualizarlo
     token = log_user(TEST_CONSTANTS["default_username"]) #Logea usuario
     response = client.put(
-        ENDPOINTS["update_user"].format(username=TEST_CONSTANTS["default_username"]),
+        AUTH_BASE+UPDATE_USER.format(username=TEST_CONSTANTS["default_username"]),
         json={"username": TEST_CONSTANTS["new_username"], "email": TEST_CONSTANTS["new_email"], "password": TEST_CONSTANTS["new_password"]},
         headers=token
     )
@@ -65,21 +65,21 @@ def test_update_user(client, db_session, reset_database, create_user, log_user):
 
 def test_update_duplicate_username(client, db_session):
     client.post(
-        ENDPOINTS["register"],
+        AUTH_BASE+REGISTER,
         json={"username": TEST_CONSTANTS["default_username_1"], "email": TEST_CONSTANTS["default_email_1"], "password": TEST_CONSTANTS["default_password"]}
     )
     client.post(
-        ENDPOINTS["register"],
+        AUTH_BASE+REGISTER,
         json={"username": TEST_CONSTANTS["default_username_2"], "email": TEST_CONSTANTS["default_email_2"], "password": TEST_CONSTANTS["default_password"]}
     )
     login_response = client.post(
-        ENDPOINTS["login"],
+        AUTH_BASE+LOGIN,
         data={"username": TEST_CONSTANTS["default_username_1"], "password": TEST_CONSTANTS["default_password"]},
         headers={"Content-Type": "application/x-www-form-urlencoded"}
     )
     token = login_response.json()["access_token"]
     response = client.put(
-        ENDPOINTS["update_user"].format(username=TEST_CONSTANTS["default_username_1"]),
+       AUTH_BASE+UPDATE_USER.format(username=TEST_CONSTANTS["default_username_1"]),
         json={"username": TEST_CONSTANTS["default_username_2"]},
         headers={"Authorization": f"Bearer {token}"}
     )
@@ -88,21 +88,21 @@ def test_update_duplicate_username(client, db_session):
 
 def test_update_duplicate_email(client, db_session):
     client.post(
-        ENDPOINTS["register"],
+        AUTH_BASE+REGISTER,
         json={"username": TEST_CONSTANTS["default_username_1"], "email": TEST_CONSTANTS["default_email_1"], "password": TEST_CONSTANTS["default_password"]}
     )
     client.post(
-        ENDPOINTS["register"],
+        AUTH_BASE+REGISTER,
         json={"username": TEST_CONSTANTS["default_username_2"], "email": TEST_CONSTANTS["default_email_2"], "password": TEST_CONSTANTS["default_password"]}
     )
     login_response = client.post(
-        ENDPOINTS["login"],
+        AUTH_BASE+LOGIN,
         data={"username": TEST_CONSTANTS["default_username_1"], "password": TEST_CONSTANTS["default_password"]},
         headers={"Content-Type": "application/x-www-form-urlencoded"}
     )
     token = login_response.json()["access_token"]
     response = client.put(
-        ENDPOINTS["update_user"].format(username=TEST_CONSTANTS["default_username_1"]),
+        AUTH_BASE+UPDATE_USER.format(username=TEST_CONSTANTS["default_username_1"]),
         json={"email": TEST_CONSTANTS["default_email_2"]},
         headers={"Authorization": f"Bearer {token}"}
     )
@@ -112,6 +112,6 @@ def test_update_duplicate_email(client, db_session):
 def test_delete_user(client, db_session, create_user, log_user):
     create_user()
     token = log_user(TEST_CONSTANTS["default_username"])
-    response = client.delete(ENDPOINTS["delete_user"].format(username=TEST_CONSTANTS["default_username"]), headers=token)
+    response = client.delete(AUTH_BASE+DELETE_USER.format(username=TEST_CONSTANTS["default_username"]), headers=token)
     assert response.status_code == 200
     assert response.json()["message"] == get_message("user_deleted", "en")

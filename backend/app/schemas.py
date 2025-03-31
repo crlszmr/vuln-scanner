@@ -20,9 +20,10 @@ class VulnerabilityCreate(BaseModel):
     reference_url: str  
 
 class VulnerabilityUpdate(BaseModel):
-    description: str | None = None
-    severity: str | None = None
-    reference_url: str   | None = None
+    cve_id: str
+    description: str
+    severity: str
+    reference_url: str
 
 class VulnerabilityResponse(VulnerabilityCreate):
     id: int
