@@ -1,7 +1,7 @@
 # backend/app/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import auth, vulnerabilities
+from app.routes import auth, vulnerabilities, nvd
 from app.database import engine, Base
 
 # Crear las tablas en la base de datos
@@ -21,6 +21,7 @@ app.add_middleware(
 # Incluir los routers
 app.include_router(auth.router)
 app.include_router(vulnerabilities.router)
+app.include_router(nvd.router)
 
 @app.get("/")
 def read_root():
