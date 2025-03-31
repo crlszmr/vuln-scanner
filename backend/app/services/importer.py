@@ -2,14 +2,10 @@
 from sqlalchemy.orm import Session
 from app.models import Vulnerability
 from typing import List, Dict
-from app.services.nvd import fetch_cves_by_page
+from app.services.nvd import get_cves_by_page
 from app.database import SessionLocal
 
 def import_all_cves(max_pages: int = 1000, results_per_page: int = 2000) -> int:
-    """
-    Descarga todos los CVE desde NVD API y los almacena en la BD, evitando duplicados.
-    Devuelve el número de CVEs importados.
-    """
     db = SessionLocal()
     total_imported = 0
     page = 0
@@ -18,11 +14,11 @@ def import_all_cves(max_pages: int = 1000, results_per_page: int = 2000) -> int:
     try:
         while not finished and page < max_pages:
             start_index = page * results_per_page
-            data = fetch_cves_by_page(start_index=start_index, results_per_page=results_per_page)
+            data = get_cves_by_page(start_index=start_index, results_per_page=results_per_page)
 
-            vulns = extract_cves_from_nvd(data)
+            vulns = parse_cves_from_nvd(data)
             if vulns:
-                imported = store_cves(db, vulns)
+                imported = save_cves_to_db(db, vulns)
                 total_imported += imported
                 if len(vulns) < results_per_page:
                     finished = True  # última página alcanzada
@@ -36,10 +32,7 @@ def import_all_cves(max_pages: int = 1000, results_per_page: int = 2000) -> int:
 
     return total_imported
 
-def extract_cves_from_nvd(data: Dict) -> List[Dict]:
-    """
-    Transforma la respuesta de la NVD API en una lista de diccionarios listos para insertar.
-    """
+def parse_cves_from_nvd(data: Dict) -> List[Dict]:
     parsed = []
 
     for item in data.get("vulnerabilities", []):
@@ -71,16 +64,10 @@ def extract_cves_from_nvd(data: Dict) -> List[Dict]:
                 "severity": severity,
                 "reference_url": reference_url
             })
-    print(f"[DEBUG] Parsed vulnerabilities: {len(parsed)}")
 
     return parsed
 
-
-def store_cves(db: Session, vulns: List[Dict]) -> int:
-    """
-    Inserta nuevas vulnerabilidades en la base de datos, evitando duplicados por cve_id.
-    Devuelve el número de vulnerabilidades importadas.
-    """
+def save_cves_to_db(db: Session, vulns: List[Dict]) -> int:
     imported = 0
 
     for v in vulns:

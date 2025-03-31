@@ -1,5 +1,4 @@
 # app/config/constants.py
-
 TEST_CONSTANTS = {
     "default_username": "testuser",
     "default_username_1": "testuser1",

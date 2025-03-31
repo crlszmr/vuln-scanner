@@ -4,12 +4,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routes import auth, vulnerabilities, nvd
 from app.database import engine, Base
 
-# Crear las tablas en la base de datos
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="API de Identificación de Vulnerabilidades", version="1.0")
 
-# Configurar CORS para permitir solicitudes del frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,7 +16,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Incluir los routers
 app.include_router(auth.router)
 app.include_router(vulnerabilities.router)
 app.include_router(nvd.router)

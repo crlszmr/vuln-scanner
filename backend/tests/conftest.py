@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 import os
 from app.config.translations import get_message
 from app.config.constants import TEST_CONSTANTS
-from app.config.endpoints import ENDPOINTS
+from app.config.endpoints import *
 
 
 
@@ -62,7 +62,7 @@ def client(db_session):
 def create_user(client):
     def _create(username=TEST_CONSTANTS["default_username"], email=TEST_CONSTANTS["default_email"], password=TEST_CONSTANTS["default_password"]):
         response = client.post(
-            ENDPOINTS["register"],
+            AUTH_BASE+REGISTER,
             json={"username": username, "email": email, "password": password}
         )
         assert response.status_code in [200, 201], f"{get_message('error_create_user', 'en')}: {response.text}"
@@ -75,7 +75,7 @@ def create_user(client):
 def log_user(client):
     def _log(username=TEST_CONSTANTS["default_username"], password=TEST_CONSTANTS["default_password"]):
         login_response = client.post(
-            ENDPOINTS["login"],
+            AUTH_BASE+LOGIN,
             data={"username": username, "password": password},
             headers={"Content-Type": "application/x-www-form-urlencoded"}
         )
