@@ -9,29 +9,26 @@ import datetime
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from app.schemas import UserCreate, UserUpdate
 from app.config.translations import get_message
-from app.config.endpoints import ENDPOINTS
+from app.config.endpoints import *
 
 SECRET_KEY = "supersecretkey"
 ALGORITHM = "HS256"
-router = APIRouter(prefix=ENDPOINTS["auth"], tags=["auth"])
+router = APIRouter(prefix=AUTH_BASE, tags=["auth"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=ENDPOINTS["login"])
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=LOGIN)
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
-
 def get_password_hash(password):
     return pwd_context.hash(password)
 
-# Crea token para login
 def create_access_token(data: dict, expires_delta: datetime.timedelta):
     to_encode = data.copy()
     expire = datetime.datetime.now(datetime.UTC) + expires_delta
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-# Devuelve usuario activo
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -47,29 +44,27 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     except jwt.PyJWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=get_message("invalid_token", "en"))
 
-# Registra usuario
-@router.post(ENDPOINTS["register_short"])
+@router.post(REGISTER)
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
     # Validar si el username ya existe
     existing_user = db.query(User).filter(User.username == user.username).first()
     if existing_user:
         raise HTTPException(status_code=400, detail=get_message("username_taken", "en"))
-    
+
     # Validar si el email ya existe
     existing_email = db.query(User).filter(User.email == user.email).first()
     if existing_email:
         raise HTTPException(status_code=400, detail=get_message("email_taken", "en"))
-    
+
     hashed_password = get_password_hash(user.password)
     new_user = User(username=user.username, email=user.email, hashed_password=hashed_password)
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    
+
     return {"message": get_message("user_created", "en")}
 
-# Logea usuario
-@router.post(ENDPOINTS["login_short"])
+@router.post(LOGIN)
 def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
@@ -77,8 +72,7 @@ def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = D
     access_token = create_access_token(data={"sub": user.username}, expires_delta=datetime.timedelta(hours=1))
     return {"access_token": access_token, "token_type": "bearer"}
 
-# Modifica usuario
-@router.put(ENDPOINTS["update_user_short"])
+@router.put(UPDATE_USER)
 def update_user(username: str, user_data: UserUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     user = db.query(User).filter(User.username == username).first()
     if not user:
@@ -101,14 +95,12 @@ def update_user(username: str, user_data: UserUpdate, db: Session = Depends(get_
     if user_data.password:
         user.hashed_password = get_password_hash(user_data.password)
 
-
     db.commit()
     db.refresh(user)
-    
+
     return {"message": get_message("user_updated", "en")}
 
-# Elimina usuario
-@router.delete(ENDPOINTS["delete_user_short"])
+@router.delete(DELETE_USER)
 def delete_user(username: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == username).first()
     if user:
