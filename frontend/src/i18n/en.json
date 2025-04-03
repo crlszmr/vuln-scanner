@@ -1,0 +1,12 @@
+{
+    "login": {
+      "title": "Login",
+      "email": "Email",
+      "password": "Password",
+      "button": "Sign In",
+      "invalidCredentials": "Invalid credentials",
+      "error": "Login failed",
+      "success": "Logged in! Token saved."
+    }
+  }
+  
