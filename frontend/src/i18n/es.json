@@ -1,0 +1,12 @@
+{
+    "login": {
+      "title": "Iniciar sesión",
+      "email": "Correo electrónico",
+      "password": "Contraseña",
+      "button": "Entrar",
+      "invalidCredentials": "Credenciales no válidas",
+      "error": "Error al iniciar sesión",
+      "success": "¡Sesión iniciada! Token guardado."
+    }
+  }
+  
