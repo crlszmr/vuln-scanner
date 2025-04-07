@@ -1,9 +1,18 @@
 # backend/app/services/importer.py
 from sqlalchemy.orm import Session
-from app.models import Vulnerability
+from app.crud import platforms as crud_platforms
+from app.crud import vulnerabilities as crud_vulns
+from app.models.vulnerability import Vulnerability
+from app.schemas.platform import PlatformCreate
+from app.schemas.vulnerability import VulnerabilityCreate
+from datetime import datetime
 from typing import List, Dict
-from app.services.nvd import get_cves_by_page
+from app.services.nvd import get_cves_by_page, fetch_nvd_cpes
 from app.database import SessionLocal
+from app.crud import cve_descriptions as crud_desc
+from app.schemas.cve_description import CveDescriptionCreate
+from app.schemas.cve_reference import ReferenceCreate
+from app.crud import cve_references as crud_refs
 
 def import_all_cves(max_pages: int = 1000, results_per_page: int = 2000) -> int:
     db = SessionLocal()
@@ -32,50 +41,145 @@ def import_all_cves(max_pages: int = 1000, results_per_page: int = 2000) -> int:
 
     return total_imported
 
-def parse_cves_from_nvd(data: Dict) -> List[Dict]:
-    parsed = []
+def parse_cves_from_nvd(data: dict) -> list[tuple[VulnerabilityCreate, list[dict], list[dict]]]:
+    results = []
 
     for item in data.get("vulnerabilities", []):
         cve_data = item.get("cve", {})
         cve_id = cve_data.get("id")
 
-        descriptions = cve_data.get("descriptions", [])
-        english_descriptions = [d for d in descriptions if d.get("lang") == "en"]
-        description = english_descriptions[0]["value"] if english_descriptions else ""
+        source_identifier = cve_data.get("sourceIdentifier")
+        published_str = cve_data.get("published")
+        last_modified_str = cve_data.get("lastModified")
+        status = cve_data.get("vulnStatus")
 
-        metrics = item.get("metrics", {})
-        severity = ""
+        # Extraer CVSS
+        cvss_score = None
+        cvss_vector = None
+        severity = None
+        metrics = cve_data.get("metrics", {})
         if "cvssMetricV31" in metrics:
-            severity = metrics["cvssMetricV31"][0]["cvssData"]["baseSeverity"]
+            cvss_data = metrics["cvssMetricV31"][0]["cvssData"]
         elif "cvssMetricV30" in metrics:
-            severity = metrics["cvssMetricV30"][0]["cvssData"]["baseSeverity"]
+            cvss_data = metrics["cvssMetricV30"][0]["cvssData"]
         elif "cvssMetricV2" in metrics:
-            severity = metrics["cvssMetricV2"][0]["cvssData"]["baseSeverity"]
+            cvss_data = metrics["cvssMetricV2"][0]["cvssData"]
+        else:
+            cvss_data = None
 
-        references = cve_data.get("references", [])
-        reference_url = references[0].get("url", "") if references else ""
+        if cvss_data:
+            cvss_score = str(cvss_data.get("baseScore"))
+            cvss_vector = cvss_data.get("vectorString")
+            severity = cvss_data.get("baseSeverity")
 
-        print(f"[DEBUG] CVE: {cve_id}, Severity: {severity}, Description: {bool(description)}")
+        # Extraer descripciones
+        descriptions = [
+            {"lang": d["lang"], "value": d["value"]}
+            for d in cve_data.get("descriptions", [])
+        ]
 
-        if cve_id and description:
-            parsed.append({
-                "cve_id": cve_id,
-                "description": description,
-                "severity": severity,
-                "reference_url": reference_url
+        # Extraer referencias
+        references = []
+        for ref in cve_data.get("references", []):
+            references.append({
+                "url": ref.get("url"),
+                "name": ref.get("name"),  # Solo lo tendrás si usas MITRE
+                "tags": ",".join(ref.get("tags", [])) if ref.get("tags") else None
             })
 
-    return parsed
+        vuln = VulnerabilityCreate(
+            cve_id=cve_id,
+            source_identifier=source_identifier,
+            published=published_str,
+            last_modified=last_modified_str,
+            status=status,
+            severity=severity,
+            score=cvss_score,
+            vector=cvss_vector
+        )
 
-def save_cves_to_db(db: Session, vulns: List[Dict]) -> int:
+        results.append((vuln, descriptions, references))
+
+    return results
+
+def save_cves_to_db(db: Session, data: list[tuple[VulnerabilityCreate, list[dict], list[dict]]]) -> int:
     imported = 0
 
-    for v in vulns:
-        exists = db.query(Vulnerability).filter_by(cve_id=v["cve_id"]).first()
-        if not exists:
-            vuln = Vulnerability(**v)
-            db.add(vuln)
-            imported += 1
+    for vuln_data, desc_dicts, ref_dicts in data:
+        db_vuln = crud_vulns.create_or_update_vulnerability(db, vuln_data=vuln_data)
 
-    db.commit()
+        # Asignamos cve_id real (FK) a cada descripción
+        descriptions = [
+            CveDescriptionCreate(cve_id=db_vuln.id, lang=d["lang"], value=d["value"])
+            for d in desc_dicts
+        ]
+
+        if descriptions:
+            crud_desc.create_multi(db, descriptions)
+
+        # Referencias
+        references = [
+            ReferenceCreate(cve_id=db_vuln.id, url=r["url"], name=r.get("name"), tags=r.get("tags"))
+            for r in ref_dicts
+        ]
+        if references:
+            crud_refs.create_multi(db, references)
+
+        imported += 1
+
     return imported
+
+def import_all_cpes(max_results: int = 100) -> int:
+    db = SessionLocal()
+    try:
+        raw_data = fetch_nvd_cpes(results_per_page=max_results)
+        platforms = parse_cpes_from_nvd(raw_data)
+        return save_cpes_to_db(db, platforms)
+    finally:
+        db.close()
+
+def parse_cpes_from_nvd(data: dict) -> list[PlatformCreate]:
+    results = []
+    for item in data.get("products", []):
+        cpe_obj = item.get("cpe", {})
+        cpe_uri = cpe_obj.get("cpeName")
+
+        title_obj = item.get("titles", [{}])[0]
+        title = title_obj.get("title", "")
+        lang = title_obj.get("lang", "en")
+
+        deprecated = item.get("deprecated", False)
+        deprecated_by_list = item.get("deprecatedBy", [])
+        deprecated_by = deprecated_by_list[0] if deprecated_by_list else None
+
+        created_str = item.get("created")
+        last_modified_str = item.get("lastModified")
+
+        try:
+            created = datetime.fromisoformat(created_str.replace("Z", "+00:00")) if created_str else None
+            last_modified = datetime.fromisoformat(last_modified_str.replace("Z", "+00:00")) if last_modified_str else None
+        except Exception:
+            created = None
+            last_modified = None
+
+        if cpe_uri:
+            results.append(PlatformCreate(
+                cpe_uri=cpe_uri,
+                title=title,
+                lang=lang,
+                deprecated=deprecated,
+                deprecated_by=deprecated_by,
+                created=created,
+                last_modified=last_modified
+            ))
+
+    return results
+
+def save_cpes_to_db(db: Session, platforms: list[PlatformCreate]) -> int:
+    count = 0
+    for platform in platforms:
+        existing = crud_platforms.get_by_uri(db, platform.cpe_uri)
+        if not existing:
+            crud_platforms.create_platform(db, platform)
+            count += 1
+    return count

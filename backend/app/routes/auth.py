@@ -2,12 +2,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import User
+from app.models.user import User
 from passlib.context import CryptContext
 import jwt
 import datetime
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from app.schemas import UserCreate, UserUpdate
+from app.schemas.user import UserCreate, UserUpdate
 from app.config.translations import get_message
 from app.config.endpoints import *
 
