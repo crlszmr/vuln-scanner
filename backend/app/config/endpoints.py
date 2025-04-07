@@ -1,6 +1,7 @@
 # app/config/endpoints.py
-NVD_IMPORT_KEYWORD = "/cve-import-keyword"
-NVD_IMPORT_ALL = "/cve-import-all"
+CVE_IMPORT_KEYWORD = "/cve-import-keyword"
+CVE_IMPORT_ALL = "/cve-import-all"
+CPE_IMPORT_ALL = "/cpe-import-all"
 
 AUTH_BASE = "/auth"
 REGISTER = "/register"
