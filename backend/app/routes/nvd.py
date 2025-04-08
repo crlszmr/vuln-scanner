@@ -34,10 +34,8 @@ def import_all_cves_from_nvd_ep(max_pages: int = Query(1, ge=1, le=1000, descrip
 
 @router.post(CPE_IMPORT_ALL, status_code=status.HTTP_202_ACCEPTED)
 def import_all_cpes_from_nvd_ep(
-    max_results: int = Query(1, ge=1, le=1000, description="Número máximo de plataformas a importar")
+    max_pages: int = Query(10, ge=1, le=100),
+    results_per_page: int = Query(1000, ge=1, le=1000)
 ):
-    imported_count = import_all_cpes(max_results=max_results)
-    return JSONResponse(
-        status_code=status.HTTP_202_ACCEPTED,
-        content={"message": f"{imported_count} platforms imported successfully (max_results={max_results})."}
-    )
+    imported_count = import_all_cpes(max_pages=max_pages, results_per_page=results_per_page)
+    return {"imported": imported_count}

@@ -25,10 +25,10 @@ def get_cves_by_keyword(keyword: str, results_per_page: int = 10):
     response.raise_for_status()
     return response.json()
 
-def fetch_nvd_cpes(start_index=0, results_per_page=2000):
+def get_cpes_by_page(start_index: int = 0, results_per_page: int = 1000):
     params = {
         "startIndex": start_index,
-        "resultsPerPage": results_per_page
+        "resultsPerPage": results_per_page,
     }
 
     response = requests.get(NVD_CPE_URL, headers=HEADERS, params=params)
