@@ -5,8 +5,8 @@ from typing import Optional, List, Dict
 
 class PlatformCreate(BaseModel):
     cpe_uri: str
+    cpe_name_id: Optional[str] = None
     deprecated: bool = False
-    deprecation_date: Optional[datetime] = None
     created: Optional[datetime] = None
     last_modified: Optional[datetime] = None
     raw_titles: Optional[list] = []
