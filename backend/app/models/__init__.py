@@ -2,3 +2,4 @@
 from .user import User
 from .vulnerability import Vulnerability
 from .platform import Platform
+from .cpe_title import CpeTitle
