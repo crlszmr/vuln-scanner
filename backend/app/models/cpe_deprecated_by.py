@@ -7,4 +7,6 @@ class CpeDeprecatedBy(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     platform_id = Column(Integer, ForeignKey("platforms.id", ondelete="CASCADE"), nullable=False)
-    deprecated_by_cpe = Column(String, nullable=False)
+    cpe_uri = Column(String, nullable=False)
+    cpe_name_id = Column(String, nullable=True)
+

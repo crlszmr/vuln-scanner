@@ -1,9 +1,11 @@
 # backend/app/schemas/cpe_deprecated_by.py
 from pydantic import BaseModel
+from typing import Optional
 
 class CpeDeprecatedByCreate(BaseModel):
     platform_id: int
-    deprecated_by_cpe: str
+    cpe_uri: str
+    cpe_name_id: Optional[str] = None
 
 class CpeDeprecatedBy(CpeDeprecatedByCreate):
     id: int

@@ -171,6 +171,8 @@ def parse_cpes_from_nvd(data: dict) -> list[PlatformCreate]:
     for item in data.get("products", []):
         cpe_obj = item.get("cpe", {})
         cpe_uri = cpe_obj.get("cpeName")
+        cpe_name_id = cpe_obj.get("cpeNameId")
+
 
         if not cpe_uri or not cpe_uri.startswith("cpe:2.3:"):
             continue
@@ -179,28 +181,23 @@ def parse_cpes_from_nvd(data: dict) -> list[PlatformCreate]:
         deprecated = cpe_obj.get("deprecated", False)
         deprecated_by_list = cpe_obj.get("deprecatedBy", [])
 
-        if deprecated:
-            print(f"[DEBUG] {cpe_uri} deprecated: True — deprecationDate: {item.get('deprecationDate')}")
-
         created = None
         last_modified = None
-        deprecation_date = None
         try:
             created_str = cpe_obj.get("created")
             last_modified_str = cpe_obj.get("lastModified")
-            deprecation_date_str = item.get("deprecationDate")
+
 
             created = datetime.fromisoformat(created_str.replace("Z", "+00:00")) if created_str else None
             last_modified = datetime.fromisoformat(last_modified_str.replace("Z", "+00:00")) if last_modified_str else None
-            deprecation_date = datetime.fromisoformat(deprecation_date_str.replace("Z", "+00:00")) if deprecation_date_str else None
 
         except Exception:
             pass
 
         results.append(PlatformCreate(
             cpe_uri=cpe_uri,
+            cpe_name_id=cpe_name_id,
             deprecated=deprecated,
-            deprecation_date=deprecation_date,
             deprecated_by=deprecated_by_list[0] if deprecated_by_list else None,
             created=created,
             last_modified=last_modified,
@@ -241,12 +238,13 @@ def save_cpes_to_db(db: Session, platforms: list[PlatformCreate]) -> int:
 
             # Deprecated_by entries (CPE 2.3)
             deprecated_entries = [
-                CpeDeprecatedByCreate(
-                    platform_id=db_platform.id,
-                    deprecated_by_cpe=cpe.get("cpeName", "")
-                )
-                for cpe in platform.raw_deprecated_by or []
-            ]
+            CpeDeprecatedByCreate(
+                platform_id=db_platform.id,
+                cpe_uri=cpe.get("cpeName", ""),
+                cpe_name_id=cpe.get("cpeNameId")
+            )
+            for cpe in platform.raw_deprecated_by or []
+        ]
 
             if deprecated_entries:
                 crud_deprecated.create_multi(db, deprecated_entries)

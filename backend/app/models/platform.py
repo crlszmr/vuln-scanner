@@ -10,8 +10,8 @@ class Platform(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     cpe_uri = Column(String, unique=True, index=True)  # cpe.cpeName
+    cpe_name_id = Column(String, nullable=True)
     deprecated = Column(Boolean, default=False)         # deprecated
-    deprecation_date = Column(DateTime, nullable=True)
     created = Column(DateTime, nullable=True)           # created
     last_modified = Column(DateTime, nullable=True)     # lastModified
 
