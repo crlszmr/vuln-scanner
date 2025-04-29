@@ -8,4 +8,9 @@ export const API_ROUTES = {
   VULNERABILITIES: {
     LIST: `${API_BASE_URL}/vulnerabilities/list`,
   },
+  NVD: {
+    IMPORT_VULNERABILITIES: `${API_BASE_URL}/nvd/cve-import-all`,
+    IMPORT_PLATFORMS: `${API_BASE_URL}/nvd/cpe-import-all`,
+    IMPORT_WEAKNESSES: `${API_BASE_URL}/nvd/cwe-import-all`,
+  }
 };
