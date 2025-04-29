@@ -1,3 +1,4 @@
+import { theme } from '@/styles/theme';
 import { API_ROUTES } from '@/config/apiRoutes';
 import { APP_ROUTES } from '@/config/appRoutes';
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
@@ -5,13 +6,12 @@ import { useEffect, useState } from "react";
 import { useAuth } from '@/context/AuthContext';
 import LoginForm from '@/components/LoginForm';
 import RegisterForm from '@/components/RegisterForm';
-import Navbar from '@/components/Navbar';
+import Navbar from '@/components/layouts/Navbar';
+import Footer from '@/components/layouts/Footer';
 import Home from '@/pages/Home';
-
-function ProtectedRoute({ children }) {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? children : <Navigate to={APP_ROUTES.LOGIN} />;
-}
+import AdminDashboard from '@/pages/AdminDashboard';
+import NotAuthorized from '@/pages/NotAuthorized';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 function Vulnerabilities() {
   const { token } = useAuth();
@@ -64,23 +64,40 @@ function Vulnerabilities() {
 function App() {
   return (
     <Router>
-      <Navbar />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path={APP_ROUTES.LOGIN} element={<LoginForm />} />
-        <Route path={APP_ROUTES.REGISTER} element={<RegisterForm />} />
-        <Route
-          path={APP_ROUTES.VULNERABILITY_LIST}
-          element={
-            <ProtectedRoute>
-              <Vulnerabilities />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+      <div className="flex flex-col min-h-screen"> {/* ✅ Estructura para Footer */}
+        <Navbar />
+        <main style={{flexGrow: 1, backgroundColor: theme.colors.background, color: theme.colors.text, }}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path={APP_ROUTES.LOGIN} element={<LoginForm />} />
+            <Route path={APP_ROUTES.REGISTER} element={<RegisterForm />} />
+            <Route
+              path={APP_ROUTES.VULNERABILITY_LIST}
+              element={
+                <ProtectedRoute>
+                  <Vulnerabilities />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={APP_ROUTES.ADMIN_DASHBOARD}
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route path={APP_ROUTES.NOT_AUTHORIZED} element={<NotAuthorized />} />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </main>
+
+        <Footer /> {/* ✅ Footer siempre abajo */}
+      </div>
     </Router>
   );
 }
 
 export default App;
+
+
