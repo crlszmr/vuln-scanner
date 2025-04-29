@@ -10,6 +10,9 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from app.schemas.user import UserCreate, UserUpdate
 from app.config.translations import get_message
 from app.config.endpoints import *
+from app.services.auth import authenticate_user, create_access_token  # Asegúrate de tener estos imports
+from datetime import timedelta
+
 
 SECRET_KEY = "supersecretkey"
 ALGORITHM = "HS256"
@@ -64,13 +67,30 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
 
     return {"message": get_message("user_created", "en")}
 
-@router.post(LOGIN)
+'''@router.post(LOGIN)
 def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == form_data.username).first()
-    if not user or not verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=get_message("invalid_credentials"))
-    access_token = create_access_token(data={"sub": user.username}, expires_delta=datetime.timedelta(hours=1))
-    return {"access_token": access_token, "token_type": "bearer"}
+user = db.query(User).filter(User.username == form_data.username).first()
+if not user or not verify_password(form_data.password, user.hashed_password):
+raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=get_message("invalid_credentials"))
+access_token = create_access_token(data={"sub": user.username}, expires_delta=datetime.timedelta(hours=1))
+return {"access_token": access_token, "token_type": "bearer"}'''
+
+@router.post(LOGIN)
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = authenticate_user(db, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
+    
+    access_token = create_access_token(
+        data={"sub": user.email},
+        expires_delta=timedelta(minutes=60)  # 👈 Añadido correctamente
+    )
+
+    return {
+        "token": access_token,
+        "role": user.role,
+        "email": user.email
+    }
 
 @router.put(UPDATE_USER)
 def update_user(username: str, user_data: UserUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
