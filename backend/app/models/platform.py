@@ -2,8 +2,6 @@
 from sqlalchemy import Column, Integer, String, Boolean, Table, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from app.database import Base
-from app.models.relations import vulnerability_platform
-
 
 class Platform(Base):
     __tablename__ = "platforms"
@@ -15,7 +13,15 @@ class Platform(Base):
     created = Column(DateTime, nullable=True)           # created
     last_modified = Column(DateTime, nullable=True)     # lastModified
 
-    vulnerabilities = relationship("Vulnerability", secondary=vulnerability_platform, back_populates="platforms")
+    vulnerabilities = relationship(
+        "Vulnerability",
+        secondary="cve_cpe",
+        primaryjoin="Platform.cpe_uri == foreign(CveCpe.cpe_uri)",
+        secondaryjoin="Vulnerability.cve_id == foreign(CveCpe.cve_name)",
+        back_populates="platforms"
+    )
     titles = relationship("CpeTitle", back_populates="platform", cascade="all, delete-orphan")
+    references = relationship("CPEReference", back_populates="platform", cascade="all, delete-orphan")
+
 
 

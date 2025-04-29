@@ -1,4 +1,4 @@
-# backend/app/models/platform.py
+# backend/app/models/cve_description.py
 from sqlalchemy import Column, Integer, String, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from app.database import Base

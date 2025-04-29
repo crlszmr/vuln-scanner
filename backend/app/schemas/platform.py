@@ -1,7 +1,7 @@
 # backend/app/schemas/platform.py
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional, List, Dict
+from typing import Optional
 
 class PlatformCreate(BaseModel):
     cpe_uri: str
@@ -11,6 +11,8 @@ class PlatformCreate(BaseModel):
     last_modified: Optional[datetime] = None
     raw_titles: Optional[list] = []
     raw_deprecated_by: Optional[list] = []
+    raw_refs: Optional[list[dict]] = None
+
 
 class PlatformResponse(PlatformCreate):
     id: int
