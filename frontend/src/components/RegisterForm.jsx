@@ -1,10 +1,11 @@
-import { API_ROUTES } from '@/config/apiRoutes';
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
+import { API_ROUTES } from '@/config/apiRoutes';
+import { MainLayout } from '@/components/layouts/MainLayout';
+import { PageWrapper } from '@/components/layouts/PageWrapper';
+import { Button } from '@/components/ui/Button';
+import { theme } from '@/styles/theme';
 
 function RegisterForm() {
-  const { t } = useTranslation();
-
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,7 +17,7 @@ function RegisterForm() {
     e.preventDefault();
 
     if (password !== confirm) {
-      setError(t("register.passwordMismatch"));
+      setError("❌ Las contraseñas no coinciden.");
       return;
     }
 
@@ -35,10 +36,10 @@ function RegisterForm() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.detail || t("register.error"));
+        throw new Error(data.detail || "❌ Error al registrar. Inténtalo más tarde.");
       }
 
-      setMessage(t("register.success"));
+      setMessage("✅ Registro exitoso.");
       setError("");
       setUsername("");
       setEmail("");
@@ -46,70 +47,144 @@ function RegisterForm() {
       setConfirm("");
     } catch (err) {
       console.error("Registration error:", err);
-      setError(err.message || t("register.error"));
+      setError(err.message || "❌ Error desconocido.");
       setMessage("");
     }
   };
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 border rounded-md shadow">
-      <h2 className="text-2xl font-bold mb-4 text-center">{t("register.title")}</h2>
-      <form onSubmit={handleRegister} className="space-y-4">
-        <div>
-          <label className="block mb-1 font-medium">{t("register.name")}</label>
-          <input
-            type="text"
-            className="w-full border p-2 rounded"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block mb-1 font-medium">{t("register.email")}</label>
-          <input
-            type="email"
-            className="w-full border p-2 rounded"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block mb-1 font-medium">{t("register.password")}</label>
-          <input
-            type="password"
-            className="w-full border p-2 rounded"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block mb-1 font-medium">{t("register.confirm")}</label>
-          <input
-            type="password"
-            className="w-full border p-2 rounded"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            required
-          />
-        </div>
-
-        {error && <p className="text-red-600">{error}</p>}
-        {message && <p className="text-green-600">{message}</p>}
-
-        <button
-          type="submit"
-          className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
+    <MainLayout>
+      <PageWrapper>
+        <div
+          style={{
+            maxWidth: '450px',
+            margin: '40px auto',
+            padding: '2rem',
+            borderRadius: theme.radius.lg,
+            backgroundColor: theme.colors.surface,
+            boxShadow: theme.shadow.soft,
+            color: theme.colors.text,
+            fontFamily: theme.font.family,
+          }}
         >
-          {t("register.button")}
-        </button>
-      </form>
-    </div>
+          <h2 style={{ fontSize: '24px', textAlign: 'center', fontWeight: 600, marginBottom: '1rem' }}>
+            Crear cuenta
+          </h2>
+
+          <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '4px' }}>Nombre de usuario</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                style={{
+                  padding: '12px',
+                  borderRadius: theme.radius.md,
+                  border: '1px solid #334155',
+                  backgroundColor: '#0f172a',
+                  color: theme.colors.text,
+                  width: '100%',
+                  fontSize: '16px',
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '4px' }}>Correo electrónico</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                style={{
+                  padding: '12px',
+                  borderRadius: theme.radius.md,
+                  border: '1px solid #334155',
+                  backgroundColor: '#0f172a',
+                  color: theme.colors.text,
+                  width: '100%',
+                  fontSize: '16px',
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '4px' }}>Contraseña</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                style={{
+                  padding: '12px',
+                  borderRadius: theme.radius.md,
+                  border: '1px solid #334155',
+                  backgroundColor: '#0f172a',
+                  color: theme.colors.text,
+                  width: '100%',
+                  fontSize: '16px',
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '4px' }}>Confirmar contraseña</label>
+              <input
+                type="password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                required
+                style={{
+                  padding: '12px',
+                  borderRadius: theme.radius.md,
+                  border: '1px solid #334155',
+                  backgroundColor: '#0f172a',
+                  color: theme.colors.text,
+                  width: '100%',
+                  fontSize: '16px',
+                }}
+              />
+            </div>
+
+            {error && (
+              <p
+                style={{
+                  backgroundColor: theme.colors.error,
+                  color: '#fff',
+                  padding: '10px',
+                  borderRadius: theme.radius.md,
+                  textAlign: 'center',
+                  fontWeight: '500',
+                }}
+              >
+                {error}
+              </p>
+            )}
+
+            {message && (
+              <p
+                style={{
+                  backgroundColor: theme.colors.success,
+                  color: '#fff',
+                  padding: '10px',
+                  borderRadius: theme.radius.md,
+                  textAlign: 'center',
+                  fontWeight: '500',
+                }}
+              >
+                {message}
+              </p>
+            )}
+
+            <Button type="submit" variant="success" fullWidth>
+              Crear cuenta
+            </Button>
+          </form>
+        </div>
+      </PageWrapper>
+    </MainLayout>
   );
 }
 
