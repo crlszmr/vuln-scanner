@@ -1,27 +1,57 @@
+import { MainLayout } from '@/components/layouts/MainLayout';
+import { PageWrapper } from '@/components/layouts/PageWrapper';
+import { Button } from '@/components/ui/Button';
+import { useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '@/config/appRoutes';
-import { Link } from "react-router-dom";
-import { useAuth } from '@/context/AuthContext';
+import { theme } from '@/styles/theme';
 
-function Home() {
-  const { isAuthenticated } = useAuth();
+export default function Home() {
+  const navigate = useNavigate();
 
   return (
-    <div className="max-w-2xl mx-auto mt-12 p-6 text-center">
-      <h1 className="text-4xl font-bold text-blue-700 mb-4">Welcome to VulnScanner</h1>
-      <p className="text-lg text-gray-700 mb-6">
-        This is a simple web application that helps you detect and analyze system vulnerabilities.
-      </p>
+    <MainLayout>
+      <PageWrapper>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            minHeight: 'calc(100vh - 160px)',
+            padding: '2rem',
+            transition: theme.transition.base,
+          }}
+        >
+          <h1
+            style={{
+              fontSize: '40px',
+              fontWeight: 'bold',
+              color: theme.colors.text,
+              marginBottom: '1.5rem',
+              fontFamily: theme.font.family,
+            }}
+          >
+            Welcome to VulnScanner
+          </h1>
 
-      {!isAuthenticated ? (
-        <div className="space-x-4">
-          <Link to={APP_ROUTES.LOGIN} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Login</Link>
-          <Link to={APP_ROUTES.REGISTER} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Register</Link>
+          <p
+            style={{
+              color: theme.colors.textSecondary,
+              fontSize: '18px',
+              marginBottom: '2rem',
+              maxWidth: '600px',
+              fontFamily: theme.font.family,
+            }}
+          >
+            Easily manage, import, and analyze software vulnerabilities. A professional platform for IT administrators and cybersecurity experts.
+          </p>
+
+          <Button variant="primary" onClick={() => navigate(APP_ROUTES.LOGIN)}>
+            Get Started
+          </Button>
         </div>
-      ) : (
-        <Link to={APP_ROUTES.VULNERABILITY_LIST} className="bg-purple-600 text-white px-6 py-2 rounded hover:bg-purple-700">Go to Dashboard</Link>
-      )}
-    </div>
+      </PageWrapper>
+    </MainLayout>
   );
 }
-
-export default Home;
