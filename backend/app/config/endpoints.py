@@ -2,6 +2,7 @@
 CVE_IMPORT_KEYWORD = "/cve-import-keyword"
 CVE_IMPORT_ALL = "/cve-import-all"
 CPE_IMPORT_ALL = "/cpe-import-all"
+CWE_IMPORT_ALL = "/cwe-import-all"
 
 AUTH_BASE = "/auth"
 REGISTER = "/register"

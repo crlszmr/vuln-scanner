@@ -1,4 +1,4 @@
-# backend/app/schemas/platform.py
+# backend/app/schemas/cve_description.py
 from pydantic import BaseModel
 from typing import Optional
 
