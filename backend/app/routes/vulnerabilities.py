@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import Vulnerability
+from app.models.vulnerability import Vulnerability
 from app.routes.auth import get_current_user
 from app.schemas import VulnerabilityCreate, VulnerabilityResponse, VulnerabilityUpdate
 from app.config.translations import get_message

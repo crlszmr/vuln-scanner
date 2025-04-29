@@ -1,26 +1,27 @@
 # backend/app/crud/vulnerabilities.py
 from sqlalchemy.orm import Session
-from app.models import Vulnerability
+from app.models.vulnerability import Vulnerability
+from app.schemas.vulnerability import VulnerabilityCreate
 
-def create_or_update_vulnerability(db: Session, cve_data: dict):
-    cve_id = cve_data["cve"]["id"]
-    description = cve_data["cve"]["descriptions"][0]["value"]
-    severity = (
-        cve_data.get("cve", {})
-        .get("metrics", {})
-        .get("cvssMetricV31", [{}])[0]
-        .get("cvssData", {})
-        .get("baseSeverity", "UNKNOWN")
-    )
+def get_by_cve_id(db: Session, cve_id: str):
+    return db.query(Vulnerability).filter(Vulnerability.cve_id == cve_id).first()
 
-    vuln = db.query(Vulnerability).filter_by(cve_id=cve_id).first()
-    if vuln:
-        vuln.description = description
-        vuln.severity = severity
+def create_or_update_vulnerability(db: Session, vuln_data: VulnerabilityCreate):
+    # Excluimos las relaciones (como descriptions) al crear/actualizar directamente
+    data = vuln_data.model_dump(exclude={"descriptions"})
+
+    existing = get_by_cve_id(db, vuln_data.cve_id)
+
+    if existing:
+        for field, value in data.items():
+            setattr(existing, field, value)
+        db.commit()
+        db.refresh(existing)
+        return existing
     else:
-        vuln = Vulnerability(cve_id=cve_id, description=description, severity=severity)
-        db.add(vuln)
+        new_vuln = Vulnerability(**data)
+        db.add(new_vuln)
+        db.commit()
+        db.refresh(new_vuln)
+        return new_vuln
 
-    db.commit()
-    db.refresh(vuln)
-    return vuln
