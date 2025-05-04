@@ -15,5 +15,4 @@ class ReferenceResponse(ReferenceBase):
     cve_id: int
 
     class Config:
-
-        orm_mode = True
+        from_attributes = True

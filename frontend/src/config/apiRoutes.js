@@ -12,5 +12,8 @@ export const API_ROUTES = {
     IMPORT_VULNERABILITIES: `${API_BASE_URL}/nvd/cve-import-all`,
     IMPORT_PLATFORMS: `${API_BASE_URL}/nvd/cpe-import-all`,
     IMPORT_WEAKNESSES: `${API_BASE_URL}/nvd/cwe-import-all`,
-  }
+  },
+  DEVICES: {
+    UPLOAD: `${API_BASE_URL}/devices/`,
+  },
 };

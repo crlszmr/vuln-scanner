@@ -1,8 +1,10 @@
 # backend/app/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import auth, vulnerabilities, nvd
+from app.routes import auth, vulnerabilities, nvd, devices, devices_config
+from app.models import device
 from app.database import engine, Base
+from app.models import device_config
 
 Base.metadata.create_all(bind=engine)
 
@@ -19,6 +21,8 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(vulnerabilities.router)
 app.include_router(nvd.router)
+app.include_router(devices.router)
+app.include_router(devices_config.router)
 
 @app.get("/")
 def read_root():

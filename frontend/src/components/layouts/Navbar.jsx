@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { APP_ROUTES } from '@/config/appRoutes';
 import { theme } from '@/styles/theme';
+import { Button } from '@/components/ui/Button';
+
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -41,21 +43,15 @@ const Navbar = () => {
                 Admin Panel
               </Link>
             )}
-            <button
-              onClick={logout}
-              style={{
-                backgroundColor: theme.colors.primary,
-                color: '#fff',
-                padding: '8px 16px',
-                borderRadius: theme.radius.md,
-                border: 'none',
-                cursor: 'pointer',
-                fontWeight: '600',
-                transition: theme.transition.base,
-              }}
-            >
-              Logout
-            </button>
+            {user.role === 'user' && (
+              <Link to="/devices/upload" style={{ color: theme.colors.text, textDecoration: 'none' }}>
+                Subir equipo
+              </Link>
+    )}
+
+        <Button onClick={logout}>
+          Logout
+        </Button>
           </>
         )}
       </div>

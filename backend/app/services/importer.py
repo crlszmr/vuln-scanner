@@ -31,7 +31,17 @@ from app.schemas.cve_cwe import CveCweCreate
 from app.crud import cve_cpe as crud_cve_cpe
 from app.crud import cve_cwe as crud_cve_cwe
 from app.config.secrets import NVD_API_KEY
+from threading import Lock
 
+# Progreso global de importación CPE
+cpe_import_progress = {
+    "status": "idle",
+    "imported": 0,
+    "page": 0,
+    "total_pages": None,
+    "cancel": False
+}
+cpe_import_lock = Lock()
 
 
 
@@ -292,14 +302,30 @@ def save_cves_to_db(db: Session, data: list[tuple[VulnerabilityCreate, list[dict
 
     return imported
 
-def import_all_cpes(max_pages: int = 100, results_per_page: int = 1000) -> int:
+def import_all_cpes(results_per_page: int = 1000) -> int:
+    from app.services.importer import cpe_import_progress, cpe_import_lock
+
     db = SessionLocal()
     total_imported = 0
+    page = 0
+    finished = False
 
     try:
-        for page in range(max_pages):  # ✅ Este for ya respeta max_pages
+        existing_cpes = set(p.cpe_uri for p in crud_platforms.get_all_uris(db))
+        print(f"📌 {len(existing_cpes)} CPEs ya existen en la base de datos.")
+
+        while not finished:
+
+            # 🚨 Comprobar si se ha solicitado cancelar
+            if cpe_import_progress.get("cancel"):
+                print("🚫 Importación cancelada por el usuario.")
+                with cpe_import_lock:
+                    cpe_import_progress["status"] = "cancelled"
+                break
+
+            start_index = page * results_per_page
             data = get_cpes_by_page(
-                start_index=page * results_per_page,
+                start_index=start_index,
                 results_per_page=results_per_page
             )
             products = data.get("products", [])
@@ -308,16 +334,24 @@ def import_all_cpes(max_pages: int = 100, results_per_page: int = 1000) -> int:
                 break
 
             parsed_platforms = parse_cpes_from_nvd(data)
-            count = save_cpes_to_db(db, parsed_platforms)
+            new_platforms = [p for p in parsed_platforms if p.cpe_uri not in existing_cpes]
+
+            count = save_cpes_to_db(db, new_platforms)
             total_imported += count
 
-            print(f"✔ Página {page + 1}: {count} plataformas importadas.")
+            print(f"✔ Página {page + 1}: {count} plataformas nuevas importadas.")
+
+            for p in new_platforms:
+                existing_cpes.add(p.cpe_uri)
 
             if len(products) < results_per_page:
                 print("✅ Última página alcanzada (menos de results_per_page).")
-                break
+                finished = True
+            else:
+                page += 1
 
         print(f"✅ Total plataformas importadas: {total_imported}")
+
     finally:
         db.close()
 
@@ -534,3 +568,102 @@ def download_weakness_xml_if_needed():
 
     os.remove(CWE_ZIP_PATH)
     print("✅ CWE XML descargado y extraído.")
+
+def get_cpe_import_progress():
+    progress = cpe_import_progress.copy()
+    total_pages = progress.get("total_pages")
+    current_page = progress.get("page")
+
+    total_cpes = None
+    if total_pages is not None:
+        total_cpes = total_pages * 1000
+
+    imported = progress.get("imported", 0)
+    percentage = 0
+    if total_cpes:
+        percentage = int((imported / total_cpes) * 100)
+
+    return {
+        "status": progress.get("status"),
+        "imported": imported,
+        "total": total_cpes,
+        "progress": percentage
+    }
+
+def import_all_cpes(results_per_page: int = 1000) -> int:
+    db = SessionLocal()
+    total_imported = 0
+    page = 0
+    finished = False
+
+    try:
+        existing_cpes = set(p.cpe_uri for p in crud_platforms.get_all_uris(db))
+
+        with cpe_import_lock:
+            cpe_import_progress.update({
+                "status": "running",
+                "imported": 0,
+                "page": 0,
+                "total_pages": None
+            })
+
+        while not finished:
+            # 🚨 Comprobar cancelación
+            if cpe_import_progress.get("cancel"):
+                print("🚫 Importación cancelada por el usuario.")
+                with cpe_import_lock:
+                    cpe_import_progress["status"] = "cancelled"
+                break
+            
+            start_index = page * results_per_page
+            data = get_cpes_by_page(start_index=start_index, results_per_page=results_per_page)
+            products = data.get("products", [])
+
+            if not products:
+                break
+
+            total_results = data.get("totalResults")
+            total_pages = (total_results // results_per_page) + (1 if total_results % results_per_page else 0)
+
+            if page == 0:
+                with cpe_import_lock:
+                    cpe_import_progress["total_pages"] = total_pages
+
+            parsed_platforms = parse_cpes_from_nvd(data)
+            new_platforms = [p for p in parsed_platforms if p.cpe_uri not in existing_cpes]
+
+            count = save_cpes_to_db(db, new_platforms)
+            total_imported += count
+
+            with cpe_import_lock:
+                cpe_import_progress.update({
+                    "imported": total_imported,
+                    "page": page + 1
+                })
+
+            for p in new_platforms:
+                existing_cpes.add(p.cpe_uri)
+
+            if len(products) < results_per_page:
+                finished = True
+            else:
+                page += 1
+
+        with cpe_import_lock:
+            cpe_import_progress.update({
+                "status": "finished",
+                "imported": total_imported,
+                "page": page + 1
+            })
+
+    except Exception as e:
+        with cpe_import_lock:
+            cpe_import_progress.update({
+                "status": f"error: {str(e)}"
+            })
+        raise
+
+    finally:
+        db.close()
+
+    return total_imported

@@ -38,7 +38,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         username: str = payload.get("sub")
         if username is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=get_message("invalid_token", "en"))
-        user = db.query(User).filter(User.username == username).first()
+        user = db.query(User).filter(User.email == username).first()
         if user is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=get_message("user_not_found", "en"))
         return user

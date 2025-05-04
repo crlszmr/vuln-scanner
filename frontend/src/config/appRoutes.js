@@ -4,5 +4,6 @@ export const APP_ROUTES = {
     VULNERABILITY_LIST: '/vulnerabilities/list',
     ADMIN_DASHBOARD: '/admin/dashboard',
     NOT_AUTHORIZED: '/not-authorized',
+    DEVICE_UPLOAD: '/devices/upload',
   };
   

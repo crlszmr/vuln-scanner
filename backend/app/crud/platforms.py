@@ -16,3 +16,6 @@ def create_platform(db: Session, platform_data: PlatformCreate):
 
 def list_platforms(db: Session):
     return db.query(Platform).all()
+
+def get_all_uris(db: Session) -> list:
+    return db.query(Platform.cpe_uri).all()

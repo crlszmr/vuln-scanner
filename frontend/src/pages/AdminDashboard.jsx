@@ -1,4 +1,5 @@
 import { useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '@/context/AuthContext';
 import axios from 'axios';
 import { API_ROUTES } from '@/config/apiRoutes';
@@ -6,22 +7,28 @@ import { MainLayout } from '@/components/layouts/MainLayout';
 import { PageWrapper } from '@/components/layouts/PageWrapper';
 import { Button } from '@/components/ui/Button';
 import { theme } from '@/styles/theme';
+import { useNotification } from '@/context/NotificationContext';
 
 const AdminDashboard = () => {
   const { user } = useContext(AuthContext);
+  const { addNotification } = useNotification();
+  const navigate = useNavigate();
 
   const handleImport = async (endpoint) => {
     try {
-      console.log("Importando a URL:", endpoint);
+      addNotification("Iniciando importación...", "info");
+
       const response = await axios.post(endpoint, {}, {
         headers: {
           Authorization: `Bearer ${user?.token}`
         }
       });
-      alert(`✅ Importación correcta: ${response.data.message || 'Success'}`);
+
+      addNotification(`Importación correcta: ${response.data.message || 'Success'}`, "success");
+
     } catch (error) {
       console.error('Error en la importación:', error);
-      alert(`❌ Error en la importación: ${error.response?.data?.detail || error.message}`);
+      addNotification(`Error en la importación: ${error.response?.data?.detail || error.message}`, "error");
     }
   };
 
@@ -71,9 +78,9 @@ const AdminDashboard = () => {
             <Button
               variant="success"
               fullWidth
-              onClick={() => handleImport(API_ROUTES.NVD.IMPORT_PLATFORMS)}
+              onClick={() => navigate("/cpes")}
             >
-              Importar Plataformas (CPEs)
+              Gestión de Plataformas (CPEs)
             </Button>
 
             <Button

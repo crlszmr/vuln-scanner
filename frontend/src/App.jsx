@@ -12,6 +12,11 @@ import Home from '@/pages/Home';
 import AdminDashboard from '@/pages/AdminDashboard';
 import NotAuthorized from '@/pages/NotAuthorized';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import DeviceUpload from '@/pages/DeviceUpload';
+import CPEManagement from "@/pages/CPEManagement";
+import GlobalImportStatus from "@/components/ui/GlobalImportStatus";
+import { NotificationProvider } from "@/context/NotificationContext";
+import NotificationContainer from "@/components/ui/NotificationContainer";
 
 function Vulnerabilities() {
   const { token } = useAuth();
@@ -64,40 +69,29 @@ function Vulnerabilities() {
 function App() {
   return (
     <Router>
-      <div className="flex flex-col min-h-screen"> {/* ✅ Estructura para Footer */}
-        <Navbar />
-        <main style={{flexGrow: 1, backgroundColor: theme.colors.background, color: theme.colors.text, }}>
-          <Routes>
+      <NotificationProvider>
+        <NotificationContainer />
+        <GlobalImportStatus />
+        <div className="flex flex-col min-h-screen">
+          <Navbar />
+          <main style={{ flexGrow: 1, backgroundColor: theme.colors.background, color: theme.colors.text }}>
+            <Routes>
             <Route path="/" element={<Home />} />
             <Route path={APP_ROUTES.LOGIN} element={<LoginForm />} />
             <Route path={APP_ROUTES.REGISTER} element={<RegisterForm />} />
-            <Route
-              path={APP_ROUTES.VULNERABILITY_LIST}
-              element={
-                <ProtectedRoute>
-                  <Vulnerabilities />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path={APP_ROUTES.ADMIN_DASHBOARD}
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
+            <Route path={APP_ROUTES.VULNERABILITY_LIST} element={<ProtectedRoute><Vulnerabilities /></ProtectedRoute>} />
+            <Route path={APP_ROUTES.ADMIN_DASHBOARD} element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
             <Route path={APP_ROUTES.NOT_AUTHORIZED} element={<NotAuthorized />} />
+            <Route path={APP_ROUTES.DEVICE_UPLOAD} element={<ProtectedRoute><DeviceUpload /></ProtectedRoute>} />
+            <Route path="/cpes" element={<CPEManagement />} />
             <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
-        </main>
-
-        <Footer /> {/* ✅ Footer siempre abajo */}
-      </div>
+            </Routes>
+          </main>
+          <Footer />
+        </div>
+      </NotificationProvider>
     </Router>
   );
 }
 
 export default App;
-
-

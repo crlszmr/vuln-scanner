@@ -8,18 +8,18 @@ import { MainLayout } from '@/components/layouts/MainLayout';
 import { PageWrapper } from '@/components/layouts/PageWrapper';
 import { Button } from '@/components/ui/Button';
 import { theme } from '@/styles/theme';
+import { useNotification } from '@/context/NotificationContext';
 
 export default function LoginForm() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { addNotification } = useNotification();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setErrorMessage('');
 
     try {
       const params = new URLSearchParams();
@@ -36,6 +36,8 @@ export default function LoginForm() {
 
       login({ token, role, email: userEmail });
 
+      addNotification("✅ Inicio de sesión exitoso.", "success");
+
       if (role === 'admin') {
         navigate(APP_ROUTES.ADMIN_DASHBOARD);
       } else {
@@ -46,12 +48,12 @@ export default function LoginForm() {
 
       if (error.response) {
         if (error.response.status === 400 || error.response.status === 401) {
-          setErrorMessage('❌ Usuario o contraseña incorrectos');
+          addNotification("❌ Usuario o contraseña incorrectos.", "error");
         } else {
-          setErrorMessage('❌ Error desconocido. Inténtalo más tarde.');
+          addNotification("❌ Error desconocido. Inténtalo más tarde.", "error");
         }
       } else {
-        setErrorMessage('❌ No se pudo conectar al servidor');
+        addNotification("❌ No se pudo conectar al servidor.", "error");
       }
     }
   };
@@ -84,31 +86,9 @@ export default function LoginForm() {
               fontFamily: theme.font.family,
             }}
           >
-            <h1
-              style={{
-                textAlign: 'center',
-                fontSize: '24px',
-                fontWeight: '700',
-                marginBottom: '8px',
-              }}
-            >
+            <h1 style={{ textAlign: 'center', fontSize: '24px', fontWeight: '700', marginBottom: '8px' }}>
               Bienvenido
             </h1>
-
-            {errorMessage && (
-              <div
-                style={{
-                  backgroundColor: '#7f1d1d',
-                  color: '#fff',
-                  textAlign: 'center',
-                  padding: '12px',
-                  borderRadius: theme.radius.md,
-                  fontWeight: '500',
-                }}
-              >
-                {errorMessage}
-              </div>
-            )}
 
             <input
               type="email"
