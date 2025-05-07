@@ -14,6 +14,10 @@ from app.models.platform import Platform
 from app.routes.auth import get_current_user
 from app.services.auth import verify_password
 from app.database import SessionLocal
+from app.schemas.common import PasswordConfirmation  # 👈 nuevo schema
+from app.models.user import User   # 👈 ESTA LÍNEA ES LA QUE FALTABA
+
+
 
 
 
@@ -82,18 +86,23 @@ def cancel_cpe_import():
     return {"message": "Importación de CPE cancelada."}
 
 @router.post("/cpe-delete-all", status_code=status.HTTP_202_ACCEPTED)
-def delete_all_cpes(password: str = Body(...), current_user: dict = Depends(get_current_user)):
+def delete_all_cpes(payload: PasswordConfirmation, background_tasks: BackgroundTasks, current_user: User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Solo el administrador puede eliminar todos los CPEs.")
+    
+    if not verify_password(payload.password, current_user.hashed_password):
+        raise HTTPException(status_code=403, detail="Contraseña incorrecta.")
+
+    background_tasks.add_task(delete_cpes_background)
+
+    return {"message": "Eliminación de CPEs iniciada en segundo plano."}
+
+def delete_cpes_background():
     db = SessionLocal()
     try:
-        if current_user["role"] != "admin":
-            raise HTTPException(status_code=403, detail="Solo el administrador puede eliminar todos los CPEs.")
-
-        if not verify_password(password, current_user["password"]):
-            raise HTTPException(status_code=403, detail="Contraseña incorrecta.")
-
         deleted = db.query(Platform).delete()
         db.commit()
-        return {"message": f"Se eliminaron {deleted} CPEs correctamente."}
+        print(f"🧹 [DEBUG] Eliminados {deleted} CPEs en background.")
     finally:
         db.close()
 

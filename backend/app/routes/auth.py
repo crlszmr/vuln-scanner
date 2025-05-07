@@ -1,5 +1,5 @@
 # backend/app/routes/auth.py
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
@@ -12,6 +12,8 @@ from app.config.translations import get_message
 from app.config.endpoints import *
 from app.services.auth import authenticate_user, create_access_token  # Asegúrate de tener estos imports
 from datetime import timedelta
+from fastapi import Cookie
+
 
 
 SECRET_KEY = "supersecretkey"
@@ -26,26 +28,40 @@ def verify_password(plain_password, hashed_password):
 def get_password_hash(password):
     return pwd_context.hash(password)
 
-def create_access_token(data: dict, expires_delta: datetime.timedelta):
-    to_encode = data.copy()
-    expire = datetime.datetime.now(datetime.UTC) + expires_delta
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+def get_token_from_cookie(access_token: str = Cookie(None)):
+    print("🔥 [DEBUG] get_token_from_cookie → access_token:", access_token)
+    if access_token is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No token in cookie")
+    return access_token
+
+
+def get_current_user(token: str = Depends(get_token_from_cookie), db: Session = Depends(get_db)):
+    print("📦 [DEBUG] get_current_user → Token recibido:", token)
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        print("✅ [DEBUG] JWT Decodificado:", payload)
+
         username: str = payload.get("sub")
         if username is None:
+            print("❌ [DEBUG] JWT sin sub")
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=get_message("invalid_token", "en"))
+
         user = db.query(User).filter(User.email == username).first()
         if user is None:
+            print("❌ [DEBUG] Usuario no encontrado en DB con email:", username)
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=get_message("user_not_found", "en"))
+
+        print("🎉 [DEBUG] Usuario encontrado:", user.username)
         return user
+
     except jwt.ExpiredSignatureError:
+        print("❌ [DEBUG] JWT Expirado")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=get_message("token_expired", "en"))
-    except jwt.PyJWTError:
+    except jwt.PyJWTError as e:
+        print("❌ [DEBUG] Error al decodificar JWT:", e)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=get_message("invalid_token", "en"))
+
 
 @router.post(REGISTER)
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
@@ -76,21 +92,31 @@ access_token = create_access_token(data={"sub": user.username}, expires_delta=da
 return {"access_token": access_token, "token_type": "bearer"}'''
 
 @router.post(LOGIN)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
-    
+        raise HTTPException(status_code=400, detail="Invalid credentials")
+
+    # Sacar el rol desde el usuario
+    role = user.role  # 👈 Ya debería estar en la base de datos
+
+    access_token_expires = timedelta(minutes=60)
     access_token = create_access_token(
         data={"sub": user.email},
-        expires_delta=timedelta(minutes=60)  # 👈 Añadido correctamente
+        role=role,
+        expires_delta=access_token_expires
     )
 
-    return {
-        "token": access_token,
-        "role": user.role,
-        "email": user.email
-    }
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        samesite="lax",   # 👈 mejor para localhost
+        secure=False
+    ) # Cambia a True en producción
+
+    return {"access_token": access_token, "token_type": "bearer", "role": role, "email": user.email}
+
 
 @router.put(UPDATE_USER)
 def update_user(username: str, user_data: UserUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

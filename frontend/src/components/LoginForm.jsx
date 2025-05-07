@@ -30,19 +30,23 @@ export default function LoginForm() {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
+        withCredentials: true, // 👈 IMPORTANTE para que mande la cookie
       });
 
-      const { token, role, email: userEmail } = response.data;
+      const { access_token, role, email: userEmail } = response.data;
 
-      login({ token, role, email: userEmail });
-
+      // ✅ Guardar en contexto (Navbar leerá esto y se actualizará)
+      login({ token: access_token, role, email: userEmail });
+      
       addNotification("✅ Inicio de sesión exitoso.", "success");
-
-      if (role === 'admin') {
-        navigate(APP_ROUTES.ADMIN_DASHBOARD);
+      
+      // ✅ Redirigir según rol (FORZAMOS A MINÚSCULAS para que sea siempre fiable)
+      if (role.toLowerCase() === 'admin') {
+          navigate(APP_ROUTES.ADMIN_DASHBOARD);
       } else {
-        navigate(APP_ROUTES.HOME);
+          navigate(APP_ROUTES.DEVICE_UPLOAD);
       }
+
     } catch (error) {
       console.error('Error de login:', error);
 

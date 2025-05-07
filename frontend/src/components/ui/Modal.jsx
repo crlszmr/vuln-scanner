@@ -6,10 +6,10 @@ export function Modal({ isOpen, onClose, children }) {
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Fondo oscuro translúcido */}
+          {/* Fondo oscuro translúcido (opaco siempre, sin transparencia accidental) */}
           <motion.div
             initial={{ opacity: 0 }}
-            animate={{ opacity: 0.5 }}
+            animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
             style={{
@@ -18,36 +18,36 @@ export function Modal({ isOpen, onClose, children }) {
               left: 0,
               width: '100vw',
               height: '100vh',
-              backgroundColor: '#000',
+              backgroundColor: 'rgba(0, 0, 0, 0.5)', // 👈 Solucionado fondo
               zIndex: 1000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
             onClick={onClose}
-          />
-
-          {/* Caja modal */}
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-            style={{
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              backgroundColor: theme.colors.surface,
-              color: theme.colors.text,
-              padding: '32px',
-              borderRadius: theme.radius.lg,
-              boxShadow: theme.shadow.soft,
-              zIndex: 1100,
-              minWidth: '300px',
-              maxWidth: '90vw',
-              fontFamily: theme.font.family,
-              transition: theme.transition.base,
-            }}
           >
-            {children}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              style={{
+                backgroundColor: theme.colors.surface,
+                color: theme.colors.text,
+                padding: '32px',
+                borderRadius: theme.radius.lg,
+                boxShadow: theme.shadow.soft,
+                zIndex: 1100,
+                fontFamily: theme.font.family,
+                width: '100%',
+                maxWidth: '400px',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                {children}
+              </div>
+            </motion.div>
           </motion.div>
         </>
       )}

@@ -32,6 +32,10 @@ from app.crud import cve_cpe as crud_cve_cpe
 from app.crud import cve_cwe as crud_cve_cwe
 from app.config.secrets import NVD_API_KEY
 from threading import Lock
+from sqlalchemy.dialects.postgresql import insert
+from app.models.platform import Platform
+
+
 
 # Progreso global de importación CPE
 cpe_import_progress = {
@@ -407,58 +411,96 @@ def parse_cpes_from_nvd(data: dict) -> list[PlatformCreate]:
 
 
 def save_cpes_to_db(db: Session, platforms: list[PlatformCreate]) -> int:
-    count = 0
+    if not platforms:
+        return 0
+
+    bulk_data = []
+    platform_refs = []
+    platform_titles = []
+    platform_deprecated_by = []
+
+    # Cargar todos los CPE existentes en memoria
+    existing_cpes = set(p.cpe_uri for p in crud_platforms.get_all_uris(db))
 
     for platform in platforms:
 
-        # Saltar CPEs antiguos en formato 2.0 por seguridad
         if platform.cpe_uri.startswith("cpe:/"):
-            continue
+            continue  # Saltar CPE 2.0 por seguridad
 
-        existing = crud_platforms.get_by_uri(db, platform.cpe_uri)
-        if not existing:
-            db_platform = crud_platforms.create_platform(db, platform)
-            count += 1
+        if platform.cpe_uri in existing_cpes:
+            continue  # Evitar duplicados
 
-            # Títulos (CPE 2.3)
-            titles = [
-                CpeTitleCreate(
-                    platform_id=db_platform.id,
-                    lang=t.get("lang", "en"),
-                    value=t.get("title", "")
-                )
-                for t in platform.raw_titles or [] if "title" in t
-            ]
-            if titles:
-                crud_titles.create_multi(db, titles)
+        existing_cpes.add(platform.cpe_uri)
 
-            # Deprecated_by entries (CPE 2.3)
-            deprecated_entries = [
-            CpeDeprecatedByCreate(
-                platform_id=db_platform.id,
-                cpe_uri=cpe.get("cpeName", ""),
-                cpe_name_id=cpe.get("cpeNameId")
-            )
-            for cpe in platform.raw_deprecated_by or []
-        ]
+        bulk_data.append({
+            "cpe_uri": platform.cpe_uri,
+            "cpe_name_id": platform.cpe_name_id,
+            "deprecated": platform.deprecated,
+            "deprecated_by": platform.deprecated_by,
+            "created": platform.created,
+            "last_modified": platform.last_modified
+        })
 
-            if deprecated_entries:
-                crud_deprecated.create_multi(db, deprecated_entries)
-        
-        # Guardar referencias del CPE
-        refs = [
-            CPEReferenceCreate(
-                ref=r.get("ref"),
-                type=r.get("type")
-            )
-            for r in platform.raw_refs or [] if "ref" in r
-        ]
+    inserted = 0
 
-        if refs:
-            cpe_references.create_multi(db, platform_id=db_platform.id, references=refs)
+    # Bulk insert de platforms
+    if bulk_data:
+        stmt = insert(Platform).values(bulk_data)
+        stmt = stmt.on_conflict_do_nothing(index_elements=["cpe_uri"])
+
+        result = db.execute(stmt)
+        db.commit()
+
+        inserted = result.rowcount or len(bulk_data)
+
+    # Obtener de nuevo los platforms insertados (para obtener ids)
+    if inserted:
+        new_platforms = db.query(Platform).filter(Platform.cpe_uri.in_([p["cpe_uri"] for p in bulk_data])).all()
+        platforms_by_uri = {p.cpe_uri: p.id for p in new_platforms}
+
+        for platform in platforms:
+            if platform.cpe_uri not in platforms_by_uri:
+                continue  # Ya existía
+
+            platform_id = platforms_by_uri[platform.cpe_uri]
+
+            # Títulos
+            for t in platform.raw_titles or []:
+                if "title" in t:
+                    platform_titles.append(CpeTitleCreate(
+                        platform_id=platform_id,
+                        lang=t.get("lang", "en"),
+                        value=t.get("title", "")
+                    ))
+
+            # Deprecated By
+            for dep in platform.raw_deprecated_by or []:
+                platform_deprecated_by.append(CpeDeprecatedByCreate(
+                    platform_id=platform_id,
+                    cpe_uri=dep.get("cpeName", ""),
+                    cpe_name_id=dep.get("cpeNameId")
+                ))
+
+            # Referencias
+            for r in platform.raw_refs or []:
+                if "ref" in r:
+                    platform_refs.append(CPEReferenceCreate(
+                        ref=r.get("ref"),
+                        type=r.get("type")
+                    ))
+
+        if platform_titles:
+            crud_titles.create_multi(db, platform_titles)
+
+        if platform_deprecated_by:
+            crud_deprecated.create_multi(db, platform_deprecated_by)
+
+        if platform_refs:
+            for p in platforms_by_uri.values():
+                cpe_references.create_multi(db, platform_id=p, references=platform_refs)
 
     db.commit()
-    return count
+    return inserted
 
 def extract_text(element):
     return element.text.strip() if element is not None and element.text else None

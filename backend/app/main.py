@@ -12,8 +12,8 @@ app = FastAPI(title="API de Identificación de Vulnerabilidades", version="1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=["http://localhost:5173"],  # 👉 tu frontend
+    allow_credentials=True,  # 👈 muy importante para cookies
     allow_methods=["*"],
     allow_headers=["*"],
 )
