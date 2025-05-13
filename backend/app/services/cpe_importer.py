@@ -5,6 +5,15 @@ import gzip
 import xml.etree.ElementTree as ET
 
 
+def parse_cpe_uri(uri: str) -> tuple[str, str, str]:
+    try:
+        parts = uri.split(":")
+        if len(parts) >= 6:
+            return parts[3], parts[4], parts[5]
+    except Exception:
+        pass
+    return "", "", ""
+
 def extract_cpes_from_feed_config(config: dict) -> list[str]:
     cpes = []
     nodes = config.get('nodes', [])
@@ -72,7 +81,14 @@ def import_cpes_from_xml(filepath: str=CPE_XML_PATH) -> int:
             if not cpe_name or not cpe_name.startswith('cpe:2.3:'):
                 continue
             if cpe_name not in existing_cpes:
-                platforms_to_insert.append({'cpe_uri': cpe_name, 'deprecated': item.attrib.get('deprecated', 'false') == 'true'})
+                vendor, product, version = parse_cpe_uri(cpe_name)
+                platforms_to_insert.append({
+                    'cpe_uri': cpe_name,
+                    'vendor': vendor,
+                    'product': product,
+                    'version': version,
+                    'deprecated': item.attrib.get('deprecated', 'false') == 'true'
+                })
         if platforms_to_insert:
             stmt = insert(Platform).values(platforms_to_insert)
             stmt = stmt.on_conflict_do_nothing(index_elements=['cpe_uri'])
@@ -105,9 +121,6 @@ def import_cpes_from_xml(filepath: str=CPE_XML_PATH) -> int:
                     text = ref.text or ''
                     if not href:
                         continue
-                    if platform_id is None:
-                        logger.error(f'🔍 Referencia ignorada por platform_id=None | CPE: {cpe_name} | ref: {href}')
-                        continue
                     references_to_insert.append(CPEReferenceCreate(platform_id=platform_id, ref=href, type=text))
             deprecated = cpe_23.find('cpe-23:deprecation', ns)
             if deprecated is not None:
@@ -121,15 +134,9 @@ def import_cpes_from_xml(filepath: str=CPE_XML_PATH) -> int:
         if titles_to_insert:
             crud_titles.create_multi(db, titles_to_insert)
         references_valid = [r for r in references_to_insert if r.platform_id is not None]
-        invalid_refs = len(references_to_insert) - len(references_valid)
-        if invalid_refs > 0:
-            logger.warning(f'❗ Se descartaron {invalid_refs} referencias con platform_id=None')
         if references_valid:
             crud_references.create_multi(db, references_valid)
         deprecated_valid = [d for d in deprecated_by_to_insert if d.platform_id is not None]
-        invalid_deps = len(deprecated_by_to_insert) - len(deprecated_valid)
-        if invalid_deps > 0:
-            logger.warning(f'❗ Se descartaron {invalid_deps} deprecated-by con platform_id=None')
         if deprecated_valid:
             crud_deprecated.create_multi(db, deprecated_valid)
         db.commit()
@@ -140,22 +147,6 @@ def import_cpes_from_xml(filepath: str=CPE_XML_PATH) -> int:
     finally:
         db.close()
     return imported
-
-def extract_all_cpes(configurations: list) -> list[str]:
-    cpes = []
-    for config in configurations:
-        nodes = config.get('nodes', [])
-        collect_cpes_from_nodes(nodes, cpes)
-    return cpes
-
-def collect_cpes_from_nodes(nodes: list, cpes: list[str]):
-    for node in nodes:
-        for match in node.get('cpeMatch', []):
-            criteria = match.get('criteria') or match.get('cpe23Uri')
-            if criteria:
-                cpes.append(criteria)
-        for child in node.get('children', []):
-            collect_cpes_from_nodes(child, cpes)
 
 def extract_all_cpes(configurations: list) -> list[str]:
     cpes = []

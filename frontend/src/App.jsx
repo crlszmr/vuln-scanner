@@ -17,6 +17,8 @@ import CPEManagement from "@/pages/CPEManagement";
 import { NotificationProvider } from "@/context/NotificationContext";
 import NotificationContainer from "@/components/ui/NotificationContainer";
 import CVEManagement from "@/pages/CVEManagement";
+import DeviceMatchPlatforms from '@/pages/DeviceMatchPlatforms';
+
 
 
 function Vulnerabilities() {
@@ -85,6 +87,7 @@ function App() {
             <Route path={APP_ROUTES.DEVICE_UPLOAD} element={<ProtectedRoute><DeviceUpload /></ProtectedRoute>} />
             <Route path="/cpes" element={<ProtectedRoute requiredRole="admin"><CPEManagement /></ProtectedRoute>} />
             <Route path="/cves" element={<ProtectedRoute requiredRole="admin"><CVEManagement /></ProtectedRoute>} />
+            <Route path="/devices/:deviceId/match-platforms" element={<DeviceMatchPlatforms />} />
             <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </main>

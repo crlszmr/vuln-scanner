@@ -44,9 +44,7 @@ export default function DeviceUpload() {
       formData.append("os_name", osName);
 
       await axios.post(API_ROUTES.DEVICES.UPLOAD, formData, {
-        headers: {
-          Authorization: `Bearer ${user?.token}`,
-        },
+        withCredentials: true
       });
 
       addNotification("✅ Configuración del equipo subida correctamente.", "success");

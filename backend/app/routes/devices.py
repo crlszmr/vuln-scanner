@@ -5,6 +5,10 @@ from app.database import get_db
 from app.routes.auth import get_current_user
 import json
 import app.crud.devices_config as crud_device_configs
+from app.models.user import User
+from app.services.matching_service import match_device_configs_to_platforms
+
+
 
 router = APIRouter()
 
@@ -51,3 +55,11 @@ def create_device_with_config(
             crud_device_configs.create_device_config(db=db, device_id=device.id, config=config_create)
 
     return device
+
+@router.get("/devices/{device_id}/match-platforms")
+def get_matched_platforms(
+    device_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return match_device_configs_to_platforms(device_id=device_id, db=db)
