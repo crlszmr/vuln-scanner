@@ -3,11 +3,8 @@ from sqlalchemy.orm import Session
 from app.models.cpe_reference import CPEReference
 from app.schemas.cpe_reference import CPEReferenceCreate
 
-def create_reference(db: Session, platform_id: int, reference: CPEReferenceCreate) -> CPEReference:
-    db_ref = CPEReference(platform_id=platform_id, **reference.dict())
-    db.add(db_ref)
-    return db_ref
+def create_multi(db: Session, references: list[CPEReferenceCreate]) -> None:
+    objs = [CPEReference(**ref.dict()) for ref in references]
+    db.add_all(objs)
+    db.commit()  # o db.flush() si el commit se hace fuera
 
-def create_multi(db: Session, platform_id: int, references: list[CPEReferenceCreate]) -> None:
-    for ref in references:
-        create_reference(db, platform_id, ref)

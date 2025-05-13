@@ -10,9 +10,9 @@ export const API_ROUTES = {
   },
   NVD: {
     IMPORT_VULNERABILITIES: `${API_BASE_URL}/nvd/cve-import-all`,
+    IMPORT_VULNERABILITIES_FROM_JSON: `${API_BASE_URL}/nvd/cve-import-all-from-json`, // ← clave actualizada
     IMPORT_PLATFORMS: `${API_BASE_URL}/nvd/cpe-import-all`,
     IMPORT_WEAKNESSES: `${API_BASE_URL}/nvd/cwe-import-all`,
-    CPE_IMPORT_STATUS: `${API_BASE_URL}/nvd/cpe-import-status`,
     CPE_IMPORT_CANCEL: `${API_BASE_URL}/nvd/cpe-import-cancel`,
     CPE_DELETE_ALL: `${API_BASE_URL}/nvd/cpe-delete-all`,
     CPE_LIST: `${API_BASE_URL}/nvd/cpe-list`,

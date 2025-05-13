@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from app.models.vulnerability import Vulnerability
 from app.schemas.vulnerability import VulnerabilityCreate
 
+model = Vulnerability
+
 def get_by_cve_id(db: Session, cve_id: str):
     return db.query(Vulnerability).filter(Vulnerability.cve_id == cve_id).first()
 

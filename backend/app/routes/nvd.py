@@ -1,29 +1,25 @@
-# backend/app/routes/nvd.py
 from app.config.endpoints import CVE_IMPORT_KEYWORD, CVE_IMPORT_ALL, VULNERABILITIES_BASE, CPE_IMPORT_ALL, CWE_IMPORT_ALL
-from fastapi import APIRouter, Query, status, BackgroundTasks
+from fastapi import APIRouter, Query, status, BackgroundTasks, HTTPException, Body, Depends, Request
 from fastapi.responses import JSONResponse
 from app.services.nvd import get_cves_by_keyword
-from app.services.importer import parse_cves_from_nvd, save_cves_to_db, import_all_cves, import_all_cpes, get_cpe_import_progress
+from app.services.importer import parse_cves_from_nvd, save_cves_to_db, import_all_cves, import_all_weaknesses_from_file, download_weakness_xml_if_needed
+from app.services.importer import import_cpes_from_xml
 from app.database import SessionLocal
-from app.services.importer import import_all_weaknesses_from_file, download_weakness_xml_if_needed
-from app.routes.auth import get_current_user
-from fastapi import HTTPException
-from fastapi import APIRouter, Query, Body, Depends, HTTPException, status
-from app.services.importer import import_all_cpes, cpe_import_progress, cpe_import_lock
 from app.models.platform import Platform
 from app.routes.auth import get_current_user
 from app.services.auth import verify_password
-from app.database import SessionLocal
-from app.schemas.common import PasswordConfirmation  # 👈 nuevo schema
-from app.models.user import User   # 👈 ESTA LÍNEA ES LA QUE FALTABA
-
-
-
+from app.schemas.common import PasswordConfirmation
+from app.models.user import User
+from sse_starlette.sse import EventSourceResponse
+from app.services.importer import import_all_cves_stream
+from app.services.importer import import_all_cves_from_files
+from app.services.importer import import_all_cves_from_files_stream
 
 
 
 
 router = APIRouter(prefix="/nvd", tags=["nvd"])
+
 
 @router.post(CVE_IMPORT_KEYWORD, status_code=status.HTTP_202_ACCEPTED)
 def import_cves_by_keyword(keyword: str = Query(..., description="Palabra clave para buscar vulnerabilidades")):
@@ -42,23 +38,12 @@ def import_cves_by_keyword(keyword: str = Query(..., description="Palabra clave 
     )
 
 @router.post(CVE_IMPORT_ALL, status_code=status.HTTP_202_ACCEPTED)
-def import_all_cves_from_nvd_ep(max_pages: int = Query(1, ge=1, le=1000, description="Número máximo de páginas a importar")):
-    imported_count = import_all_cves(max_pages=max_pages)
+def import_all_cves_from_nvd_ep():
+    imported_count = import_all_cves()
     return JSONResponse(
         status_code=status.HTTP_202_ACCEPTED,
-        content={"message": f"{imported_count} CVEs imported successfully (max_pages={max_pages})."}
+        content={"message": f"{imported_count} CVEs imported successfully."}
     )
-
-# ✅ Nuevo endpoint: Importar CPEs (en background)
-@router.post(CPE_IMPORT_ALL, status_code=status.HTTP_202_ACCEPTED)
-def import_all_cpes_from_nvd_ep(background_tasks: BackgroundTasks):
-    background_tasks.add_task(import_all_cpes)
-    return {"message": "Importación de CPEs iniciada."}
-
-# ✅ Nuevo endpoint: Consultar progreso de la importación
-@router.get("/cpe-import-status", status_code=status.HTTP_200_OK)
-def get_cpe_import_status():
-    return get_cpe_import_progress()
 
 @router.post(CWE_IMPORT_ALL, status_code=status.HTTP_202_ACCEPTED)
 def import_all_weaknesses_from_nvd_ep(
@@ -77,13 +62,6 @@ def import_all_weaknesses_from_nvd_ep(
         status_code=status.HTTP_202_ACCEPTED,
         content={"message": f"{count} weaknesses imported successfully."}
     )
-
-@router.post("/cpe-import-cancel", status_code=status.HTTP_202_ACCEPTED)
-def cancel_cpe_import():
-    with cpe_import_lock:
-        cpe_import_progress["cancel"] = True
-        cpe_import_progress["status"] = "cancelled"
-    return {"message": "Importación de CPE cancelada."}
 
 @router.post("/cpe-delete-all", status_code=status.HTTP_202_ACCEPTED)
 def delete_all_cpes(payload: PasswordConfirmation, background_tasks: BackgroundTasks, current_user: User = Depends(get_current_user)):
@@ -114,3 +92,43 @@ def list_cpes():
         return [{"id": c.id, "cpe_uri": c.cpe_uri, "deprecated": c.deprecated} for c in cpes]
     finally:
         db.close()
+
+@router.post("/cpe-import-all-from-xml", status_code=status.HTTP_202_ACCEPTED)
+def import_all_cpes_from_xml_ep():
+    imported_count = import_cpes_from_xml()
+    return JSONResponse(
+        status_code=status.HTTP_202_ACCEPTED,
+        content={"message": f"{imported_count} CPEs imported successfully from XML."}
+    )
+
+@router.get("/cve-import-stream")
+async def stream_cve_import(request: Request):
+    async def event_generator():
+        async for event in import_all_cves_stream():
+            if await request.is_disconnected():
+                break
+            yield event
+    return EventSourceResponse(event_generator())
+
+
+@router.post("/cve-import-all-from-json", status_code=status.HTTP_202_ACCEPTED)
+def import_all_cves_from_json_ep():
+    imported_count = import_all_cves_from_files()
+    return JSONResponse(
+        status_code=status.HTTP_202_ACCEPTED,
+        content={"imported": imported_count}
+    )
+
+@router.get("/cve-import-from-json-stream", status_code=status.HTTP_202_ACCEPTED)
+async def stream_import_from_json(request: Request):
+    async def event_generator():
+        print("🚀 Iniciando generador de eventos SSE")  # <--- IMPORTANTE
+
+        async for event in import_all_cves_from_files_stream():
+            print(f"📤 Enviando evento SSE: {event}")  # <--- VERIFICACIÓN
+            if await request.is_disconnected():
+                print("⚠️ Cliente desconectado")
+                break
+            yield event
+
+    return EventSourceResponse(event_generator())

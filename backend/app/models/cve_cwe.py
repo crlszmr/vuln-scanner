@@ -1,14 +1,11 @@
 # backend/app/models/cve_cwe.py
-
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, String, ForeignKey, PrimaryKeyConstraint
 from app.database import Base
-from sqlalchemy import PrimaryKeyConstraint
-
 
 class CveCwe(Base):
     __tablename__ = "cve_cwe"
 
-    cve_name = Column(String, nullable=False)
+    cve_name = Column(String, ForeignKey("vulnerabilities.cve_id", ondelete="CASCADE"), nullable=False)
     cwe_id = Column(String, nullable=False)
 
     __table_args__ = (

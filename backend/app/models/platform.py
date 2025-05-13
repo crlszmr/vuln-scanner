@@ -2,16 +2,16 @@
 from sqlalchemy import Column, Integer, String, Boolean, Table, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from app.database import Base
+from datetime import datetime
+
 
 class Platform(Base):
     __tablename__ = "platforms"
 
     id = Column(Integer, primary_key=True, index=True)
     cpe_uri = Column(String, unique=True, index=True)  # cpe.cpeName
-    cpe_name_id = Column(String, nullable=True)
     deprecated = Column(Boolean, default=False)         # deprecated
-    created = Column(DateTime, nullable=True)           # created
-    last_modified = Column(DateTime, nullable=True)     # lastModified
+    imported_at = Column(DateTime, default=datetime.utcnow)
 
     vulnerabilities = relationship(
         "Vulnerability",
@@ -22,6 +22,7 @@ class Platform(Base):
     )
     titles = relationship("CpeTitle", back_populates="platform", cascade="all, delete-orphan")
     references = relationship("CPEReference", back_populates="platform", cascade="all, delete-orphan")
+
 
 
 

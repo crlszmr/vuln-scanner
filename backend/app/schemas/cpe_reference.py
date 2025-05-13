@@ -6,8 +6,10 @@ class CPEReferenceBase(BaseModel):
     ref: str
     type: Optional[str] = None
 
-class CPEReferenceCreate(CPEReferenceBase):
-    pass
+class CPEReferenceCreate(BaseModel):
+    platform_id: int  # ✅ necesario para que funcione tu inserción
+    ref: str
+    type: str | None = None
 
 class CPEReference(CPEReferenceBase):
     id: int

@@ -5,7 +5,6 @@ from typing import Optional
 class CpeDeprecatedByCreate(BaseModel):
     platform_id: int
     cpe_uri: str
-    cpe_name_id: Optional[str] = None
 
 class CpeDeprecatedBy(CpeDeprecatedByCreate):
     id: int

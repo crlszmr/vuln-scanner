@@ -70,10 +70,11 @@ const AdminDashboard = () => {
             <Button
               variant="primary"
               fullWidth
-              onClick={() => handleImport(API_ROUTES.NVD.IMPORT_VULNERABILITIES)}
+              onClick={() => navigate("/cves")}
             >
               Importar Vulnerabilidades (CVEs)
             </Button>
+
 
             <Button
               variant="success"

@@ -14,9 +14,10 @@ import NotAuthorized from '@/pages/NotAuthorized';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import DeviceUpload from '@/pages/DeviceUpload';
 import CPEManagement from "@/pages/CPEManagement";
-import GlobalImportStatus from "@/components/ui/GlobalImportStatus";
 import { NotificationProvider } from "@/context/NotificationContext";
 import NotificationContainer from "@/components/ui/NotificationContainer";
+import CVEManagement from "@/pages/CVEManagement";
+
 
 function Vulnerabilities() {
   const { token } = useAuth();
@@ -71,7 +72,6 @@ function App() {
     <Router>
       <NotificationProvider>
         <NotificationContainer />
-        <GlobalImportStatus />
         <div className="flex flex-col min-h-screen">
           <Navbar />
           <main style={{ flexGrow: 1, backgroundColor: theme.colors.background, color: theme.colors.text }}>
@@ -83,7 +83,8 @@ function App() {
             <Route path={APP_ROUTES.ADMIN_DASHBOARD} element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
             <Route path={APP_ROUTES.NOT_AUTHORIZED} element={<NotAuthorized />} />
             <Route path={APP_ROUTES.DEVICE_UPLOAD} element={<ProtectedRoute><DeviceUpload /></ProtectedRoute>} />
-            <Route path="/cpes" element={<CPEManagement />} />
+            <Route path="/cpes" element={<ProtectedRoute requiredRole="admin"><CPEManagement /></ProtectedRoute>} />
+            <Route path="/cves" element={<ProtectedRoute requiredRole="admin"><CVEManagement /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </main>

@@ -3,7 +3,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base
 
-class Reference(Base):
+class CveReference(Base):
     __tablename__ = "cve_references"
 
     id = Column(Integer, primary_key=True, index=True)
