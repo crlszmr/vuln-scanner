@@ -1,1 +1,3 @@
 "backend/data/" 
+"*.pyc" 
+"__pycache__/" 
