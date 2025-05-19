@@ -95,6 +95,8 @@ def match_platforms_for_device(device_id: int, db: Session):
         matched_vendor = None
         match_type = "none"
         matched_platform = None
+        matched_product = None
+        match_score = 0.0
 
         # 1️⃣ platform.vendor
         vendor_matches, match_type = match_progressively(vendor_phrases, platform_vendor_map, source="vendor")
@@ -108,22 +110,57 @@ def match_platforms_for_device(device_id: int, db: Session):
             match_type = "acronym"
             match_found = True
 
-        # 3️⃣ platform.product
+        # 3️⃣ platform.product (solo si no se encontró vendor)
         if not match_found:
             product_matches, match_type = match_progressively(product_phrases, platform_product_map, source="product")
             if product_matches:
                 matched_vendor = product_matches[0]
                 match_found = True
 
-        # 4️⃣ cpe_titles.title
+        # 4️⃣ cpe_titles.title (solo si no se encontró vendor/product)
         if not match_found:
             title_candidate, title_type = match_progressively(vendor_phrases + product_phrases, cpe_title_map, source="title")
             if title_candidate:
-                matched_vendor = title_candidate[0]  # title_candidate is a list of (title, platform_id)
+                matched_vendor = title_candidate[0]
                 match_type = title_type
                 platform_id = title_candidate[1]
                 matched_platform = db.query(Platform).filter(Platform.id == platform_id).first()
                 match_found = True
+
+        # ➕ Match de product si vendor ya fue identificado
+        if matched_vendor and match_type in ("exact_vendor", "acronym") and normalized_product:
+            vendor_platforms = db.query(Platform).filter(Platform.vendor == matched_vendor).all()
+            product_candidates = [(p.product, p) for p in vendor_platforms if p.product]
+            if product_candidates:
+                choices = [normalize_separators(preprocess(prod)) for prod, _ in product_candidates]
+                best_match = process.extractOne(normalized_product, choices, scorer=fuzz.token_sort_ratio)
+                if best_match:
+                    best_score, matched_text = best_match[1], best_match[0]
+                    if best_score > 60:
+                        for orig_text, platform in product_candidates:
+                            if normalize_separators(preprocess(orig_text)) == matched_text:
+                                matched_product = orig_text
+                                match_score = round(best_score, 2)
+                                break
+
+            # 🔒 Filtro adicional: buscar en títulos pero solo si pertenecen al mismo vendor
+            if not matched_product:
+                filtered_titles = db.query(CpeTitle).join(Platform).filter(Platform.vendor == matched_vendor).all()
+                title_norms = [(normalize_separators(preprocess(t.value)), t) for t in filtered_titles if t.value]
+                if title_norms:
+                    title_match = process.extractOne(
+                        normalized_product,
+                        [t[0] for t in title_norms],
+                        scorer=fuzz.token_sort_ratio
+                    )
+                    if title_match and title_match[1] > 60:
+                        matched_text = title_match[0]
+                        for norm_text, title in title_norms:
+                            if norm_text == matched_text:
+                                matched_product = title.value
+                                match_score = round(title_match[1], 2)
+                                matched_platform = title.platform
+                                break
 
         match_types_counter[match_type] += 1
 
@@ -134,6 +171,8 @@ def match_platforms_for_device(device_id: int, db: Session):
             "matched_vendor": matched_vendor,
             "match": match_found,
             "match_type": match_type,
+            "matched_product": matched_product,
+            "match_score": match_score,
         }
 
         if matched_platform:
