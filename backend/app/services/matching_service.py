@@ -5,7 +5,7 @@ from app.models.platform import Platform
 from app.models.cpe_title import CpeTitle
 
 import re
-from collections import Counter
+from collections import Counter, defaultdict
 from rapidfuzz import fuzz, process
 
 def normalize_separators(text: str) -> str:
@@ -49,19 +49,27 @@ def generate_phrases(words: list[str], max_size: int = 5) -> list[str]:
         phrases.append(phrase)
     return phrases
 
-def match_progressively(target_phrases: list[str], candidates: set[str], source: str, threshold=85):
+def match_progressively(target_phrases: list[str], candidate_map: dict, source: str):
     for phrase in target_phrases:
-        if phrase in candidates:
-            return phrase, f"exact_{source}"
+        if phrase in candidate_map:
+            return candidate_map[phrase], f"exact_{source}"
     return None, None
 
-def match_platforms_for_device(device_id: int, db: Session, fuzzy_threshold: int = 85):
-    platform_vendor_set = set(normalize_separators(preprocess(v)) for v in db.scalars(select(distinct(Platform.vendor))).all())
-    platform_product_set = set(normalize_separators(preprocess(p)) for p in db.scalars(select(distinct(Platform.product))).all())
-    cpe_title_set = {
-        normalize_separators(preprocess(t.value)): t.platform_id
-        for t in db.query(CpeTitle).distinct(CpeTitle.value).all()
-    }
+def match_platforms_for_device(device_id: int, db: Session):
+    platform_vendor_map = defaultdict(list)
+    for v in db.scalars(select(distinct(Platform.vendor))):
+        norm = normalize_separators(preprocess(v))
+        platform_vendor_map[norm].append(v)
+
+    platform_product_map = defaultdict(list)
+    for p in db.scalars(select(distinct(Platform.product))):
+        norm = normalize_separators(preprocess(p))
+        platform_product_map[norm].append(p)
+
+    cpe_title_map = defaultdict(list)
+    for t in db.query(CpeTitle).distinct(CpeTitle.value).all():
+        norm = normalize_separators(preprocess(t.value))
+        cpe_title_map[norm].append((t.value, t.platform_id))
 
     device_configs = db.query(DeviceConfig).filter(DeviceConfig.device_id == device_id).all()
 
@@ -89,29 +97,31 @@ def match_platforms_for_device(device_id: int, db: Session, fuzzy_threshold: int
         matched_platform = None
 
         # 1️⃣ platform.vendor
-        matched_vendor, match_type = match_progressively(vendor_phrases, platform_vendor_set, source="vendor", threshold=fuzzy_threshold)
-        if matched_vendor:
+        vendor_matches, match_type = match_progressively(vendor_phrases, platform_vendor_map, source="vendor")
+        if vendor_matches:
+            matched_vendor = vendor_matches[0]
             match_found = True
 
         # 2️⃣ Acronym
-        elif vendor_acronym in platform_vendor_set:
-            matched_vendor = vendor_acronym
+        elif vendor_acronym in platform_vendor_map:
+            matched_vendor = platform_vendor_map[vendor_acronym][0]
             match_type = "acronym"
             match_found = True
 
         # 3️⃣ platform.product
         if not match_found:
-            matched_vendor, match_type = match_progressively(product_phrases, platform_product_set, source="product", threshold=fuzzy_threshold)
-            if matched_vendor:
+            product_matches, match_type = match_progressively(product_phrases, platform_product_map, source="product")
+            if product_matches:
+                matched_vendor = product_matches[0]
                 match_found = True
 
         # 4️⃣ cpe_titles.title
         if not match_found:
-            title_candidate, title_type = match_progressively(vendor_phrases + product_phrases, set(cpe_title_set.keys()), source="title", threshold=fuzzy_threshold)
+            title_candidate, title_type = match_progressively(vendor_phrases + product_phrases, cpe_title_map, source="title")
             if title_candidate:
-                matched_vendor = title_candidate
+                matched_vendor = title_candidate[0]  # title_candidate is a list of (title, platform_id)
                 match_type = title_type
-                platform_id = cpe_title_set[title_candidate]
+                platform_id = title_candidate[1]
                 matched_platform = db.query(Platform).filter(Platform.id == platform_id).first()
                 match_found = True
 
