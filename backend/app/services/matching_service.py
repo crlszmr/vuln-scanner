@@ -8,6 +8,8 @@ import re
 from collections import Counter, defaultdict
 from rapidfuzz import fuzz, process
 
+MIN_MATCH_SCORE = 60
+
 def normalize_separators(text: str) -> str:
     return re.sub(r'[\s\-_\.]+', ' ', text).strip()
 
@@ -36,6 +38,15 @@ def preprocess(text: str) -> str:
 def get_acronym(text: str) -> str:
     words = normalize(text).split()
     return ''.join(w[0] for w in words if w)
+
+def extract_year_or_version(text: str) -> int:
+    match = re.search(r'(\d{4})', text)
+    if match:
+        return int(match.group(1))
+    match = re.search(r'(\d+)', text)
+    if match:
+        return int(match.group(1))
+    return None
 
 def ends_with_number(text: str) -> bool:
     return bool(re.search(r'\d+$', text))
@@ -79,6 +90,7 @@ def match_platforms_for_device(device_id: int, db: Session):
     for config in device_configs:
         raw_vendor = config.vendor or ""
         raw_product = config.product or ""
+        raw_version = config.version or ""
 
         normalized_vendor = normalize_separators(preprocess(raw_vendor))
         normalized_product = normalize_separators(preprocess(raw_product))
@@ -97,6 +109,7 @@ def match_platforms_for_device(device_id: int, db: Session):
         matched_platform = None
         matched_product = None
         match_score = 0.0
+        needs_review = False
 
         # 1️⃣ platform.vendor
         vendor_matches, match_type = match_progressively(vendor_phrases, platform_vendor_map, source="vendor")
@@ -136,14 +149,19 @@ def match_platforms_for_device(device_id: int, db: Session):
                 best_match = process.extractOne(normalized_product, choices, scorer=fuzz.token_sort_ratio)
                 if best_match:
                     best_score, matched_text = best_match[1], best_match[0]
-                    if best_score > 60:
-                        for orig_text, platform in product_candidates:
-                            if normalize_separators(preprocess(orig_text)) == matched_text:
+                    for orig_text, platform in product_candidates:
+                        if normalize_separators(preprocess(orig_text)) == matched_text:
+                            dev_year = extract_year_or_version(raw_version or raw_product)
+                            plat_year = extract_year_or_version(platform.version or platform.product)
+                            if dev_year and plat_year and abs(dev_year - plat_year) > 10:
+                                best_score -= 20
+                            score = max(0.0, best_score)
+                            if score >= MIN_MATCH_SCORE:
                                 matched_product = orig_text
-                                match_score = round(best_score, 2)
-                                break
+                                match_score = round(score, 2)
+                                matched_platform = platform
+                            break
 
-            # 🔒 Filtro adicional: buscar en títulos pero solo si pertenecen al mismo vendor
             if not matched_product:
                 filtered_titles = db.query(CpeTitle).join(Platform).filter(Platform.vendor == matched_vendor).all()
                 title_norms = [(normalize_separators(preprocess(t.value)), t) for t in filtered_titles if t.value]
@@ -153,14 +171,30 @@ def match_platforms_for_device(device_id: int, db: Session):
                         [t[0] for t in title_norms],
                         scorer=fuzz.token_sort_ratio
                     )
-                    if title_match and title_match[1] > 60:
+                    if title_match:
                         matched_text = title_match[0]
                         for norm_text, title in title_norms:
                             if norm_text == matched_text:
-                                matched_product = title.value
-                                match_score = round(title_match[1], 2)
-                                matched_platform = title.platform
+                                dev_year = extract_year_or_version(raw_version or raw_product)
+                                plat_year = extract_year_or_version(title.platform.version or title.platform.product)
+                                score = title_match[1]
+                                if dev_year and plat_year and abs(dev_year - plat_year) > 10:
+                                    score -= 20
+                                score = max(0.0, score)
+                                if score >= MIN_MATCH_SCORE:
+                                    matched_product = title.value
+                                    match_score = round(score, 2)
+                                    matched_platform = title.platform
                                 break
+
+        if MIN_MATCH_SCORE <= match_score < 75:
+            needs_review = True
+
+        if match_score < MIN_MATCH_SCORE:
+            matched_product = None
+            matched_platform = None
+            match_found = False
+            match_type = None
 
         match_types_counter[match_type] += 1
 
@@ -173,6 +207,7 @@ def match_platforms_for_device(device_id: int, db: Session):
             "match_type": match_type,
             "matched_product": matched_product,
             "match_score": match_score,
+            "needs_review": needs_review
         }
 
         if matched_platform:
