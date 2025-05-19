@@ -6,7 +6,8 @@ from app.routes.auth import get_current_user
 import json
 import app.crud.devices_config as crud_device_configs
 from app.models.user import User
-from app.services.matching_service import match_device_configs_to_platforms
+from app.services.matching_service import match_platforms_for_device
+
 
 
 
@@ -57,9 +58,8 @@ def create_device_with_config(
     return device
 
 @router.get("/devices/{device_id}/match-platforms")
-def get_matched_platforms(
-    device_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    return match_device_configs_to_platforms(device_id=device_id, db=db)
+def match_platforms(device_id: int, db: Session = Depends(get_db)):
+    results = match_platforms_for_device(device_id, db)
+    if not results:
+        raise HTTPException(status_code=404, detail="Device config not found for this device.")
+    return results

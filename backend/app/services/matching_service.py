@@ -1,65 +1,152 @@
-import re
-from typing import List, Dict
-from difflib import SequenceMatcher
 from sqlalchemy.orm import Session
+from sqlalchemy import select, distinct, or_
 from app.models.device_config import DeviceConfig
 from app.models.platform import Platform
+from app.models.cpe_title import CpeTitle
 
+import re
+from collections import Counter
+from rapidfuzz import fuzz, process
+
+def normalize_separators(text: str) -> str:
+    return re.sub(r'[\s\-_\.]+', ' ', text).strip()
+
+def clean_word(word: str) -> str:
+    alpha = re.match(r'[a-zA-Z]+', word)
+    return alpha.group(0).lower() if alpha else word.lower()
+
+def translate_symbols(text: str) -> str:
+    replacements = {
+        '+': ' plus ',
+        '-': ' minus ',
+        '&': ' and '
+    }
+    for symbol, word in replacements.items():
+        text = text.replace(symbol, word)
+    return text
 
 def normalize(text: str) -> str:
-    text = text.lower().strip()
-    text = re.sub(r"[\(\)\[\],._\-]", " ", text)
-    text = re.sub(r"\b(corporation|corp|inc|ltd|s\.a\.|s\.l\.)\b", "", text)
-    text = re.sub(r"\s+", " ", text)
-    return text.strip()
+    if not text:
+        return ""
+    return re.sub(r'[^\w\s]', '', text.strip().lower())
 
+def preprocess(text: str) -> str:
+    return normalize_separators(normalize(translate_symbols(text)))
 
-def similarity(a: str, b: str) -> float:
-    return SequenceMatcher(None, a, b).ratio()
+def get_acronym(text: str) -> str:
+    words = normalize(text).split()
+    return ''.join(w[0] for w in words if w)
 
+def ends_with_number(text: str) -> bool:
+    return bool(re.search(r'\d+$', text))
 
-def match_device_configs_to_platforms(device_id: int, db: Session, threshold=0.75) -> Dict[int, List[Dict]]:
-    print(f"🔍 Empezando matching para device_id={device_id}")
-    result = {}
+def generate_phrases(words: list[str], max_size: int = 5) -> list[str]:
+    cleaned_words = [clean_word(w) for w in words]
+    phrases = [] 
+    limit = min(len(cleaned_words), max_size)
+    for size in range(1, limit + 1):
+        phrase = " ".join(cleaned_words[:size])
+        phrases.append(phrase)
+    return phrases
 
-    configs = db.query(DeviceConfig).filter(DeviceConfig.device_id == device_id).all()
-    print(f"📦 Se encontraron {len(configs)} entradas en device_config")
+def match_progressively(target_phrases: list[str], candidates: set[str], source: str, threshold=85):
+    for phrase in target_phrases:
+        if phrase in candidates:
+            return phrase, f"exact_{source}"
+    return None, None
 
-    platforms = db.query(Platform).all()
-    print(f"💽 Se encontraron {len(platforms)} plataformas posibles")
+def match_platforms_for_device(device_id: int, db: Session, fuzzy_threshold: int = 85):
+    platform_vendor_set = set(normalize_separators(preprocess(v)) for v in db.scalars(select(distinct(Platform.vendor))).all())
+    platform_product_set = set(normalize_separators(preprocess(p)) for p in db.scalars(select(distinct(Platform.product))).all())
+    cpe_title_set = {
+        normalize_separators(preprocess(t.value)): t.platform_id
+        for t in db.query(CpeTitle).distinct(CpeTitle.value).all()
+    }
 
-    for config in configs:
-        print(f"\n➡️ Procesando config ID={config.id}: vendor='{config.vendor}', product='{config.product}', version='{config.version}'")
+    device_configs = db.query(DeviceConfig).filter(DeviceConfig.device_id == device_id).all()
 
-        config_vendor = normalize(config.vendor or "")
-        config_product = normalize(config.product or "")
-        config_version = normalize(config.version or "")
+    results = []
+    match_types_counter = Counter()
 
-        matches = []
+    for config in device_configs:
+        raw_vendor = config.vendor or ""
+        raw_product = config.product or ""
 
-        for p in platforms:
-            p_vendor = normalize(p.vendor or "")
-            p_product = normalize(p.product or "")
-            p_version = normalize(p.version or "")
+        normalized_vendor = normalize_separators(preprocess(raw_vendor))
+        normalized_product = normalize_separators(preprocess(raw_product))
 
-            vendor_score = similarity(config_vendor, p_vendor)
-            product_score = similarity(config_product, p_product)
-            version_score = similarity(config_version, p_version) if config_version and p_version else 1.0
+        vendor_words = normalized_vendor.split()
+        product_words = normalized_product.split()
 
-            total_score = 0.4 * vendor_score + 0.5 * product_score + 0.1 * version_score
+        vendor_phrases = generate_phrases(vendor_words)
+        product_phrases = generate_phrases(product_words)
 
-            if total_score >= threshold:
-                print(f"      ✅ Match aceptado (score ≥ {threshold})")
-                matches.append({
-                    "platform_id": p.id,
-                    "vendor": p.vendor,
-                    "product": p.product,
-                    "version": p.version,
-                    "score": round(total_score, 3)
-                })
+        vendor_acronym = get_acronym(raw_vendor)
 
-        result[config.id] = matches
+        match_found = False
+        matched_vendor = None
+        match_type = "none"
+        matched_platform = None
 
-    print(f"✅ Matching finalizado para device_id={device_id}")
-    return result
+        # 1️⃣ platform.vendor
+        matched_vendor, match_type = match_progressively(vendor_phrases, platform_vendor_set, source="vendor", threshold=fuzzy_threshold)
+        if matched_vendor:
+            match_found = True
 
+        # 2️⃣ Acronym
+        elif vendor_acronym in platform_vendor_set:
+            matched_vendor = vendor_acronym
+            match_type = "acronym"
+            match_found = True
+
+        # 3️⃣ platform.product
+        if not match_found:
+            matched_vendor, match_type = match_progressively(product_phrases, platform_product_set, source="product", threshold=fuzzy_threshold)
+            if matched_vendor:
+                match_found = True
+
+        # 4️⃣ cpe_titles.title
+        if not match_found:
+            title_candidate, title_type = match_progressively(vendor_phrases + product_phrases, set(cpe_title_set.keys()), source="title", threshold=fuzzy_threshold)
+            if title_candidate:
+                matched_vendor = title_candidate
+                match_type = title_type
+                platform_id = cpe_title_set[title_candidate]
+                matched_platform = db.query(Platform).filter(Platform.id == platform_id).first()
+                match_found = True
+
+        match_types_counter[match_type] += 1
+
+        result_entry = {
+            "device_config_id": config.id,
+            "original_vendor": raw_vendor,
+            "original_product": raw_product,
+            "matched_vendor": matched_vendor,
+            "match": match_found,
+            "match_type": match_type,
+        }
+
+        if matched_platform:
+            result_entry["matched_platform"] = {
+                "id": matched_platform.id,
+                "vendor": matched_platform.vendor,
+                "product": matched_platform.product,
+                "version": matched_platform.version
+            }
+
+        results.append(result_entry)
+
+    total = len(results)
+    matched = total - match_types_counter["none"]
+    summary = {
+        "total_configs": total,
+        "matched": matched,
+        "unmatched": match_types_counter["none"],
+        "match_percentage": round((matched / total) * 100, 2) if total else 0.0,
+        "by_type": dict(match_types_counter)
+    }
+
+    return {
+        "results": results,
+        "summary": summary
+    }
