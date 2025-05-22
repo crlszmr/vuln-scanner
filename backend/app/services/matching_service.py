@@ -38,6 +38,22 @@ def get_acronym(text: str) -> str:
     words = normalize(text).split()
     return ''.join(w[0] for w in words if w)
 
+def version_similarity(version1: str, version2: str) -> float:
+    if not version1 or not version2:
+        return 0.0
+
+    v1 = preprocess(version1)
+    v2 = preprocess(version2)
+
+    # Si son exactamente iguales después del normalizado, devolvemos 100 directamente
+    if v1 == v2:
+        return 100.0
+
+    # Comparación caso-insensible e ignorando guiones/puntos
+    score = fuzz.ratio(v1, v2)
+    return score
+
+
 def match_progressively(target_words: list[str], candidate_map: dict, source: str):
     for i in range(len(target_words)):
         for j in range(i+1, len(target_words)+1):
@@ -47,7 +63,6 @@ def match_progressively(target_words: list[str], candidate_map: dict, source: st
     return None, None
 
 def match_platforms_for_device(device_id: int, db: Session):
-    # Precargar vendors y products normalizados
     platform_vendor_map = defaultdict(list)
     product_to_vendor = defaultdict(list)
 
@@ -66,7 +81,6 @@ def match_platforms_for_device(device_id: int, db: Session):
         if norm_prod != alt_prod:
             product_to_vendor[alt_prod].append(vend)
 
-    # Precargar cpe_titles normalizados
     cpe_titles_by_platform = defaultdict(list)
     for t in db.query(CpeTitle).all():
         norm = preprocess(t.value)
@@ -79,6 +93,7 @@ def match_platforms_for_device(device_id: int, db: Session):
     for config in device_configs:
         raw_vendor = config.vendor or ""
         raw_product = config.product or ""
+        config_version = config.version or ""
 
         normalized_vendor = preprocess(raw_vendor)
         extended_vendor = extended_normalize(raw_vendor)
@@ -94,9 +109,9 @@ def match_platforms_for_device(device_id: int, db: Session):
         matched_product = None
         matched_platform = None
         match_score = 0.0
+        version_score = 0.0
         needs_review = False
 
-        # 1️⃣ Matching por vendor
         vendor_matches, match_type = match_progressively(vendor_words, platform_vendor_map, "vendor")
         if not vendor_matches:
             vendor_matches, match_type = match_progressively(alt_vendor_words, platform_vendor_map, "vendor_cleaned")
@@ -112,13 +127,11 @@ def match_platforms_for_device(device_id: int, db: Session):
             match_type = "acronym"
             match_found = True
         else:
-            # 2️⃣ Matching por product si falla vendor
             vendor_matches, match_type = match_progressively(alt_vendor_words, product_to_vendor, "product_as_vendor")
             if vendor_matches:
                 matched_vendor = vendor_matches[0]
                 match_found = True
 
-        # 3️⃣ Evaluar el producto si hay vendor
         best_score = 0.0
         best_platform = None
         if matched_vendor:
@@ -133,11 +146,23 @@ def match_platforms_for_device(device_id: int, db: Session):
                 for title in cpe_titles_by_platform.get(platform.id, []):
                     scores.append(fuzz.token_sort_ratio(normalized_product, title))
 
-                if scores:
-                    max_score = max(scores)
-                    if max_score > best_score:
-                        best_score = max_score
-                        best_platform = platform
+                version_score = version_similarity(config_version, platform.version or "")
+                version_bonus = 0
+                if version_score >= 90:
+                    version_bonus = 20
+                elif version_score >= 70:
+                    version_bonus = 10
+                elif version_score >= 50:
+                    version_bonus = 5
+                else:
+                    version_bonus = -10
+
+                max_base_score = max(scores) if scores else 0
+                total_score = max_base_score + version_bonus
+
+                if total_score > best_score:
+                    best_score = total_score
+                    best_platform = platform
 
         if best_score >= MIN_MATCH_SCORE:
             matched_product = best_platform.product
@@ -157,6 +182,7 @@ def match_platforms_for_device(device_id: int, db: Session):
             "device_config_id": config.id,
             "original_vendor": raw_vendor,
             "original_product": raw_product,
+            "device_config_version": config_version,
             "matched_vendor": matched_vendor,
             "match": match_found,
             "match_type": match_type,
@@ -168,6 +194,7 @@ def match_platforms_for_device(device_id: int, db: Session):
                 "version": matched_platform.version
             } if matched_platform else None,
             "match_score": match_score,
+            "version_score": round(version_score, 2),
             "needs_review": needs_review
         })
 
