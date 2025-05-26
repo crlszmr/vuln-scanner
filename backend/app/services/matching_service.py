@@ -106,9 +106,7 @@ def match_platforms_for_device(device_id: int, db: Session):
         matched_vendor = None
         match_type = "none"
         matched_product = None
-        matched_platform = None
         match_score = 0.0
-        version_score = 0.0
         needs_review = False
 
         vendor_matches, match_type = match_progressively(vendor_words, platform_vendor_map, "vendor")
@@ -132,7 +130,6 @@ def match_platforms_for_device(device_id: int, db: Session):
                 match_found = True
 
         best_score = 0.0
-        best_platform = None
         if matched_vendor:
             vendor_platforms = db.query(Platform).filter(Platform.vendor == matched_vendor).all()
             for platform in vendor_platforms:
@@ -145,35 +142,20 @@ def match_platforms_for_device(device_id: int, db: Session):
                 for title in cpe_titles_by_platform.get(platform.id, []):
                     scores.append(fuzz.token_sort_ratio(normalized_product, title))
 
-                version_score = version_similarity(config_version, platform.version or "")
-                version_bonus = 0
-                if version_score >= 90:
-                    version_bonus = 20
-                elif version_score >= 70:
-                    version_bonus = 10
-                elif version_score >= 50:
-                    version_bonus = 5
-                else:
-                    version_bonus = -10
-
-                max_base_score = max(scores) if scores else 0
-                total_score = max_base_score + version_bonus
+                total_score = max(scores) if scores else 0
 
                 if total_score > best_score:
                     best_score = total_score
-                    best_platform = platform
+                    matched_product = platform.product
 
         if best_score >= MIN_MATCH_SCORE:
-            matched_product = best_platform.product
-            matched_platform = best_platform
-            match_score = round(best_score, 2)
             match_found = True
+            match_score = round(best_score, 2)
             match_type = match_type or "product_match"
             if best_score < 75:
                 needs_review = True
         else:
             matched_product = None
-            matched_platform = None
 
         match_types_counter[match_type] += 1
 
@@ -186,14 +168,7 @@ def match_platforms_for_device(device_id: int, db: Session):
             "match": match_found,
             "match_type": match_type,
             "matched_product": matched_product,
-            "matched_platform": {
-                "id": matched_platform.id,
-                "vendor": matched_platform.vendor,
-                "product": matched_platform.product,
-                "version": matched_platform.version
-            } if matched_platform else None,
             "match_score": match_score,
-            "version_score": round(version_score, 2),
             "needs_review": needs_review
         })
 
