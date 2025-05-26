@@ -1,14 +1,25 @@
+
 from sqlalchemy.orm import Session
 from sqlalchemy import select, distinct
 from app.models.device_config import DeviceConfig
 from app.models.platform import Platform
 from app.models.cpe_title import CpeTitle
+from app.models.cve_cpe import CveCpe
 
 import re
 from collections import Counter, defaultdict
 from rapidfuzz import fuzz
 
 MIN_MATCH_SCORE = 60
+
+VALID_HW = {'*', '-', 'x86', 'x64', 'amd64', 'i386', 'i686', 'unknown'}
+INVALID_SW = {
+    "linux", "android", "ios", "mac", "macos", "unix",
+    "ibm_zos", "solaris", "openbsd", "freebsd", "netbsd",
+    "hpux", "aix", "vxworks", "rtos", "tizen", "watchos",
+    "tvos", "esx", "chromeos", "qnx"
+}
+
 
 def normalize_separators(text: str) -> str:
     return re.sub(r'[\s\-_\.]+', ' ', text).strip()
@@ -37,25 +48,65 @@ def get_acronym(text: str) -> str:
     words = normalize(text).split()
     return ''.join(w[0] for w in words if w)
 
-def version_similarity(version1: str, version2: str) -> float:
-    if not version1 or not version2:
-        return 0.0
+def extract_version(product_name: str, config_version: str) -> str:
+    year_match = re.search(r'(19\d{2}|20\d{2}|2100)', product_name)
+    if year_match:
+        return year_match.group(1)
+    if config_version:
+        return config_version.strip()
+    return None
 
-    v1 = preprocess(version1)
-    v2 = preprocess(version2)
+def normalize_field(text: str) -> str:
+    text = text.replace('\\', '').replace("'", '').replace('-', '_')
+    return normalize(text)
 
-    # Si son exactamente iguales después del normalizado, devolvemos 100 directamente
-    if v1 == v2:
-        return 100.0
+def escape_like(text: str) -> str:
+    return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
-    # Comparación caso-insensible e ignorando guiones/puntos
-    score = fuzz.ratio(v1, v2)
-    return score
+def match_version_with_cpe_uri(matched_vendor: str, matched_product: str, target_major_version: str, db: Session):
+    if not (matched_vendor and matched_product and target_major_version):
+        return []
 
+    norm_vendor = normalize_field(matched_vendor)
+    norm_product = normalize_field(matched_product)
+
+    escaped_vendor = escape_like(matched_vendor)
+    escaped_product = escape_like(matched_product)
+
+    like_expr = f"cpe:2.3:%:{escaped_vendor}:{escaped_product}:%"
+    candidates = db.query(CveCpe).filter(CveCpe.cpe_uri.like(like_expr, escape='\\')).all()
+
+    matched = []
+    for cpe in candidates:
+        parts = cpe.cpe_uri.split(':')
+        if len(parts) >= 13:
+            vendor = normalize_field(parts[3])
+            product = normalize_field(parts[4])
+            version = parts[5]
+            target_sw = parts[10].lower()
+            target_hw = parts[11].lower()
+
+            if vendor != norm_vendor or product != norm_product:
+                continue
+
+            if target_hw not in VALID_HW or target_sw in INVALID_SW:
+                continue
+
+            if version in ('*', '-'):
+                matched.append(cpe)
+                continue
+
+            if version == target_major_version:
+                matched.append(cpe)
+
+    if not matched:
+        print(f"⚠️ No se encontró ningún CPE para {matched_vendor}:{matched_product} con versión {target_major_version}")
+
+    return matched
 
 def match_progressively(target_words: list[str], candidate_map: dict, source: str):
     for i in range(len(target_words)):
-        for j in range(i+1, len(target_words)+1):
+        for j in range(i + 1, len(target_words) + 1):
             phrase = ' '.join(target_words[i:j])
             if phrase in candidate_map:
                 return candidate_map[phrase], f"exact_{source}"
@@ -157,6 +208,12 @@ def match_platforms_for_device(device_id: int, db: Session):
         else:
             matched_product = None
 
+        target_version = extract_version(raw_product or "", config_version)
+        matched_cpes = match_version_with_cpe_uri(matched_vendor, matched_product, target_version, db)
+
+        if not matched_cpes:
+            print(f"⚠️ No se encontró ningún CPE para {matched_vendor}:{matched_product} con versión {target_version}")
+
         match_types_counter[match_type] += 1
 
         results.append({
@@ -169,7 +226,11 @@ def match_platforms_for_device(device_id: int, db: Session):
             "match_type": match_type,
             "matched_product": matched_product,
             "match_score": match_score,
-            "needs_review": needs_review
+            "needs_review": needs_review,
+            "matched_cpe_uris": [
+                {"cve_name": cve, "cpe_uri": uri}
+                for cve, uri in { (c.cve_name, c.cpe_uri) for c in matched_cpes }
+            ]
         })
 
     total = len(results)
