@@ -16,7 +16,6 @@ def normalize_separators(text: str) -> str:
 def translate_symbols(text: str) -> str:
     replacements = {
         '+': ' plus ',
-        '-': ' minus ',
         '&': ' and '
     }
     for symbol, word in replacements.items():
@@ -26,7 +25,7 @@ def translate_symbols(text: str) -> str:
 def normalize(text: str) -> str:
     if not text:
         return ""
-    return re.sub(r'[^\w\s]', '', text.strip().lower())
+    return re.sub(r'[^\w\s-]', '', text.strip().lower())
 
 def preprocess(text: str) -> str:
     return normalize_separators(normalize(translate_symbols(text)))
