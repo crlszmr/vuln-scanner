@@ -24,5 +24,6 @@ export const API_ROUTES = {
     DEVICE_CONFIG: (id) => `${API_BASE_URL}/devices/${id}/config`,
     DEVICE_MATCHES: (deviceId) => `${API_BASE_URL}/devices/${deviceId}/matches`,
     MATCH_REFRESH: (deviceId) => `${API_BASE_URL}/devices/${deviceId}/match-platforms/refresh`,
+    MATCH_PROGRESS: (id) => `${API_BASE_URL}/devices/${id}/match-platforms/progress`,
   },
 };

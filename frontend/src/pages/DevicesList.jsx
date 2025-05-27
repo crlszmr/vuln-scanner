@@ -69,7 +69,6 @@ export default function DevicesList() {
               {devices.map((device) => (
                 <motion.div
                   key={device.id}
-                  onClick={() => navigate(APP_ROUTES.DEVICE_CONFIG(device.id))}
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
                   style={{
@@ -79,7 +78,6 @@ export default function DevicesList() {
                     borderRadius: theme.radius.xl,
                     padding: "1.5rem",
                     boxShadow: theme.shadow.soft,
-                    cursor: "pointer",
                     transition: theme.transition.base,
                   }}
                 >
@@ -99,49 +97,32 @@ export default function DevicesList() {
                       display: "flex",
                       flexWrap: "wrap",
                       gap: "0.5rem",
+                      marginBottom: "1rem",
                     }}
                   >
-                    <span
-                      style={{
-                        backgroundColor: "#4b5563", // gris Tailwind slate-600
-                        color: "#f9fafb",
-                        padding: "4px 10px",
-                        borderRadius: "999px",
-                        fontSize: "13px",
-                        fontWeight: "500",
-                      }}
-                    >
+                    <span style={{ backgroundColor: "#4b5563", color: "#f9fafb", padding: "4px 10px", borderRadius: "999px", fontSize: "13px", fontWeight: "500" }}>
                       Tipo: {device.type}
                     </span>
-
-                    <span
-                      style={{
-                        backgroundColor: "#1e40af",
-                        color: "#f8fafc",
-                        padding: "4px 10px",
-                        borderRadius: "999px",
-                        fontSize: "13px",
-                        fontWeight: "500",
-                      }}
-                    >
+                    <span style={{ backgroundColor: "#1e40af", color: "#f8fafc", padding: "4px 10px", borderRadius: "999px", fontSize: "13px", fontWeight: "500" }}>
                       SO: {device.os_name}
                     </span>
-
-                    <span
-                      style={{
-                        backgroundColor: "#064e3b",
-                        color: "#d1fae5",
-                        padding: "4px 10px",
-                        borderRadius: "999px",
-                        fontSize: "13px",
-                        fontWeight: "500",
-                      }}
-                    >
+                    <span style={{ backgroundColor: "#064e3b", color: "#d1fae5", padding: "4px 10px", borderRadius: "999px", fontSize: "13px", fontWeight: "500" }}>
                       Apps: {device.config?.filter((c) => c.type === "a").length ?? 0}
                     </span>
                   </div>
-                </motion.div>
 
+                  <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                    <Button onClick={() => navigate(APP_ROUTES.DEVICE_MATCHING(device.id))}>
+                      Matching
+                    </Button>
+                    <Button onClick={() => navigate(APP_ROUTES.DEVICE_CONFIG(device.id))}>
+                      Mostrar configuración
+                    </Button>
+                    <Button onClick={() => navigate(APP_ROUTES.DEVICE_VULNERABILITIES(device.id))}>
+                      Vulnerabilidades
+                    </Button>
+                  </div>
+                </motion.div>
               ))}
             </div>
           )}

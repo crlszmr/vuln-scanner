@@ -10,4 +10,6 @@ export const APP_ROUTES = {
   USER_DASHBOARD: '/dashboard',
   DEVICE_LIST: '/devices/list',
   DEVICE_CONFIG: (id) => `/devices/${id}/config`,
+  DEVICE_MATCHING: (id) => `/devices/${id}/matching`,
+  DEVICE_VULNERABILITIES: (id) => `/devices/${id}/vulnerabilities`,
 };

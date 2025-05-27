@@ -8,6 +8,7 @@ from app.models.device_match import DeviceMatch
 import re
 from collections import Counter, defaultdict
 from rapidfuzz import fuzz
+import asyncio
 
 MIN_MATCH_SCORE = 60
 
@@ -110,7 +111,14 @@ def match_progressively(target_words: list[str], candidate_map: dict, source: st
                 return candidate_map[phrase], f"exact_{source}"
     return None, None
 
-def match_platforms_for_device(device_id: int, db: Session):
+
+def match_platforms_for_device(device_id: int, db: Session, yield_progress: bool = False):
+    from collections import defaultdict, Counter
+    import re
+    from sqlalchemy import select, distinct
+    from app.models import Platform, CpeTitle, DeviceConfig, DeviceMatch
+    from fuzzywuzzy import fuzz
+
     platform_vendor_map = defaultdict(list)
     product_to_vendor = defaultdict(list)
 
@@ -121,8 +129,7 @@ def match_platforms_for_device(device_id: int, db: Session):
         if norm != alt:
             platform_vendor_map[alt].append(v)
 
-    for p in db.query(distinct(Platform.product), Platform.vendor).all():
-        prod, vend = p
+    for prod, vend in db.query(distinct(Platform.product), Platform.vendor).all():
         norm_prod = preprocess(prod or "")
         alt_prod = extended_normalize(prod or "")
         product_to_vendor[norm_prod].append(vend)
@@ -137,137 +144,182 @@ def match_platforms_for_device(device_id: int, db: Session):
     device_configs = db.query(DeviceConfig).filter(DeviceConfig.device_id == device_id).all()
     results = []
     match_types_counter = Counter()
+    total = len(device_configs)
 
-    for config in device_configs:
-        raw_vendor = config.vendor or ""
-        raw_product = config.product or ""
-        config_version = config.version or ""
+    def process_configs():
+        for idx, config in enumerate(device_configs, 1):
+            raw_vendor = config.vendor or ""
+            raw_product = config.product or ""
+            config_version = config.version or ""
 
-        normalized_vendor = preprocess(raw_vendor)
-        extended_vendor = extended_normalize(raw_vendor)
-        normalized_product = preprocess(raw_product)
+            normalized_vendor = preprocess(raw_vendor)
+            extended_vendor = extended_normalize(raw_vendor)
+            normalized_product = preprocess(raw_product)
 
-        vendor_words = normalized_vendor.split()
-        alt_vendor_words = extended_vendor.split()
-        vendor_acronym = get_acronym(raw_vendor)
+            vendor_words = normalized_vendor.split()
+            alt_vendor_words = extended_vendor.split()
+            vendor_acronym = get_acronym(raw_vendor)
 
-        match_found = False
-        matched_vendor = None
-        match_type = "none"
-        matched_product = None
-        match_score = 0.0
-        needs_review = False
+            match_found = False
+            matched_vendor = None
+            match_type = "none"
+            matched_product = None
+            match_score = 0.0
+            needs_review = False
 
-        vendor_matches, match_type = match_progressively(vendor_words, platform_vendor_map, "vendor")
-        if not vendor_matches:
-            vendor_matches, match_type = match_progressively(alt_vendor_words, platform_vendor_map, "vendor_cleaned")
-        if not vendor_matches:
-            simplified_words = [re.sub(r'\d+$', '', w) for w in alt_vendor_words]
-            vendor_matches, match_type = match_progressively(simplified_words, platform_vendor_map, "vendor_simplified")
+            vendor_matches, match_type = match_progressively(vendor_words, platform_vendor_map, "vendor")
+            if not vendor_matches:
+                vendor_matches, match_type = match_progressively(alt_vendor_words, platform_vendor_map, "vendor_cleaned")
+            if not vendor_matches:
+                simplified_words = [re.sub(r'\d+$', '', w) for w in alt_vendor_words]
+                vendor_matches, match_type = match_progressively(simplified_words, platform_vendor_map, "vendor_simplified")
 
-        if vendor_matches:
-            matched_vendor = vendor_matches[0]
-            match_found = True
-        elif vendor_acronym in platform_vendor_map:
-            matched_vendor = platform_vendor_map[vendor_acronym][0]
-            match_type = "acronym"
-            match_found = True
-        else:
-            vendor_matches, match_type = match_progressively(alt_vendor_words, product_to_vendor, "product_as_vendor")
             if vendor_matches:
                 matched_vendor = vendor_matches[0]
                 match_found = True
+            elif vendor_acronym in platform_vendor_map:
+                matched_vendor = platform_vendor_map[vendor_acronym][0]
+                match_type = "acronym"
+                match_found = True
+            else:
+                vendor_matches, match_type = match_progressively(alt_vendor_words, product_to_vendor, "product_as_vendor")
+                if vendor_matches:
+                    matched_vendor = vendor_matches[0]
+                    match_found = True
 
-        best_score = 0.0
-        if matched_vendor:
-            vendor_platforms = db.query(Platform).filter(Platform.vendor == matched_vendor).all()
-            for platform in vendor_platforms:
-                scores = []
+            best_score = 0.0
+            if matched_vendor:
+                vendor_platforms = db.query(Platform).filter(Platform.vendor == matched_vendor).all()
+                for platform in vendor_platforms:
+                    scores = []
 
-                if platform.product:
-                    norm_prod = preprocess(platform.product)
-                    scores.append(fuzz.token_sort_ratio(normalized_product, norm_prod))
+                    if platform.product:
+                        norm_prod = preprocess(platform.product)
+                        scores.append(fuzz.token_sort_ratio(normalized_product, norm_prod))
 
-                for title in cpe_titles_by_platform.get(platform.id, []):
-                    scores.append(fuzz.token_sort_ratio(normalized_product, title))
+                    for title in cpe_titles_by_platform.get(platform.id, []):
+                        scores.append(fuzz.token_sort_ratio(normalized_product, title))
 
-                total_score = max(scores) if scores else 0
+                    total_score = max(scores) if scores else 0
 
-                if total_score > best_score:
-                    best_score = total_score
-                    matched_product = platform.product
+                    if total_score > best_score:
+                        best_score = total_score
+                        matched_product = platform.product
 
-        if best_score >= MIN_MATCH_SCORE:
-            match_found = True
-            match_score = round(best_score, 2)
-            match_type = match_type or "product_match"
-            if best_score < 75:
-                needs_review = True
-        else:
-            matched_product = None
+            if best_score >= MIN_MATCH_SCORE:
+                match_found = True
+                match_score = round(best_score, 2)
+                match_type = match_type or "product_match"
+                if best_score < 75:
+                    needs_review = True
+            else:
+                matched_product = None
 
-        target_version = extract_version(raw_product or "", config_version)
-        matched_cpes = match_version_with_cpe_uri(matched_vendor, matched_product, target_version, db)
+            target_version = extract_version(raw_product or "", config_version)
+            matched_cpes = match_version_with_cpe_uri(matched_vendor, matched_product, target_version, db)
 
-        if not matched_cpes:
-            print(f"⚠️ No se encontró ningún CPE para {matched_vendor}:{matched_product} con versión {target_version}")
+            match_types_counter[match_type] += 1
 
-        match_types_counter[match_type] += 1
+            results.append({
+                "device_config_id": config.id,
+                "original_vendor": raw_vendor,
+                "original_product": raw_product,
+                "device_config_version": config_version,
+                "matched_vendor": matched_vendor,
+                "match": match_found,
+                "match_type": match_type,
+                "matched_product": matched_product,
+                "match_score": match_score,
+                "needs_review": needs_review,
+                "matched_cpe_uris": [
+                    {"cve_name": c.cve_name, "cpe_uri": c.cpe_uri}
+                    for c in matched_cpes
+                ]
+            })
 
-        results.append({
-            "device_config_id": config.id,
-            "original_vendor": raw_vendor,
-            "original_product": raw_product,
-            "device_config_version": config_version,
-            "matched_vendor": matched_vendor,
-            "match": match_found,
-            "match_type": match_type,
-            "matched_product": matched_product,
-            "match_score": match_score,
-            "needs_review": needs_review,
-            "matched_cpe_uris": [
-                {"cve_name": cve, "cpe_uri": uri}
-                for cve, uri in {(c.cve_name, c.cpe_uri) for c in matched_cpes}
-            ]
-        })
+            if yield_progress:
+                yield f"{idx}/{total} - Procesado: {raw_vendor} {raw_product} ({match_type}, {match_score})"
 
-    # Obtener tuplas (cve_name, cpe_uri) ya existentes para este device_config
-    existing = db.query(DeviceMatch.cve_name, DeviceMatch.cpe_uri).filter(
-        DeviceMatch.device_config_id.in_([r["device_config_id"] for r in results])
-    ).all()
-    existing_set = set(existing)
+    if yield_progress:
+        async def generator():
+            for message in process_configs():
+                yield message
+                await asyncio.sleep(0.05)  # opcional, da margen al cliente
 
-    # Solo insertar si el par no existe ya
-    to_save = []
-    for result in results:
-        for cpe_data in result["matched_cpe_uris"]:
-            key = (cpe_data["cve_name"], cpe_data["cpe_uri"])
-            if key not in existing_set:
-                to_save.append(DeviceMatch(
-                    device_config_id=result["device_config_id"],
-                    cve_name=cpe_data["cve_name"],
-                    cpe_uri=cpe_data["cpe_uri"],
-                    matched_vendor=result["matched_vendor"],
-                    matched_product=result["matched_product"],
-                    match_type=result["match_type"],
-                    match_score=result["match_score"],
-                    needs_review=result["needs_review"]
-                ))
+            existing = db.query(DeviceMatch.cve_name, DeviceMatch.cpe_uri).filter(
+                DeviceMatch.device_config_id.in_([r["device_config_id"] for r in results])
+            ).all()
+            existing_set = set(existing)
 
-    db.bulk_save_objects(to_save)
-    db.commit()
+            to_save = []
+            for result in results:
+                for cpe_data in result["matched_cpe_uris"]:
+                    key = (cpe_data["cve_name"], cpe_data["cpe_uri"])
+                    if key not in existing_set:
+                        to_save.append(DeviceMatch(
+                            device_config_id=result["device_config_id"],
+                            cve_name=cpe_data["cve_name"],
+                            cpe_uri=cpe_data["cpe_uri"],
+                            matched_vendor=result["matched_vendor"],
+                            matched_product=result["matched_product"],
+                            match_type=result["match_type"],
+                            match_score=result["match_score"],
+                            needs_review=result["needs_review"]
+                        ))
 
-    total = len(results)
-    matched = total - match_types_counter["none"]
-    summary = {
-        "total_configs": total,
-        "matched": matched,
-        "unmatched": match_types_counter["none"],
-        "match_percentage": round((matched / total) * 100, 2) if total else 0.0,
-        "by_type": dict(match_types_counter)
-    }
+            db.bulk_save_objects(to_save)
+            db.commit()
 
-    return {
-        "results": results,
-        "summary": summary
-    }
+            matched = total - match_types_counter["none"]
+            summary = {
+                "total_configs": total,
+                "matched": matched,
+                "unmatched": match_types_counter["none"],
+                "match_percentage": round((matched / total) * 100, 2) if total else 0.0,
+                "by_type": dict(match_types_counter)
+            }
+
+            yield "[DONE]"
+
+        return generator()
+
+    else:
+        for _ in process_configs():
+            pass  # ignorar yield
+        existing = db.query(DeviceMatch.cve_name, DeviceMatch.cpe_uri).filter(
+            DeviceMatch.device_config_id.in_([r["device_config_id"] for r in results])
+        ).all()
+        existing_set = set(existing)
+
+        to_save = []
+        for result in results:
+            for cpe_data in result["matched_cpe_uris"]:
+                key = (cpe_data["cve_name"], cpe_data["cpe_uri"])
+                if key not in existing_set:
+                    to_save.append(DeviceMatch(
+                        device_config_id=result["device_config_id"],
+                        cve_name=cpe_data["cve_name"],
+                        cpe_uri=cpe_data["cpe_uri"],
+                        matched_vendor=result["matched_vendor"],
+                        matched_product=result["matched_product"],
+                        match_type=result["match_type"],
+                        match_score=result["match_score"],
+                        needs_review=result["needs_review"]
+                    ))
+
+        db.bulk_save_objects(to_save)
+        db.commit()
+
+        matched = total - match_types_counter["none"]
+        summary = {
+            "total_configs": total,
+            "matched": matched,
+            "unmatched": match_types_counter["none"],
+            "match_percentage": round((matched / total) * 100, 2) if total else 0.0,
+            "by_type": dict(match_types_counter)
+        }
+
+        return {
+            "results": results,
+            "summary": summary
+        }

@@ -22,7 +22,8 @@ import Dashboard from '@/pages/Dashboard';
 import DevicesList from '@/pages/DevicesList';
 import DeviceConfig from '@/pages/DeviceConfig';
 import VulnerabilityDetails from "@/pages/VulnerabilityDetails";
-
+import DeviceMatching from './pages/DeviceMatching';
+import DeviceVulnerabilities from './pages/DeviceVulnerabilities';
 
 
 
@@ -98,6 +99,8 @@ function App() {
             <Route path="/cpes" element={<ProtectedRoute requiredRole="admin"><CPEManagement /></ProtectedRoute>} />
             <Route path="/cves" element={<ProtectedRoute requiredRole="admin"><CVEManagement /></ProtectedRoute>} />
             <Route path="/devices/:deviceId/match-platforms" element={<DeviceMatchPlatforms />} />
+            <Route path="/devices/:id/matching" element={<DeviceMatching />} />
+            <Route path="/devices/:id/vulnerabilities" element={<DeviceVulnerabilities />} />
             <Route path="/vulnerabilities/:cveId" element={<ProtectedRoute><VulnerabilityDetails /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" />} />
             </Routes>

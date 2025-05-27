@@ -10,6 +10,10 @@ from app.services.matching_service import match_platforms_for_device
 from typing import List
 from app.models.device_match import DeviceMatch
 from app.models.device_config import DeviceConfig
+from sse_starlette.sse import EventSourceResponse
+import asyncio
+
+
 
 
 
@@ -120,3 +124,29 @@ def refresh_device_matches(
     result = match_platforms_for_device(device_id, db)
     print(f"🔁 Matching ejecutado: {len(result['results'])} configs procesadas")
     return result["summary"]
+
+
+@router.get("/devices/{device_id}/match-platforms/progress")
+async def match_platforms_with_progress(
+    device_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Verificar que el dispositivo es del usuario
+    device = db.query(models.Device).filter_by(id=device_id, user_id=current_user.id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+
+    async def event_generator():
+        yield {"event": "message", "data": "Iniciando análisis..."}
+        await asyncio.sleep(0.5)
+
+        result = match_platforms_for_device(device_id, db, yield_progress=True)
+
+        # Si result es un generador de progreso
+        async for progreso in result:
+            yield {"event": "message", "data": progreso}
+
+        yield {"event": "message", "data": "[DONE]"}
+
+    return EventSourceResponse(event_generator())
