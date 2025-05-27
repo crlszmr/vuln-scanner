@@ -12,3 +12,4 @@ from .cpe_reference import CPEReference  # 👈 MUY IMPORTANTE
 from .vulnerability import Vulnerability
 from .weakness import Weakness
 from .user import User
+from app.models.device_match import DeviceMatch

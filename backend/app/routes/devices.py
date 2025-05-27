@@ -8,6 +8,9 @@ import app.crud.devices_config as crud_device_configs
 from app.models.user import User
 from app.services.matching_service import match_platforms_for_device
 from typing import List
+from app.models.device_match import DeviceMatch
+from app.models.device_config import DeviceConfig
+
 
 
 
@@ -82,3 +85,38 @@ def get_device_with_config(
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
     return device
+
+@router.get("/devices/{device_id}/matches")
+def get_device_matches(device_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    matches = db.query(DeviceMatch).join(DeviceMatch.device_config).join(DeviceConfig.device).filter(
+        DeviceConfig.device_id == device_id,
+        DeviceConfig.device.has(user_id=current_user.id)
+    ).all()
+
+    return [
+        {
+            "device_config_id": m.device_config_id,
+            "cve_name": m.cve_name,
+            "cpe_uri": m.cpe_uri,
+            "matched_vendor": m.matched_vendor,
+            "matched_product": m.matched_product,
+            "match_type": m.match_type,
+            "match_score": m.match_score,
+            "needs_review": m.needs_review,
+        }
+        for m in matches
+    ]
+
+@router.post("/devices/{device_id}/match-platforms/refresh")
+def refresh_device_matches(
+    device_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    device = db.query(models.Device).filter_by(id=device_id, user_id=current_user.id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+
+    result = match_platforms_for_device(device_id, db)
+    print(f"🔁 Matching ejecutado: {len(result['results'])} configs procesadas")
+    return result["summary"]

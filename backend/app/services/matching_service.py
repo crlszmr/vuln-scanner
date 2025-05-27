@@ -1,11 +1,10 @@
-
 from sqlalchemy.orm import Session
 from sqlalchemy import select, distinct
 from app.models.device_config import DeviceConfig
 from app.models.platform import Platform
 from app.models.cpe_title import CpeTitle
 from app.models.cve_cpe import CveCpe
-
+from app.models.device_match import DeviceMatch
 import re
 from collections import Counter, defaultdict
 from rapidfuzz import fuzz
@@ -19,7 +18,6 @@ INVALID_SW = {
     "hpux", "aix", "vxworks", "rtos", "tizen", "watchos",
     "tvos", "esx", "chromeos", "qnx"
 }
-
 
 def normalize_separators(text: str) -> str:
     return re.sub(r'[\s\-_\.]+', ' ', text).strip()
@@ -229,9 +227,35 @@ def match_platforms_for_device(device_id: int, db: Session):
             "needs_review": needs_review,
             "matched_cpe_uris": [
                 {"cve_name": cve, "cpe_uri": uri}
-                for cve, uri in { (c.cve_name, c.cpe_uri) for c in matched_cpes }
+                for cve, uri in {(c.cve_name, c.cpe_uri) for c in matched_cpes}
             ]
         })
+
+    # Obtener tuplas (cve_name, cpe_uri) ya existentes para este device_config
+    existing = db.query(DeviceMatch.cve_name, DeviceMatch.cpe_uri).filter(
+        DeviceMatch.device_config_id.in_([r["device_config_id"] for r in results])
+    ).all()
+    existing_set = set(existing)
+
+    # Solo insertar si el par no existe ya
+    to_save = []
+    for result in results:
+        for cpe_data in result["matched_cpe_uris"]:
+            key = (cpe_data["cve_name"], cpe_data["cpe_uri"])
+            if key not in existing_set:
+                to_save.append(DeviceMatch(
+                    device_config_id=result["device_config_id"],
+                    cve_name=cpe_data["cve_name"],
+                    cpe_uri=cpe_data["cpe_uri"],
+                    matched_vendor=result["matched_vendor"],
+                    matched_product=result["matched_product"],
+                    match_type=result["match_type"],
+                    match_score=result["match_score"],
+                    needs_review=result["needs_review"]
+                ))
+
+    db.bulk_save_objects(to_save)
+    db.commit()
 
     total = len(results)
     matched = total - match_types_counter["none"]

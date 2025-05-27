@@ -1,3 +1,4 @@
+// src/pages/DeviceConfig.jsx
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { MainLayout } from "@/components/layouts/MainLayout";
@@ -8,30 +9,67 @@ import axios from "axios";
 export default function DeviceConfig() {
   const { deviceId } = useParams();
   const [device, setDevice] = useState(null);
+  const [matches, setMatches] = useState({});
+  const [expanded, setExpanded] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     axios.get(API_ROUTES.DEVICES.DEVICE_CONFIG(deviceId), { withCredentials: true })
-      .then((res) => {
-        setDevice(res.data);
-      })
-      .catch((err) => {
-        console.error("Error loading device config:", err);
-      })
+      .then((res) => setDevice(res.data))
+      .catch((err) => console.error("Error loading device config:", err))
       .finally(() => setLoading(false));
   }, [deviceId]);
 
-  const grouped = {
-    o: [],
-    h: [],
-    a: [],
-  };
+  useEffect(() => {
+    if (!deviceId) return;
+    axios.get(API_ROUTES.DEVICES.DEVICE_MATCHES(deviceId), { withCredentials: true })
+      .then(res => {
+        const grouped = {};
+        for (const m of res.data) {
+          if (!grouped[m.device_config_id]) grouped[m.device_config_id] = [];
+          grouped[m.device_config_id].push(m);
+        }
+        setMatches(grouped);
+      })
+      .catch(err => console.error("Error loading matches:", err));
+  }, [deviceId]);
 
+  const [refreshing, setRefreshing] = useState(false);
+const [lastSummary, setLastSummary] = useState(null);
+
+const handleMatchRefresh = () => {
+  setRefreshing(true);
+  axios.post(API_ROUTES.DEVICES.MATCH_REFRESH(deviceId), {}, { withCredentials: true })
+    .then(res => {
+      setLastSummary(res.data);
+      return axios.get(API_ROUTES.DEVICES.DEVICE_MATCHES(deviceId), { withCredentials: true });
+    })
+    .then(res => {
+      const grouped = {};
+      for (const m of res.data) {
+        if (!grouped[m.device_config_id]) grouped[m.device_config_id] = [];
+        grouped[m.device_config_id].push(m);
+      }
+      setMatches(grouped);
+    })
+    .catch(err => console.error("Error actualizando matches:", err))
+    .finally(() => setRefreshing(false));
+};
+
+
+  const grouped = { o: [], h: [], a: [] };
   if (device?.config) {
     for (const c of device.config) {
       grouped[c.type]?.push(c);
     }
   }
+
+  const toggleExpand = (configId) => {
+    setExpanded(prev => ({
+      ...prev,
+      [configId]: !prev[configId]
+    }));
+  };
 
   return (
     <MainLayout>
@@ -40,7 +78,21 @@ export default function DeviceConfig() {
           <p className="text-muted-foreground">Cargando configuración...</p>
         ) : (
           <>
-            <h1 className="text-2xl font-bold mb-4">{device.alias}</h1>
+            <div className="flex justify-between items-center mb-4">
+              <h1 className="text-2xl font-bold">{device.alias}</h1>
+              <button
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm"
+                onClick={handleMatchRefresh}
+                disabled={refreshing}
+              >
+                {refreshing ? "Analizando..." : "Iniciar análisis de coincidencias"}
+              </button>
+            </div>
+            {lastSummary && (
+              <p className="text-sm text-muted-foreground mb-2">
+                {lastSummary.matched} de {lastSummary.total_configs} elementos con coincidencias ({lastSummary.match_percentage}%)
+              </p>
+            )}
 
             {["o", "h", "a"].map((typeKey) => (
               <div key={typeKey} className="mb-6">
@@ -50,13 +102,34 @@ export default function DeviceConfig() {
                 {grouped[typeKey].length === 0 ? (
                   <p className="text-muted-foreground">No hay elementos.</p>
                 ) : (
-                  <ul className="space-y-2">
-                    {grouped[typeKey].map((item, idx) => (
-                      <li key={idx} className="border p-3 rounded-xl">
-                        <strong>{item.vendor}</strong> - {item.product}
-                        {item.version && <> (v{item.version})</>}
-                      </li>
-                    ))}
+                  <ul className="space-y-4">
+                    {grouped[typeKey].map((item, idx) => {
+                      const configMatches = matches[item.id] || [];
+                      const isOpen = expanded[item.id];
+
+                      return (
+                        <li key={idx} className="border p-3 rounded-xl">
+                          <div className="flex justify-between items-center">
+                            <span><strong>{item.vendor}</strong> - {item.product} {item.version && <> (v{item.version})</>}</span>
+                            {configMatches.length > 0 && (
+                              <button
+                                className="text-sm text-blue-500 underline"
+                                onClick={() => toggleExpand(item.id)}
+                              >
+                                {isOpen ? "Ocultar matches" : "Mostrar matches"}
+                              </button>
+                            )}
+                          </div>
+                          {isOpen && (
+                            <ul className="mt-2 pl-4 text-sm text-muted-foreground space-y-1">
+                              {configMatches.map((m, i) => (
+                                <li key={i}>• <strong>{m.cve_name}</strong> → {m.cpe_uri}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </div>
