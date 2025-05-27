@@ -6,6 +6,8 @@ import { PageWrapper } from "@/components/layouts/PageWrapper";
 import { API_ROUTES } from "@/config/apiRoutes";
 import axios from "axios";
 import { Button } from "@/components/ui/button"; // ✅ AÑADIDO
+import { Link } from "react-router-dom";
+
 
 export default function DeviceConfig() {
   const { deviceId } = useParams();
@@ -124,7 +126,7 @@ export default function DeviceConfig() {
                           {isOpen && (
                             <ul className="mt-2 pl-4 text-sm text-muted-foreground space-y-1">
                               {uniqueCves.map((cve, i) => (
-                                <li key={i}>• <strong>{cve}</strong></li>
+                                <li key={i}>• <Link to={`/vulnerabilities/${cve}`} className="text-blue-600 hover:underline font-semibold">{cve}</Link></li>
                               ))}
                             </ul>
                           )}

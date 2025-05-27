@@ -7,6 +7,7 @@ export const API_ROUTES = {
   },
   VULNERABILITIES: {
     LIST: `${API_BASE_URL}/vulnerabilities/list`,
+    DETAIL: (cveId) => `${API_BASE_URL}/vulnerabilities/${cveId}`,  // ✅ Añadido
   },
   NVD: {
     IMPORT_VULNERABILITIES: `${API_BASE_URL}/nvd/cve-import-all`,
