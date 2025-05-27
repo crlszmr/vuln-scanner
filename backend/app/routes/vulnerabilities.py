@@ -61,13 +61,17 @@ def get_vulnerability_detail(cve_id: str, db: Session = Depends(get_db), user: d
         raise HTTPException(status_code=404, detail=f"Vulnerability {cve_id} not found")
 
     # Buscar por vulnerabilidad.id (clave primaria entera)
-    descripcion_obj = db.query(CveDescription).filter_by(cve_id=vuln.id, lang="es").first()
+    descripcion_es = db.query(CveDescription).filter_by(cve_id=vuln.id, lang="es").first()
+    descripcion_en = db.query(CveDescription).filter_by(cve_id=vuln.id, lang="en").first()
+
+    descripcion_final = descripcion_es if descripcion_es else (descripcion_en if descripcion_en else None)
+
     references = db.query(CveReference).filter_by(cve_id=vuln.id).all()
     cwes = db.query(CveCwe).filter_by(cve_name=vuln.cve_id).all()  # esta tabla sí usa cve_id directamente
 
     return {
         **vuln.__dict__,
-        "descripcion": descripcion_obj.value if descripcion_obj else None,
+        "descripcion": descripcion_final.value if descripcion_final else None,
         "references": [{"url": r.url} for r in references],
         "cwe": [c.cwe_id for c in cwes],
     }

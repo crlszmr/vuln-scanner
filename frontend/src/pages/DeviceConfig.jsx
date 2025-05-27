@@ -1,13 +1,12 @@
-// src/pages/DeviceConfig.jsx
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
+import axios from "axios";
+import { motion } from "framer-motion";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { PageWrapper } from "@/components/layouts/PageWrapper";
 import { API_ROUTES } from "@/config/apiRoutes";
-import axios from "axios";
-import { Button } from "@/components/ui/button"; // ✅ AÑADIDO
-import { Link } from "react-router-dom";
-
+import { Button } from "@/components/ui/button";
+import { theme } from "@/styles/theme";
 
 export default function DeviceConfig() {
   const { deviceId } = useParams();
@@ -15,6 +14,8 @@ export default function DeviceConfig() {
   const [matches, setMatches] = useState({});
   const [expanded, setExpanded] = useState({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastSummary, setLastSummary] = useState(null);
 
   useEffect(() => {
     axios.get(API_ROUTES.DEVICES.DEVICE_CONFIG(deviceId), { withCredentials: true })
@@ -36,9 +37,6 @@ export default function DeviceConfig() {
       })
       .catch(err => console.error("Error loading matches:", err));
   }, [deviceId]);
-
-  const [refreshing, setRefreshing] = useState(false);
-  const [lastSummary, setLastSummary] = useState(null);
 
   const handleMatchRefresh = () => {
     setRefreshing(true);
@@ -67,10 +65,7 @@ export default function DeviceConfig() {
   }
 
   const toggleExpand = (configId) => {
-    setExpanded(prev => ({
-      ...prev,
-      [configId]: !prev[configId]
-    }));
+    setExpanded(prev => ({ ...prev, [configId]: !prev[configId] }));
   };
 
   return (
@@ -80,39 +75,66 @@ export default function DeviceConfig() {
           <p className="text-muted-foreground">Cargando configuración...</p>
         ) : (
           <>
-            <div className="flex justify-between items-center mb-4">
-              <h1 className="text-2xl font-bold">{device.alias}</h1>
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "1.5rem"
+            }}>
+              <h1 style={{
+                fontSize: "26px",
+                fontWeight: "800",
+                color: theme.colors.primary,
+                fontFamily: theme.font.family
+              }}>
+                {device.alias}
+              </h1>
               <Button onClick={handleMatchRefresh} disabled={refreshing}>
                 {refreshing ? "Analizando..." : "Iniciar Matching"}
               </Button>
             </div>
 
             {lastSummary && (
-              <p className="text-sm text-muted-foreground mb-2">
+              <p style={{ fontSize: "14px", color: theme.colors.muted, marginBottom: "1rem" }}>
                 {lastSummary.matched} de {lastSummary.total_configs} elementos con coincidencias ({lastSummary.match_percentage}%)
               </p>
             )}
 
             {["o", "h", "a"].map((typeKey) => (
-              <div key={typeKey} className="mb-6">
-                <h2 className="text-xl font-semibold mb-2">
+              <div key={typeKey} style={{ marginBottom: "2rem" }}>
+                <h2 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "0.75rem" }}>
                   {typeKey === "o" ? "Sistema Operativo" : typeKey === "h" ? "Hardware" : "Aplicaciones"}
                 </h2>
+
                 {grouped[typeKey].length === 0 ? (
-                  <p className="text-muted-foreground">No hay elementos.</p>
+                  <p style={{ color: theme.colors.muted }}>No hay elementos.</p>
                 ) : (
-                  <ul className="space-y-4">
+                  <ul style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                     {grouped[typeKey].map((item, idx) => {
                       const configMatches = matches[item.id] || [];
                       const isOpen = expanded[item.id];
-
-                      // Obtener CVEs únicos
                       const uniqueCves = [...new Set(configMatches.map(m => m.cve_name))];
 
                       return (
-                        <li key={idx} className="border p-3 rounded-xl">
-                          <div className="flex justify-between items-center">
-                            <span><strong>{item.vendor}</strong> - {item.product} {item.version && <> (v{item.version})</>}</span>
+                        <motion.li
+                          key={idx}
+                          whileHover={{ scale: 1.02 }}
+                          transition={{ duration: 0.2 }}
+                          style={{
+                            backgroundColor: theme.colors.surface,
+                            border: "1px solid #334155",
+                            borderRadius: theme.radius.xl,
+                            padding: "1.25rem",
+                            boxShadow: theme.shadow.soft,
+                            listStyle: "none",
+                            fontFamily: theme.font.family
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div style={{ fontWeight: "600" }}>
+                              <span style={{ color: theme.colors.primary }}>{item.vendor}</span> — {item.product}
+                              {item.version && <span> (v{item.version})</span>}
+                            </div>
                             {configMatches.length > 0 && (
                               <Button
                                 variant="ghost"
@@ -123,14 +145,38 @@ export default function DeviceConfig() {
                               </Button>
                             )}
                           </div>
+
                           {isOpen && (
-                            <ul className="mt-2 pl-4 text-sm text-muted-foreground space-y-1">
+                            <ul style={{
+                              listStyle: "none",
+                              marginTop: "0.75rem",
+                              paddingLeft: "1rem",
+                              fontSize: "14px",
+                              color: theme.colors.muted,
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "0.25rem"
+                            }}>
                               {uniqueCves.map((cve, i) => (
-                                <li key={i}>• <Link to={`/vulnerabilities/${cve}`} className="text-blue-600 hover:underline font-semibold">{cve}</Link></li>
+                                <li key={i}>
+                                  <span style={{ marginRight: "6px", color: "#60a5fa", fontWeight: "bold" }}>▸</span>
+                                  <Link
+                                    to={`/vulnerabilities/${cve}`}
+                                    style={{
+                                      color: "#60a5fa",
+                                      fontWeight: "600",
+                                      textDecoration: "none"
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.textDecoration = "underline"}
+                                    onMouseLeave={(e) => e.currentTarget.style.textDecoration = "none"}
+                                  >
+                                    {cve}
+                                  </Link>
+                                </li>
                               ))}
                             </ul>
                           )}
-                        </li>
+                        </motion.li>
                       );
                     })}
                   </ul>
