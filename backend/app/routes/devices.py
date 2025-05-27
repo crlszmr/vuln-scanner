@@ -71,3 +71,14 @@ def read_my_devices(
     current_user: User = Depends(get_current_user)
 ):
     return crud.devices.get_devices_by_user(db=db, user_id=current_user.id)
+
+@router.get("/devices/{device_id}/config", response_model=schemas.Device)
+def get_device_with_config(
+    device_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    device = crud.devices.get_device(db=db, device_id=device_id, user_id=current_user.id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    return device
