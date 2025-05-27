@@ -5,6 +5,7 @@ import { MainLayout } from "@/components/layouts/MainLayout";
 import { PageWrapper } from "@/components/layouts/PageWrapper";
 import { API_ROUTES } from "@/config/apiRoutes";
 import axios from "axios";
+import { Button } from "@/components/ui/button"; // ✅ AÑADIDO
 
 export default function DeviceConfig() {
   const { deviceId } = useParams();
@@ -35,27 +36,26 @@ export default function DeviceConfig() {
   }, [deviceId]);
 
   const [refreshing, setRefreshing] = useState(false);
-const [lastSummary, setLastSummary] = useState(null);
+  const [lastSummary, setLastSummary] = useState(null);
 
-const handleMatchRefresh = () => {
-  setRefreshing(true);
-  axios.post(API_ROUTES.DEVICES.MATCH_REFRESH(deviceId), {}, { withCredentials: true })
-    .then(res => {
-      setLastSummary(res.data);
-      return axios.get(API_ROUTES.DEVICES.DEVICE_MATCHES(deviceId), { withCredentials: true });
-    })
-    .then(res => {
-      const grouped = {};
-      for (const m of res.data) {
-        if (!grouped[m.device_config_id]) grouped[m.device_config_id] = [];
-        grouped[m.device_config_id].push(m);
-      }
-      setMatches(grouped);
-    })
-    .catch(err => console.error("Error actualizando matches:", err))
-    .finally(() => setRefreshing(false));
-};
-
+  const handleMatchRefresh = () => {
+    setRefreshing(true);
+    axios.post(API_ROUTES.DEVICES.MATCH_REFRESH(deviceId), {}, { withCredentials: true })
+      .then(res => {
+        setLastSummary(res.data);
+        return axios.get(API_ROUTES.DEVICES.DEVICE_MATCHES(deviceId), { withCredentials: true });
+      })
+      .then(res => {
+        const grouped = {};
+        for (const m of res.data) {
+          if (!grouped[m.device_config_id]) grouped[m.device_config_id] = [];
+          grouped[m.device_config_id].push(m);
+        }
+        setMatches(grouped);
+      })
+      .catch(err => console.error("Error actualizando matches:", err))
+      .finally(() => setRefreshing(false));
+  };
 
   const grouped = { o: [], h: [], a: [] };
   if (device?.config) {
@@ -80,14 +80,11 @@ const handleMatchRefresh = () => {
           <>
             <div className="flex justify-between items-center mb-4">
               <h1 className="text-2xl font-bold">{device.alias}</h1>
-              <button
-                className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm"
-                onClick={handleMatchRefresh}
-                disabled={refreshing}
-              >
-                {refreshing ? "Analizando..." : "Iniciar análisis de coincidencias"}
-              </button>
+              <Button onClick={handleMatchRefresh} disabled={refreshing}>
+                {refreshing ? "Analizando..." : "Iniciar Matching"}
+              </Button>
             </div>
+
             {lastSummary && (
               <p className="text-sm text-muted-foreground mb-2">
                 {lastSummary.matched} de {lastSummary.total_configs} elementos con coincidencias ({lastSummary.match_percentage}%)
@@ -107,23 +104,27 @@ const handleMatchRefresh = () => {
                       const configMatches = matches[item.id] || [];
                       const isOpen = expanded[item.id];
 
+                      // Obtener CVEs únicos
+                      const uniqueCves = [...new Set(configMatches.map(m => m.cve_name))];
+
                       return (
                         <li key={idx} className="border p-3 rounded-xl">
                           <div className="flex justify-between items-center">
                             <span><strong>{item.vendor}</strong> - {item.product} {item.version && <> (v{item.version})</>}</span>
                             {configMatches.length > 0 && (
-                              <button
-                                className="text-sm text-blue-500 underline"
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => toggleExpand(item.id)}
                               >
                                 {isOpen ? "Ocultar matches" : "Mostrar matches"}
-                              </button>
+                              </Button>
                             )}
                           </div>
                           {isOpen && (
                             <ul className="mt-2 pl-4 text-sm text-muted-foreground space-y-1">
-                              {configMatches.map((m, i) => (
-                                <li key={i}>• <strong>{m.cve_name}</strong> → {m.cpe_uri}</li>
+                              {uniqueCves.map((cve, i) => (
+                                <li key={i}>• <strong>{cve}</strong></li>
                               ))}
                             </ul>
                           )}

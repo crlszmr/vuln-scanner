@@ -5,7 +5,6 @@ import { APP_ROUTES } from '@/config/appRoutes';
 import { theme } from '@/styles/theme';
 import { Button } from '@/components/ui/Button';
 
-
 const Navbar = () => {
   const { user, logout } = useAuth();
 
@@ -44,14 +43,19 @@ const Navbar = () => {
               </Link>
             )}
             {user.role === 'user' && (
-              <Link to="/devices/upload" style={{ color: theme.colors.text, textDecoration: 'none' }}>
-                Subir equipo
-              </Link>
-    )}
+              <>
+                <Link to="/devices/upload" style={{ color: theme.colors.text, textDecoration: 'none' }}>
+                  Subir equipo
+                </Link>
+                <Link to="/devices/list" style={{ color: theme.colors.text, textDecoration: 'none' }}>
+                  Mis equipos
+                </Link>
+              </>
+            )}
 
-        <Button onClick={logout}>
-          Logout
-        </Button>
+            <Button onClick={logout}>
+              Logout
+            </Button>
           </>
         )}
       </div>
