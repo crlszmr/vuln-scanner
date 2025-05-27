@@ -19,6 +19,8 @@ import NotificationContainer from "@/components/ui/NotificationContainer";
 import CVEManagement from "@/pages/CVEManagement";
 import DeviceMatchPlatforms from '@/pages/DeviceMatchPlatforms';
 import Dashboard from '@/pages/Dashboard';
+import DevicesList from '@/pages/DevicesList';
+
 
 
 
@@ -88,6 +90,7 @@ function App() {
             <Route path={APP_ROUTES.NOT_AUTHORIZED} element={<NotAuthorized />} />
             <Route path={APP_ROUTES.DEVICE_UPLOAD} element={<ProtectedRoute><DeviceUpload /></ProtectedRoute>} />
             <Route path={APP_ROUTES.USER_DASHBOARD} element={<ProtectedRoute requiredRole="user"><Dashboard /></ProtectedRoute>}/>
+            <Route path={APP_ROUTES.DEVICE_LIST} element={<ProtectedRoute requiredRole="user"><DevicesList /></ProtectedRoute>}/>
             <Route path="/cpes" element={<ProtectedRoute requiredRole="admin"><CPEManagement /></ProtectedRoute>} />
             <Route path="/cves" element={<ProtectedRoute requiredRole="admin"><CVEManagement /></ProtectedRoute>} />
             <Route path="/devices/:deviceId/match-platforms" element={<DeviceMatchPlatforms />} />

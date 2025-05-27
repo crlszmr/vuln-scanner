@@ -19,5 +19,7 @@ export const API_ROUTES = {
   },
   DEVICES: {
     UPLOAD: `${API_BASE_URL}/devices/`,
+    MY_DEVICES: `${API_BASE_URL}/devices/me`,
+    DEVICE_CONFIG: (id) => `${API_BASE_URL}/devices/${id}/config`,
   },
 };

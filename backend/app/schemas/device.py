@@ -38,7 +38,7 @@ class DeviceCreate(DeviceBase):
 class Device(DeviceBase):
     id: int
     created_at: datetime
-    configs: List[DeviceConfig] = []
+    config: List[DeviceConfig] = []
 
-    class Config:
-        from_attributes = True
+class Config:
+    from_attributes = True

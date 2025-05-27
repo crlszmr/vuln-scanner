@@ -7,6 +7,7 @@ import json
 import app.crud.devices_config as crud_device_configs
 from app.models.user import User
 from app.services.matching_service import match_platforms_for_device
+from typing import List
 
 
 
@@ -63,3 +64,10 @@ def match_platforms(device_id: int, db: Session = Depends(get_db)):
     if not results:
         raise HTTPException(status_code=404, detail="Device config not found for this device.")
     return results
+
+@router.get("/devices/me", response_model=List[schemas.Device])
+def read_my_devices(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return crud.devices.get_devices_by_user(db=db, user_id=current_user.id)
