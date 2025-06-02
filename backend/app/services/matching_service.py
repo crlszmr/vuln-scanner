@@ -17,7 +17,7 @@ INVALID_SW = {
     "linux", "android", "ios", "mac", "macos", "unix",
     "ibm_zos", "solaris", "openbsd", "freebsd", "netbsd",
     "hpux", "aix", "vxworks", "rtos", "tizen", "watchos",
-    "tvos", "esx", "chromeos", "qnx"
+    "tvos", "esx", "chromeos", "qnx", "iphone_os"
 }
 
 def normalize_separators(text: str) -> str:

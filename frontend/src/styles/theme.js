@@ -1,3 +1,5 @@
+import { warning } from "framer-motion";
+
 // src/styles/theme.js
 export const theme = {
   colors: {
@@ -9,6 +11,8 @@ export const theme = {
     success: '#22c55e',        // verde éxito
     error: '#ef4444',          // rojo error
     accent: '#6366f1',         // azul violáceo para elementos especiales
+    warning: '#e7971d',        // amarillo para advertencias
+    darkGreen: '#006400',        // amarillo para advertencias
   },
   radius: {
     sm: '8px',
