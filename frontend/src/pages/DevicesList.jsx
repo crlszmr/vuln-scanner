@@ -188,13 +188,14 @@ export default function DevicesList() {
                       </Button>
                       <Button
                         width="120px"
-                        onClick={() => navigate(APP_ROUTES.DEVICE_VULNERABILITIES(device.id))}
+                        onClick={() => navigate(`/devices/${device.id}/vulnerabilities/overview`)}
                         hoverEffect="brightness"
                         variant="warning"
                         style={{ padding: "6px 10px", fontSize: "13px" }}
                       >
                         Vulns
                       </Button>
+
                     </div>
                   </div>
                 </motion.div>

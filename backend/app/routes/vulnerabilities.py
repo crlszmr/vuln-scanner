@@ -11,6 +11,7 @@ from app.schemas import VulnerabilityCreate, VulnerabilityResponse, Vulnerabilit
 from app.config.translations import get_message
 from app.config.endpoints import *
 
+
 router = APIRouter(prefix=VULNERABILITIES_BASE, tags=["vulnerabilities"])
 
 

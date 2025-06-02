@@ -12,6 +12,11 @@ from app.models.device_match import DeviceMatch
 from app.models.device_config import DeviceConfig
 from sse_starlette.sse import EventSourceResponse
 import asyncio
+from app.models.device_match import DeviceMatch
+from app.models.device_config import DeviceConfig
+from sqlalchemy import func
+from app.models.vulnerability import Vulnerability
+
 
 
 
@@ -150,3 +155,39 @@ async def match_platforms_with_progress(
         yield {"event": "message", "data": "[DONE]"}
 
     return EventSourceResponse(event_generator())
+@router.get("/devices/{device_id}/vulnerabilities")
+def get_vulnerabilities_by_severity(device_id: int, severity: str = None, db: Session = Depends(get_db)):
+    query = (
+        db.query(Vulnerability)
+        .join(DeviceMatch, Vulnerability.cve_id == DeviceMatch.cve_name)
+        .join(DeviceConfig, DeviceMatch.device_config_id == DeviceConfig.id)
+        .filter(DeviceConfig.device_id == device_id)
+    )
+    if severity:
+        if severity.upper() == "NONE":
+            query = query.filter(Vulnerability.severity.is_(None))
+        else:
+            query = query.filter(Vulnerability.severity == severity)
+
+    return query.distinct().all()
+
+
+@router.get("/devices/{device_id}/vulnerability-stats")
+def get_vulnerability_stats(device_id: int, db: Session = Depends(get_db)):
+    base_query = (
+        db.query(Vulnerability.severity, func.count(func.distinct(Vulnerability.cve_id)))
+        .join(DeviceMatch, Vulnerability.cve_id == DeviceMatch.cve_name)
+        .join(DeviceConfig, DeviceMatch.device_config_id == DeviceConfig.id)
+        .filter(DeviceConfig.device_id == device_id)
+        .group_by(Vulnerability.severity)
+    )
+    data = {sev if sev is not None else "NONE": count for sev, count in base_query.all()}
+
+    total_query = (
+        db.query(func.count(func.distinct(Vulnerability.cve_id)))
+        .join(DeviceMatch, Vulnerability.cve_id == DeviceMatch.cve_name)
+        .join(DeviceConfig, DeviceMatch.device_config_id == DeviceConfig.id)
+        .filter(DeviceConfig.device_id == device_id)
+    )
+    data["ALL"] = total_query.scalar()
+    return data

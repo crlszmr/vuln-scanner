@@ -1,34 +1,43 @@
+import { useEffect, useState } from "react";
+import axios from "axios";
 import { useParams } from "react-router-dom";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { PageWrapper } from "@/components/layouts/PageWrapper";
+import RiskCard from "@/components/RiskCard";
+import { API_ROUTES } from "@/config/apiRoutes";
 
-const severityLevels = [
-  { name: "None", range: [0.0, 0.0], color: "#64748b" },
-  { name: "Low", range: [0.1, 3.9], color: "#22c55e" },
-  { name: "Medium", range: [4.0, 6.9], color: "#eab308" },
-  { name: "High", range: [7.0, 8.9], color: "#f97316" },
-  { name: "Critical", range: [9.0, 10.0], color: "#ef4444" },
-  { name: "Todas", range: [0.0, 10.0], color: "#3b82f6" },
-];
+const SEVERITY_ORDER = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "NONE", "ALL"];
 
 export default function DeviceVulnerabilities() {
-  const { id } = useParams();
+  const { deviceId } = useParams();
+  const [stats, setStats] = useState({});
+
+  useEffect(() => {
+    axios
+      .get(API_ROUTES.VULNERABILITIES.STATS(deviceId), { withCredentials: true })
+      .then((res) => setStats(res.data))
+      .catch((err) => console.error("Error loading stats:", err));
+  }, [deviceId]);
 
   return (
     <MainLayout>
       <PageWrapper>
-        <h1 className="text-xl font-bold mb-6">Vulnerabilidades del equipo {id}</h1>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {severityLevels.map((level) => (
-            <div
-              key={level.name}
-              className="rounded-2xl p-6 text-white cursor-pointer shadow-md"
-              style={{ backgroundColor: level.color }}
-              onClick={() => alert(`Ver ${level.name} para dispositivo ${id}`)}
-            >
-              <h2 className="text-lg font-semibold">{level.name}</h2>
-              <p className="text-sm mt-2">X vulnerabilidades encontradas</p>
-            </div>
+        <div
+          style={{
+            width: "100%",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+            gap: "20px",
+            padding: "2rem",
+          }}
+        >
+          {SEVERITY_ORDER.map((level) => (
+            <RiskCard
+              key={level}
+              level={level}
+              count={stats[level] || 0}
+              deviceId={deviceId}
+            />
           ))}
         </div>
       </PageWrapper>
