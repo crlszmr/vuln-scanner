@@ -3,17 +3,22 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.vulnerability import Vulnerability
+from app.models.cve_description import CveDescription
+from app.models.cve_reference import CveReference
+from app.models.cve_cwe import CveCwe
 from app.routes.auth import get_current_user
-from app.schemas import VulnerabilityCreate, VulnerabilityResponse, VulnerabilityUpdate
+from app.schemas import VulnerabilityCreate, VulnerabilityResponse, VulnerabilityUpdate, DetailedVulnerabilityResponse
 from app.config.translations import get_message
 from app.config.endpoints import *
 
+
 router = APIRouter(prefix=VULNERABILITIES_BASE, tags=["vulnerabilities"])
+
 
 @router.get(LIST_VULNERABILITIES, response_model=list[VulnerabilityResponse])
 def get_vulnerabilities(db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
-    vulnerabilities = db.query(Vulnerability).all()
-    return vulnerabilities
+    return db.query(Vulnerability).all()
+
 
 @router.post(CREATE_VULNERABILITY, response_model=VulnerabilityResponse)
 def create_vulnerability(vuln: VulnerabilityCreate, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
@@ -22,6 +27,7 @@ def create_vulnerability(vuln: VulnerabilityCreate, db: Session = Depends(get_db
     db.commit()
     db.refresh(vulnerability)
     return vulnerability
+
 
 @router.put(UPDATE_VULNERABILITY, response_model=VulnerabilityResponse)
 def update_vulnerability(id: int, vuln_data: VulnerabilityUpdate, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
@@ -36,6 +42,7 @@ def update_vulnerability(id: int, vuln_data: VulnerabilityUpdate, db: Session = 
     db.refresh(vulnerability)
     return vulnerability
 
+
 @router.delete(DELETE_VULNERABILITY)
 def delete_vulnerability(id: int, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
     vulnerability = db.query(Vulnerability).filter(Vulnerability.id == id).first()
@@ -44,5 +51,28 @@ def delete_vulnerability(id: int, db: Session = Depends(get_db), user: dict = De
 
     db.delete(vulnerability)
     db.commit()
-
     return {"message": get_message("vuln_deleted", "en")}
+
+
+# ✅ NUEVO ENDPOINT: Obtener detalles completos por cve_id
+@router.get("/{cve_id}", response_model=DetailedVulnerabilityResponse)
+def get_vulnerability_detail(cve_id: str, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
+    vuln = db.query(Vulnerability).filter(Vulnerability.cve_id == cve_id).first()
+    if not vuln:
+        raise HTTPException(status_code=404, detail=f"Vulnerability {cve_id} not found")
+
+    # Buscar por vulnerabilidad.id (clave primaria entera)
+    descripcion_es = db.query(CveDescription).filter_by(cve_id=vuln.id, lang="es").first()
+    descripcion_en = db.query(CveDescription).filter_by(cve_id=vuln.id, lang="en").first()
+
+    descripcion_final = descripcion_es if descripcion_es else (descripcion_en if descripcion_en else None)
+
+    references = db.query(CveReference).filter_by(cve_id=vuln.id).all()
+    cwes = db.query(CveCwe).filter_by(cve_name=vuln.cve_id).all()  # esta tabla sí usa cve_id directamente
+
+    return {
+        **vuln.__dict__,
+        "descripcion": descripcion_final.value if descripcion_final else None,
+        "references": [{"url": r.url} for r in references],
+        "cwe": [c.cwe_id for c in cwes],
+    }

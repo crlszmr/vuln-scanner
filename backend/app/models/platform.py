@@ -10,6 +10,9 @@ class Platform(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     cpe_uri = Column(String, unique=True, index=True)  # cpe.cpeName
+    vendor = Column(String, index=True)
+    product = Column(String, index=True)
+    version = Column(String, index=True)
     deprecated = Column(Boolean, default=False)         # deprecated
     imported_at = Column(DateTime, default=datetime.utcnow)
 

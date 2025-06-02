@@ -17,7 +17,14 @@ import CPEManagement from "@/pages/CPEManagement";
 import { NotificationProvider } from "@/context/NotificationContext";
 import NotificationContainer from "@/components/ui/NotificationContainer";
 import CVEManagement from "@/pages/CVEManagement";
-
+import DeviceMatchPlatforms from '@/pages/DeviceMatchPlatforms';
+import Dashboard from '@/pages/Dashboard';
+import DevicesList from '@/pages/DevicesList';
+import DeviceConfig from '@/pages/DeviceConfig';
+import VulnerabilityDetails from "@/pages/VulnerabilityDetails";
+import DeviceMatching from './pages/DeviceMatching';
+import DeviceVulnerabilities from './pages/DeviceVulnerabilities';
+import DeviceVulnerabilitiesList from "@/pages/DeviceVulnerabilitiesList";
 
 function Vulnerabilities() {
   const { token } = useAuth();
@@ -76,16 +83,31 @@ function App() {
           <Navbar />
           <main style={{ flexGrow: 1, backgroundColor: theme.colors.background, color: theme.colors.text }}>
             <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path={APP_ROUTES.LOGIN} element={<LoginForm />} />
-            <Route path={APP_ROUTES.REGISTER} element={<RegisterForm />} />
-            <Route path={APP_ROUTES.VULNERABILITY_LIST} element={<ProtectedRoute><Vulnerabilities /></ProtectedRoute>} />
-            <Route path={APP_ROUTES.ADMIN_DASHBOARD} element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
-            <Route path={APP_ROUTES.NOT_AUTHORIZED} element={<NotAuthorized />} />
-            <Route path={APP_ROUTES.DEVICE_UPLOAD} element={<ProtectedRoute><DeviceUpload /></ProtectedRoute>} />
-            <Route path="/cpes" element={<ProtectedRoute requiredRole="admin"><CPEManagement /></ProtectedRoute>} />
-            <Route path="/cves" element={<ProtectedRoute requiredRole="admin"><CVEManagement /></ProtectedRoute>} />
-            <Route path="*" element={<Navigate to="/" />} />
+              <Route path="/" element={<Home />} />
+              <Route path={APP_ROUTES.LOGIN} element={<LoginForm />} />
+              <Route path={APP_ROUTES.REGISTER} element={<RegisterForm />} />
+              <Route path={APP_ROUTES.VULNERABILITY_LIST} element={<ProtectedRoute><Vulnerabilities /></ProtectedRoute>} />
+              <Route path={APP_ROUTES.ADMIN_DASHBOARD} element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
+              <Route path={APP_ROUTES.NOT_AUTHORIZED} element={<NotAuthorized />} />
+              <Route path={APP_ROUTES.DEVICE_UPLOAD} element={<ProtectedRoute><DeviceUpload /></ProtectedRoute>} />
+              <Route path={APP_ROUTES.USER_DASHBOARD} element={<ProtectedRoute requiredRole="user"><Dashboard /></ProtectedRoute>} />
+              <Route path={APP_ROUTES.DEVICE_LIST} element={<ProtectedRoute requiredRole="user"><DevicesList /></ProtectedRoute>} />
+              <Route path="/devices/:deviceId/config" element={<ProtectedRoute requiredRole="user"><DeviceConfig /></ProtectedRoute>} />
+              <Route path="/cpes" element={<ProtectedRoute requiredRole="admin"><CPEManagement /></ProtectedRoute>} />
+              <Route path="/cves" element={<ProtectedRoute requiredRole="admin"><CVEManagement /></ProtectedRoute>} />
+              <Route path="/devices/:deviceId/match-platforms" element={<DeviceMatchPlatforms />} />
+              <Route path="/devices/:id/matching" element={<DeviceMatching />} />
+
+              {/* 📊 Vistas de vulnerabilidades */}
+              <Route path="/devices/:deviceId/vulnerabilities/overview" element={<ProtectedRoute requiredRole="user"><DeviceVulnerabilities /></ProtectedRoute>} />
+              <Route path="/devices/:deviceId/vulnerabilities" element={<ProtectedRoute requiredRole="user"><DeviceVulnerabilitiesList /></ProtectedRoute>} />
+              <Route path="/devices/:deviceId/vulnerabilities/:severity" element={<ProtectedRoute requiredRole="user"><DeviceVulnerabilitiesList /></ProtectedRoute>} />
+
+              {/* Detalles CVE */}
+              <Route path="/vulnerabilities/:cveId" element={<ProtectedRoute><VulnerabilityDetails /></ProtectedRoute>} />
+
+              {/* Catch-all */}
+              <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </main>
           <Footer />

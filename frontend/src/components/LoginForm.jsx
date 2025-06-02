@@ -40,11 +40,12 @@ export default function LoginForm() {
       
       addNotification("✅ Inicio de sesión exitoso.", "success");
       
-      // ✅ Redirigir según rol (FORZAMOS A MINÚSCULAS para que sea siempre fiable)
       if (role.toLowerCase() === 'admin') {
-          navigate(APP_ROUTES.ADMIN_DASHBOARD);
+        navigate(APP_ROUTES.ADMIN_DASHBOARD);
+      } else if (role.toLowerCase() === 'user') {
+        navigate(APP_ROUTES.USER_DASHBOARD); // ← Añadimos nueva ruta
       } else {
-          navigate(APP_ROUTES.DEVICE_UPLOAD);
+        addNotification("⚠️ Rol no reconocido. Contacta con el administrador.", "warning");
       }
 
     } catch (error) {

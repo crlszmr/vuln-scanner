@@ -2,8 +2,15 @@
 from sqlalchemy import Column, String, ForeignKey
 from app.database import Base
 
+from sqlalchemy import PrimaryKeyConstraint
+
 class CveCpe(Base):
     __tablename__ = "cve_cpe"
 
-    cve_name = Column(String, ForeignKey("vulnerabilities.cve_id", ondelete="CASCADE"), primary_key=True)
-    cpe_uri = Column(String, primary_key=True)
+    cve_name = Column(String, nullable=False)
+    cpe_uri = Column(String, nullable=False)
+    # otros campos...
+
+    __table_args__ = (
+        PrimaryKeyConstraint("cve_name", "cpe_uri"),
+    )

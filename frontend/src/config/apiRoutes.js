@@ -7,6 +7,8 @@ export const API_ROUTES = {
   },
   VULNERABILITIES: {
     LIST: `${API_BASE_URL}/vulnerabilities/list`,
+    DETAIL: (cveId) => `${API_BASE_URL}/vulnerabilities/${cveId}`,  // ✅ Añadido
+    STATS: (deviceId) => `${API_BASE_URL}/devices/${deviceId}/vulnerability-stats`,
   },
   NVD: {
     IMPORT_VULNERABILITIES: `${API_BASE_URL}/nvd/cve-import-all`,
@@ -19,5 +21,10 @@ export const API_ROUTES = {
   },
   DEVICES: {
     UPLOAD: `${API_BASE_URL}/devices/`,
+    MY_DEVICES: `${API_BASE_URL}/devices/me`,
+    DEVICE_CONFIG: (id) => `${API_BASE_URL}/devices/${id}/config`,
+    DEVICE_MATCHES: (deviceId) => `${API_BASE_URL}/devices/${deviceId}/matches`,
+    MATCH_REFRESH: (deviceId) => `${API_BASE_URL}/devices/${deviceId}/match-platforms/refresh`,
+    MATCH_PROGRESS: (id) => `${API_BASE_URL}/devices/${id}/match-platforms/progress`,
   },
 };

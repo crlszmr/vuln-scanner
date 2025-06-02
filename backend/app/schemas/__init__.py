@@ -4,3 +4,5 @@ from .vulnerability import VulnerabilityCreate, VulnerabilityUpdate, Vulnerabili
 from .platform import PlatformCreate, PlatformResponse
 from .cpe_deprecated_by import CpeDeprecatedBy, CpeDeprecatedByCreate
 from .device import DeviceCreate, Device, DeviceBase, DeviceConfig, DeviceConfigCreate
+from .vulnerability import DetailedVulnerabilityResponse
+
