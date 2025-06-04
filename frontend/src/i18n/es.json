@@ -41,5 +41,34 @@
     "email_too_long": "El correo electrónico no puede superar los 254 caracteres.",
     "password_too_long": "La contraseña no puede superar los 128 caracteres.",
     "error_generic": "Algo salió mal. Por favor, inténtalo de nuevo."
+  },
+  "dashboard": {
+    "title": "Cuadro de Mando",
+    "subtitle": "Elige lo que quieres hacer",
+    "my_devices": "Mis equipos",
+    "config_detector": "Detector de configuración"
+  },
+  "navbar": {
+    "login": "Iniciar sesión",
+    "register": "Registrarse",
+    "dashboard": "Cuadro de Mando",
+    "admin_panel": "Panel Admin",
+    "logout": "Cerrar sesión"
+  },
+  "home": {
+    "title": "Bienvenido a VulnScanner",
+    "description": "Gestiona, importa y analiza vulnerabilidades de software de forma sencilla. Una plataforma profesional para administradores IT y expertos en ciberseguridad.",
+    "get_started": "Empezar"
+  },
+  "admin": {
+    "title": "Panel de Administración",
+    "subtitle": "Gestiona la importación y configuración de datos del sistema.",
+    "cve_button": "Importar Vulnerabilidades (CVEs)",
+    "cpe_button": "Gestión de Plataformas (CPEs)",
+    "cwe_button": "Importar Debilidades (CWEs)",
+    "import_start": "Iniciando importación...",
+    "import_success": "Importación correcta",
+    "import_error": "Error en la importación"
   }
+
 }
