@@ -6,8 +6,15 @@
     "email": "Email",
     "password": "Password",
     "confirm_password": "Confirm Password",
-    "button": "Create Account",
+    "button": "Sign up",
     "username_taken": "Username is already taken"
+  },
+  "login": {
+    "title": "Login",
+    "subtitle": "Enter your credentials to access your security dashboard.",
+    "email": "Email",
+    "password": "Password",
+    "button": "Sign in"
   },
   "messages": {
     "user_created": "User created successfully",
@@ -27,6 +34,12 @@
       "At least one digit",
       "At least one special character (!@#$%^&*()_+-=[]{};':\"\\|,.<>/?~)"
     ],
+    "login_success": "Login successful.",
+    "login_failed": "Incorrect username or password.",
+    "role_unknown": "Unknown role. Please contact the administrator.",
+    "connection_error": "Could not connect to the server.",
+    "email_too_long": "Email cannot exceed 254 characters.",
+    "password_too_long": "Password cannot exceed 128 characters.",
     "error_generic": "Something went wrong. Please try again."
   }
 }

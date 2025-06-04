@@ -200,9 +200,11 @@ function RegisterForm() {
                 onChange={(e) => setConfirm(e.target.value)}
                 style={inputStyle}
               />
-              <Button type="submit" variant="success" fullWidth>
-                {t("register.button")}
-              </Button>
+              <div style={{ marginTop: "16px", display: "flex", justifyContent: "center" }}>
+                <Button type="submit" variant="success" style={{ width: "240px" }}>
+                  {t("register.button")}
+                </Button>
+              </div>
             </form>
           </div>
         </div>

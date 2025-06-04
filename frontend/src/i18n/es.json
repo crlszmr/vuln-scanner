@@ -9,6 +9,13 @@
     "button": "Crear Cuenta",
     "username_taken": "El nombre de usuario ya está en uso"
   },
+  "login": {
+    "title": "Iniciar Sesión",
+    "subtitle": "Introduce tus credenciales para acceder a tu panel de seguridad.",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "button": "Entrar"
+  },
   "messages": {
     "user_created": "Usuario creado correctamente",
     "username_required": "El nombre de usuario es obligatorio",
@@ -27,6 +34,12 @@
       "Al menos un número",
       "Al menos un símbolo (!@#$%^&*()_+-=[]{};':\"\\|,.<>/?~)"
     ],
+    "login_success": "Inicio de sesión exitoso.",
+    "login_failed": "Usuario o contraseña incorrectos.",
+    "role_unknown": "Rol no reconocido. Contacta con el administrador.",
+    "connection_error": "No se pudo conectar al servidor.",
+    "email_too_long": "El correo electrónico no puede superar los 254 caracteres.",
+    "password_too_long": "La contraseña no puede superar los 128 caracteres.",
     "error_generic": "Algo salió mal. Por favor, inténtalo de nuevo."
   }
 }
