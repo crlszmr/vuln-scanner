@@ -1,45 +1,61 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { theme } from '@/styles/theme';
+import { X } from 'lucide-react';
+import { useNotification } from '@/context/NotificationContext';
 
-export function Toast({ message, type = 'success', isVisible }) {
+export function Toast({ id, message, type = 'success' }) {
+  const { removeNotification } = useNotification();
+
   const getBackground = () => {
     switch (type) {
-      case 'success':
-        return theme.colors.success;
-      case 'error':
-        return theme.colors.error;
-      case 'warning':
-        return theme.colors.accent;
-      default:
-        return theme.colors.primary;
+      case 'success': return '#bbf7d0';
+      case 'error': return '#fecaca';
+      case 'warning': return '#fef08a';
+      default: return '#bfdbfe';
     }
   };
 
+  const getTextColor = () => '#1e293b';
+
   return (
-    <AnimatePresence>
-      {isVisible && (
-        <motion.div
-          initial={{ opacity: 0, y: -40 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -40 }}
-          transition={{ duration: 0.4, ease: 'easeOut' }}
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={id}
+        initial={{ opacity: 0, y: -40 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -40 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        style={{
+          position: 'relative',
+          backgroundColor: getBackground(),
+          color: getTextColor(),
+          padding: '16px 24px',
+          borderRadius: '12px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+          fontSize: '16px',
+          zIndex: 1200,
+          fontFamily: 'system-ui, sans-serif',
+          minWidth: '260px',
+          maxWidth: '400px',
+          overflow: 'hidden',
+        }}
+      >
+        <button
+          onClick={() => removeNotification(id)}
           style={{
-            position: 'fixed',
-            top: '20px',
-            right: '20px',
-            backgroundColor: getBackground(),
-            color: '#fff',
-            padding: '14px 24px',
-            borderRadius: theme.radius.md,
-            boxShadow: theme.shadow.soft,
-            fontSize: '16px',
-            zIndex: 1200,
-            fontFamily: theme.font.family,
+            position: 'absolute',
+            top: 8,
+            right: 10,
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            color: getTextColor(),
           }}
+          aria-label="Cerrar"
         >
-          {message}
-        </motion.div>
-      )}
+          <X size={16} />
+        </button>
+        <div>{message}</div>
+      </motion.div>
     </AnimatePresence>
   );
 }

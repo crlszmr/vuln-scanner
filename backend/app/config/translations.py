@@ -20,6 +20,15 @@ TRANSLATIONS = {
         "vuln_deleted": "Vulnerability deleted successfully",
         "invalid_credentials": "Invalid credentials",
         "vuln_not_found": "Vulnerability not found",
+        "username_invalid": "Username can only contain letters, numbers, hyphens, and underscores",
+        "username_length": "Username must be between 3 and 20 characters",
+        "password_required": "Password is required",
+        "password_length": "Password must be at least 8 characters long",
+        "password_upper": "Password must contain at least one uppercase letter",
+        "password_lower": "Password must contain at least one lowercase letter",
+        "password_digit": "Password must contain at least one digit",
+        "password_symbol": "Password must contain at least one special character (!@#$%^&*()_+-=[]{};':\"\\|,.<>/?~)",
+        "email_invalid": "Invalid email format",
     },
     "es": {
         "user_created": "Usuario creado correctamente",
@@ -41,6 +50,15 @@ TRANSLATIONS = {
         "vuln_deleted": "Vulnerabilidad eliminada correctamente",
         "invalid_credentials": "Credenciales erróneas",
         "vuln_not_found": "Vulnerabilidad no encontrada",
+        "username_invalid": "El nombre de usuario solo puede contener letras, números, guiones y guiones bajos",
+        "username_length": "El nombre de usuario debe tener entre 3 y 20 caracteres",
+        "password_required": "La contraseña es obligatoria",
+        "password_length": "La contraseña debe tener al menos 8 caracteres",
+        "password_upper": "La contraseña debe contener al menos una letra mayúscula",
+        "password_lower": "La contraseña debe contener al menos una letra minúscula",
+        "password_digit": "La contraseña debe contener al menos un número",
+        "password_symbol": "La contraseña debe contener al menos un símbolo (!@#$%^&*()_+-=[]{};':\"\\|,.<>/?~)",
+        "email_invalid": "El formato del correo electrónico no es válido",
     }
 }
 

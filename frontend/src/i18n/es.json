@@ -1,12 +1,32 @@
 {
-    "login": {
-      "title": "Iniciar sesión",
-      "email": "Correo electrónico",
-      "password": "Contraseña",
-      "button": "Entrar",
-      "invalidCredentials": "Credenciales no válidas",
-      "error": "Error al iniciar sesión",
-      "success": "¡Sesión iniciada! Token guardado."
-    }
+  "register": {
+    "title": "Crear Cuenta",
+    "subtitle": "Protege tus sistemas con inteligencia: registra tu cuenta y analiza vulnerabilidades en segundos.",
+    "username": "Nombre de usuario",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "confirm_password": "Confirmar contraseña",
+    "button": "Crear Cuenta",
+    "username_taken": "El nombre de usuario ya está en uso"
+  },
+  "messages": {
+    "user_created": "Usuario creado correctamente",
+    "username_required": "El nombre de usuario es obligatorio",
+    "username_invalid": "El nombre de usuario debe ser una cadena de entre 3 y 20 caracteres compuesta por letras, números, guiones o guiones bajos",
+    "username_already_taken": "El nombre de usuario ya está en uso",
+    "email_required": "El correo electrónico es obligatorio",
+    "email_invalid": "El correo electrónico no tiene un formato válido",
+    "email_already_taken": "El correo electrónico ya está registrado",
+    "password_required": "La contraseña es obligatoria",
+    "password_mismatch": "Las contraseñas no coinciden",
+    "password_invalid": "La contraseña debe cumplir con los siguientes requisitos:",
+    "password_rules_list": [
+      "Al menos 8 caracteres",
+      "Al menos una letra mayúscula",
+      "Al menos una letra minúscula",
+      "Al menos un número",
+      "Al menos un símbolo (!@#$%^&*()_+-=[]{};':\"\\|,.<>/?~)"
+    ],
+    "error_generic": "Algo salió mal. Por favor, inténtalo de nuevo."
   }
-  
+}

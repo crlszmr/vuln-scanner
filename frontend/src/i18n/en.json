@@ -1,12 +1,32 @@
 {
-    "login": {
-      "title": "Login",
-      "email": "Email",
-      "password": "Password",
-      "button": "Sign In",
-      "invalidCredentials": "Invalid credentials",
-      "error": "Login failed",
-      "success": "Logged in! Token saved."
-    }
+  "register": {
+    "title": "Create Account",
+    "subtitle": "Secure your systems with intelligence: sign up and analyze vulnerabilities in seconds.",
+    "username": "Username",
+    "email": "Email",
+    "password": "Password",
+    "confirm_password": "Confirm Password",
+    "button": "Create Account",
+    "username_taken": "Username is already taken"
+  },
+  "messages": {
+    "user_created": "User created successfully",
+    "username_required": "Username is required",
+    "username_invalid": "Username must be a string between 3 and 20 characters long, containing letters, numbers, dashes, or underscores",
+    "username_already_taken": "Username is already taken",
+    "email_required": "Email is required",
+    "email_invalid": "Invalid email format",
+    "email_already_taken": "Email is already registered",
+    "password_required": "Password is required",
+    "password_mismatch": "Passwords do not match",
+    "password_invalid": "Password must meet the following requirements:",
+    "password_rules_list": [
+      "At least 8 characters",
+      "At least one uppercase letter",
+      "At least one lowercase letter",
+      "At least one digit",
+      "At least one special character (!@#$%^&*()_+-=[]{};':\"\\|,.<>/?~)"
+    ],
+    "error_generic": "Something went wrong. Please try again."
   }
-  
+}
