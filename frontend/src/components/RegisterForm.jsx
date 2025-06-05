@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { API_ROUTES } from "@/config/apiRoutes";
@@ -7,6 +7,8 @@ import { PageWrapper } from "@/components/layouts/PageWrapper";
 import { Button } from "@/components/ui/Button";
 import { useNotification } from "@/context/NotificationContext";
 import { theme } from "@/styles/theme";
+import { useAuth } from "@/context/AuthContext";
+import { APP_ROUTES } from "@/config/appRoutes";
 
 function RegisterForm() {
   // Estados locales para los campos del formulario
@@ -18,6 +20,16 @@ function RegisterForm() {
   const { addNotification } = useNotification();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Redirección si ya hay sesión iniciada
+  useEffect(() => {
+    if (user?.role === "admin") {
+      navigate(APP_ROUTES.ADMIN_DASHBOARD);
+    } else if (user?.role === "user") {
+      navigate(APP_ROUTES.USER_DASHBOARD);
+    }
+  }, [user, navigate]);
 
   // Validación de entradas antes de enviar el formulario
   const validateInputs = () => {

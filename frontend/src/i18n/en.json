@@ -63,12 +63,16 @@
   "admin": {
     "title": "Admin Panel",
     "subtitle": "Manage import and configuration of system data.",
-    "cve_button": "Import Vulnerabilities (CVEs)",
-    "cpe_button": "Platform Management (CPEs)",
-    "cwe_button": "Import Weaknesses (CWEs)",
-    "import_start": "Starting import...",
-    "import_success": "Import successful",
-    "import_error": "Import failed"
+    "cve_title": "Vulnerabilities Management",
+    "cve_code": "(CVEs)",
+    "cpe_title": "Platforms Management",
+    "cpe_code": "(CPEs)",
+    "cwe_title": "Weaknesses Management",
+    "cwe_code": "(CWEs)",
+    "import_start": "Import started",
+    "import_success": "Import finished",
+    "import_error": "Import error",
+    "user_title": "User Management"
   },
   "detector": {
     "title": "Configuration Detector",

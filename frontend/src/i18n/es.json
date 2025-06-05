@@ -52,7 +52,7 @@
     "login": "Iniciar sesión",
     "register": "Registrarse",
     "dashboard": "Cuadro de Mando",
-    "admin_panel": "Panel Admin",
+    "admin_panel": "Panel de Administración",
     "logout": "Cerrar sesión"
   },
   "home": {
@@ -63,12 +63,16 @@
   "admin": {
     "title": "Panel de Administración",
     "subtitle": "Gestiona la importación y configuración de datos del sistema.",
-    "cve_button": "Importar Vulnerabilidades (CVEs)",
-    "cpe_button": "Gestión de Plataformas (CPEs)",
-    "cwe_button": "Importar Debilidades (CWEs)",
-    "import_start": "Iniciando importación...",
-    "import_success": "Importación correcta",
-    "import_error": "Error en la importación"
+    "cve_title": "Gestión de Vulnerabilidades",
+    "cve_code": "(CVEs)",
+    "cpe_title": "Gestión de Plataformas",
+    "cpe_code": "(CPEs)",
+    "cwe_title": "Gestión de Debilidades",
+    "cwe_code": "(CWEs)",
+    "import_start": "Importación iniciada",
+    "import_success": "Importación completada",
+    "import_error": "Error en la importación",
+    "user_title": "Gestión de Usuarios"
   },
   "detector": {
     "title": "Detector de configuración",

@@ -8,7 +8,7 @@ import { API_ROUTES } from "@/config/apiRoutes";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { PageWrapper } from "@/components/layouts/PageWrapper";
 import { theme } from "@/styles/theme";
-import { ShieldAlert, ServerCog, FileSearch } from "lucide-react"; // Iconos modernos
+import { ShieldAlert, ServerCog, Bug, Users } from "lucide-react";
 
 const AdminDashboard = () => {
   const { user } = useContext(AuthContext);
@@ -91,20 +91,29 @@ const AdminDashboard = () => {
           >
             <AdminPanel
               icon={<ShieldAlert size={64} />}
-              label={t("admin.cve_button")}
+              title={t("admin.cve_title")}
+              subtitle={t("admin.cve_code")}
               onClick={() => navigate("/cves")}
             />
 
             <AdminPanel
               icon={<ServerCog size={64} />}
-              label={t("admin.cpe_button")}
+              title={t("admin.cpe_title")}
+              subtitle={t("admin.cpe_code")}
               onClick={() => navigate("/cpes")}
             />
 
             <AdminPanel
-              icon={<FileSearch size={64} />}
-              label={t("admin.cwe_button")}
+              icon={<Bug size={64} />}
+              title={t("admin.cwe_title")}
+              subtitle={t("admin.cwe_code")}
               onClick={() => handleImport(API_ROUTES.NVD.IMPORT_WEAKNESSES)}
+            />
+
+            <AdminPanel
+              icon={<Users size={64} />}
+              title={t("admin.user_title")}
+              onClick={() => {}}
             />
           </div>
         </div>
@@ -114,7 +123,7 @@ const AdminDashboard = () => {
 };
 
 // Panel visual reutilizable
-function AdminPanel({ icon, label, onClick }) {
+function AdminPanel({ icon, title, subtitle, onClick }) {
   return (
     <div
       onClick={onClick}
@@ -140,7 +149,10 @@ function AdminPanel({ icon, label, onClick }) {
       }}
     >
       {icon}
-      <h3 style={{ fontSize: "1.5rem", fontWeight: "600", marginTop: "1rem" }}>{label}</h3>
+      <div style={{ textAlign: "center", lineHeight: "1.2", marginTop: "1rem" }}>
+        <div style={{ fontSize: "1.5rem", fontWeight: 600 }}>{title}</div>
+        <div style={{ fontSize: "1.5rem", fontWeight: 600 }}>{subtitle}</div>
+      </div>
     </div>
   );
 }

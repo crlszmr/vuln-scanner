@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
@@ -12,13 +12,22 @@ import { APP_ROUTES } from "@/config/appRoutes";
 import { theme } from "@/styles/theme";
 
 export default function LoginForm() {
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const { addNotification } = useNotification();
   const { t } = useTranslation();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // Redirección si ya hay sesión iniciada
+  useEffect(() => {
+    if (user?.role === "admin") {
+      navigate(APP_ROUTES.ADMIN_DASHBOARD);
+    } else if (user?.role === "user") {
+      navigate(APP_ROUTES.USER_DASHBOARD);
+    }
+  }, [user, navigate]);
 
   // Validación personalizada del formulario
   const validateInputs = () => {
