@@ -83,5 +83,28 @@
     "step2": "The configuration file 'system_config.json' will be generated in the same directory.",
     "step3_prefix": "Upload the 'system_config.json' file to VulnScanner via ",
     "step3_link": "Dashboard > My Devices > Create New Device"
+  },
+  "cve": {
+    "title": "CVE Management",
+    "import_button": "Import CVEs",
+    "from_api": "From NVD API",
+    "import_start": "🚀 Starting import from {{source}}",
+    "importing": "Importing...",
+    "file": "File",
+    "completed": "Completed.",
+    "import_success": "✅ {{count}} items successfully imported.",
+    "import_complete": "Import Completed",
+    "items_imported": "items successfully imported.",
+    "import_error": "❌ Import error: {{error}}",
+    "import_error_title": "Import Error",
+    "import_error_message": "An error occurred during the import.",
+    "connection_error": "❌ Server connection error",
+    "error_processing": "Error processing data",
+    "delete_button": "Delete CVEs",
+    "all": "All",
+    "delete_success": "✅ All CVEs have been deleted",
+    "delete_error": "❌ Error deleting CVEs: {{error}}",
+    "imported": "imported",
+    "subtitle": "Manage import and removal of vulnerabilities from official sources."
   }
 }

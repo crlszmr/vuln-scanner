@@ -83,5 +83,28 @@
     "step2": "Se genera en el mismo directorio el fichero de configuración 'system_config.json'.",
     "step3_prefix": "Sube el fichero 'system_config.json' recién generado a VulnScanner desde ",
     "step3_link": "Dashboard > Mis equipos > Crear nuevo equipo"
+  },
+  "cve": {
+    "title": "Gestión de CVEs",
+    "import_button": "Importar CVEs",
+    "from_api": "Desde la NVD API",
+    "import_start": "🚀 Iniciando importación desde {{source}}",
+    "importing": "Importando...",
+    "file": "Archivo",
+    "completed": "Completado.",
+    "import_success": "✅ {{count}} elementos importados correctamente.",
+    "import_complete": "Importación completada",
+    "items_imported": "elementos importados con éxito.",
+    "import_error": "❌ Error en la importación: {{error}}",
+    "import_error_title": "Error en la importación",
+    "import_error_message": "Ha ocurrido un error durante la importación.",
+    "connection_error": "❌ Error de conexión con el servidor",
+    "error_processing": "Error al procesar datos",
+    "delete_button": "Eliminar CVEs",
+    "all": "Todos",
+    "delete_success": "✅ Todos los CVEs han sido eliminados",
+    "delete_error": "❌ Error al eliminar los CVEs: {{error}}",
+    "imported": "importados",
+     "subtitle": "Gestiona la importación y eliminación de vulnerabilidades desde fuentes oficiales."
   }
 }
