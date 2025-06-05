@@ -69,7 +69,7 @@ export default function Dashboard() {
             <DashboardPanel
               icon={<Settings2 size={64} />}
               label={t("dashboard.config_detector")}
-              onClick={() => navigate("/devices/upload")}
+              onClick={() => navigate("/detector")}
             />
           </div>
         </div>

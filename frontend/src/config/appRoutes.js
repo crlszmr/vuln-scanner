@@ -16,4 +16,6 @@ export const APP_ROUTES = {
     `/devices/${deviceId}/vulnerabilities/${severity.toLowerCase()}`,
     
   VULNERABILITY_DETAILS: (cveId) => `/vulnerabilities/${cveId}`, // ✅ Añadido como función
+
+  DETECTOR: '/detector', // 🆕 Nueva ruta añadida
 };

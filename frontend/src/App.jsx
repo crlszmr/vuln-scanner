@@ -25,6 +25,8 @@ import VulnerabilityDetails from "@/pages/VulnerabilityDetails";
 import DeviceMatching from './pages/DeviceMatching';
 import DeviceVulnerabilities from './pages/DeviceVulnerabilities';
 import DeviceVulnerabilitiesList from "@/pages/DeviceVulnerabilitiesList";
+import Detector from "@/pages/Detector"; // 🆕
+
 
 function Vulnerabilities() {
   const { token } = useAuth();
@@ -105,6 +107,8 @@ function App() {
 
               {/* Detalles CVE */}
               <Route path="/vulnerabilities/:cveId" element={<ProtectedRoute><VulnerabilityDetails /></ProtectedRoute>} />
+
+              <Route path="/detector" element={<ProtectedRoute requiredRole="user"><Detector /></ProtectedRoute>} /> {/* 🆕 */}
 
               {/* Catch-all */}
               <Route path="*" element={<Navigate to="/" />} />

@@ -69,6 +69,15 @@
     "import_start": "Iniciando importación...",
     "import_success": "Importación correcta",
     "import_error": "Error en la importación"
+  },
+  "detector": {
+    "title": "Detector de configuración",
+    "subtitle": "Descarga y ejecuta la herramienta para generar automáticamente la configuración de tu equipo.",
+    "download_button": "Descargar ConfigDetector",
+    "instructions_title": "Después de descargar la herramienta:",
+    "step1": "Ejecuta el fichero 'ConfigDetector.exe' en tu equipo.",
+    "step2": "Se genera en el mismo directorio el fichero de configuración 'system_config.json'.",
+    "step3_prefix": "Sube el fichero 'system_config.json' recién generado a VulnScanner desde ",
+    "step3_link": "Dashboard > Mis equipos > Crear nuevo equipo"
   }
-
 }

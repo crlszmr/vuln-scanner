@@ -69,5 +69,15 @@
     "import_start": "Starting import...",
     "import_success": "Import successful",
     "import_error": "Import failed"
+  },
+  "detector": {
+    "title": "Configuration Detector",
+    "subtitle": "Download and run the tool to automatically generate your system configuration.",
+    "download_button": "Download ConfigDetector",
+    "instructions_title": "After downloading the tool:",
+    "step1": "Run the 'ConfigDetector.exe' file on your computer.",
+    "step2": "The configuration file 'system_config.json' will be generated in the same directory.",
+    "step3_prefix": "Upload the 'system_config.json' file to VulnScanner via ",
+    "step3_link": "Dashboard > My Devices > Create New Device"
   }
 }
