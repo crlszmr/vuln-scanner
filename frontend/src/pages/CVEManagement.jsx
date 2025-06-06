@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNotification } from "@/context/NotificationContext";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { PageWrapper } from "@/components/layouts/PageWrapper";
 import { theme } from "@/styles/theme";
 import { CloudDownload, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import ImportProgressModal from "@/components/modals/ImportProgressModal";
 
 export default function CVEManagement() {
   const [status, setStatus] = useState("idle");
@@ -12,6 +13,9 @@ export default function CVEManagement() {
   const [total, setTotal] = useState(0);
   const [label, setLabel] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const eventSourceRef = useRef(null);
+
   const { addNotification } = useNotification();
   const { t } = useTranslation();
 
@@ -21,9 +25,11 @@ export default function CVEManagement() {
     setTotal(0);
     setLabel(labelText);
     setLoading(true);
+    setShowModal(true);
     addNotification(t("cve.import_start", { source: labelText }), "info");
 
     const eventSource = new EventSource(url);
+    eventSourceRef.current = eventSource;
 
     eventSource.onmessage = (event) => {
       try {
@@ -43,6 +49,7 @@ export default function CVEManagement() {
           setLoading(false);
           setLabel(t("cve.completed"));
           eventSource.close();
+          eventSourceRef.current = null;
           addNotification(t("cve.import_success", { count: data.imported }), "success");
         } else if (data.type === "error") {
           throw new Error(data.message || "Error inesperado");
@@ -52,6 +59,7 @@ export default function CVEManagement() {
         setLoading(false);
         setLabel(t("cve.error_processing"));
         eventSource.close();
+        eventSourceRef.current = null;
         addNotification(t("cve.import_error", { error: err.message }), "error");
       }
     };
@@ -61,6 +69,7 @@ export default function CVEManagement() {
       setLoading(false);
       setLabel(t("cve.connection_error"));
       eventSource.close();
+      eventSourceRef.current = null;
       addNotification(t("cve.connection_error"), "error");
     };
   };
@@ -83,6 +92,22 @@ export default function CVEManagement() {
         addNotification(t("cve.delete_error", { error: err.message }), "error");
       })
       .finally(() => setLoading(false));
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setStatus("idle");
+    setLabel("");
+  };
+
+  const handleStopImport = () => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+    setStatus("idle");
+    setLoading(false);
+    setLabel(t("cve.completed"));
   };
 
   return (
@@ -124,40 +149,17 @@ export default function CVEManagement() {
               onClick={handleDeleteAll}
             />
           </div>
-
-          {status === "running" && (
-            <div style={{ marginTop: "2.5rem", width: "100%", maxWidth: "400px" }}>
-              <h2 style={{ fontSize: "1.25rem", fontWeight: "bold", marginBottom: "1rem" }}>
-                {imported} / {total || "?"} {t("cve.imported")}
-              </h2>
-              <div style={{ width: "100%", backgroundColor: "#334155", borderRadius: "8px", overflow: "hidden", height: "20px" }}>
-                <div
-                  style={{
-                    width: total > 0 ? `${(imported / total) * 100}%` : "0%",
-                    backgroundColor: "#22c55e",
-                    height: "100%",
-                    transition: "width 0.3s ease"
-                  }}
-                ></div>
-              </div>
-              <p style={{ marginTop: "0.75rem", color: "#94a3b8" }}>{label}</p>
-            </div>
-          )}
-
-          {status === "finished" && (
-            <div style={{ marginTop: "2.5rem", width: "100%", maxWidth: "400px", color: "#22c55e" }}>
-              <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: "0.5rem" }}>✅ {t("cve.import_complete")}</h2>
-              <p style={{ fontSize: "1.125rem" }}>{imported} {t("cve.items_imported")}</p>
-            </div>
-          )}
-
-          {status === "error" && (
-            <div style={{ marginTop: "2.5rem", width: "100%", maxWidth: "400px", color: "#ef4444" }}>
-              <h2 style={{ fontSize: "1.25rem", fontWeight: "bold", marginBottom: "0.5rem" }}>❌ {t("cve.import_error_title")}</h2>
-              <p>{t("cve.import_error_message")}</p>
-            </div>
-          )}
         </div>
+
+        <ImportProgressModal
+          isOpen={showModal}
+          onClose={handleCloseModal}
+          onStop={handleStopImport}
+          imported={imported}
+          total={total}
+          label={label}
+          status={status}
+        />
       </PageWrapper>
     </MainLayout>
   );

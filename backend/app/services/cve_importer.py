@@ -1,6 +1,7 @@
 from sqlalchemy import select
 from .imports import *
 import os
+from sqlalchemy.dialects.postgresql import insert
 
 def parse_cves_from_feed(data: dict) -> list[tuple[VulnerabilityCreate, list[dict], list[dict], list[str], list[str]]]:
     results = []
@@ -159,40 +160,48 @@ def parse_cves_from_nvd(data: dict) -> list[tuple[VulnerabilityCreate, list[dict
 
 def save_cves_to_db(db: Session, data: list[tuple[VulnerabilityCreate, list[dict], list[dict], list[str], list[str]]]) -> int:
     imported = 0
-    cve_id_map = {}  # cve_id (str) -> id (int)
+    cve_id_map = {}
 
     all_descs, all_refs, all_cpes, all_cwes = [], [], [], []
 
-    # Paso 1: insertar Vulnerabilities una a una para obtener su ID
+    # Paso 0: obtener los CVEs ya existentes en BD
+    all_ids = [vuln_data.cve_id for vuln_data, *_ in data]
+    existing_ids = {
+        row[0] for row in db.query(Vulnerability.cve_id).filter(Vulnerability.cve_id.in_(all_ids)).all()
+    }
+
+    # Paso 1: insertar solo los nuevos CVEs
     for vuln_data, *_ in data:
+        if vuln_data.cve_id in existing_ids:
+            continue
         db_vuln = crud_vulns.create_or_update_vulnerability(db, vuln_data=vuln_data)
         cve_id_map[vuln_data.cve_id] = db_vuln.id
         imported += 1
 
-    # Paso 2: procesar el resto con los IDs ya resueltos
+    # Paso 2: procesar los demás registros vinculados
     for vuln_data, desc_dicts, ref_dicts, cpe_uris, cwe_ids in data:
         cve_name = vuln_data.cve_id
         cve_id = cve_id_map.get(cve_name)
         if not cve_id:
-            continue  # por seguridad
+            continue  # ya existía
 
         # Descripciones
         all_descs.extend([
-            {"cve_id": cve_id, "lang": d['lang'], "value": d['value']}
+            {"cve_id": cve_id, "lang": d["lang"], "value": d["value"]}
             for d in desc_dicts
         ])
 
         # Referencias únicas
         seen_refs = set()
         for r in ref_dicts:
-            key = (r['url'], cve_id)
+            key = (r["url"], cve_id)
             if key not in seen_refs:
                 seen_refs.add(key)
                 all_refs.append({
                     "cve_id": cve_id,
-                    "url": r['url'],
-                    "name": r.get('name'),
-                    "tags": r.get('tags')
+                    "url": r["url"],
+                    "name": r.get("name"),
+                    "tags": r.get("tags")
                 })
 
         # CPEs únicas
@@ -211,19 +220,32 @@ def save_cves_to_db(db: Session, data: list[tuple[VulnerabilityCreate, list[dict
                 seen_cwes.add(key)
                 all_cwes.append({"cve_name": cve_name, "cwe_id": cwe})
 
-    # Paso 3: inserción masiva optimizada
+    # Paso 3: inserciones masivas (con on_conflict para evitar duplicados)
+    from sqlalchemy.dialects.postgresql import insert
+
     if all_descs:
         db.bulk_insert_mappings(CveDescription, all_descs)
+
     if all_refs:
         db.bulk_insert_mappings(CveReference, all_refs)
+
     if all_cpes:
-        db.bulk_insert_mappings(CveCpe, all_cpes)
+        stmt = insert(CveCpe).values(all_cpes)
+        stmt = stmt.on_conflict_do_nothing(index_elements=["cve_name", "cpe_uri"])
+        db.execute(stmt)
+
     if all_cwes:
-        db.bulk_insert_mappings(CveCwe, all_cwes)
+        stmt = insert(CveCwe).values(all_cwes)
+        stmt = stmt.on_conflict_do_nothing(index_elements=["cve_name", "cwe_id"])
+        db.execute(stmt)
 
     db.commit()
     return imported
 
+
+
+def clean_text(value: str) -> str:
+    return value.replace("\n", "").replace("\r", "").strip()
 
 async def import_all_cves_stream(results_per_page=2000):
     from app.services.nvd import get_cves_by_page
@@ -238,7 +260,10 @@ async def import_all_cves_stream(results_per_page=2000):
 
     total_results = get_total_cve_count_from_nvd()
     total_pages = (total_results // results_per_page) + 1
-    yield f'{{"type": "start", "total": {total_results}}}'
+
+    event = {"type": "start", "total": total_results}
+    print("📤 Evento SSE start:", event)
+    yield json.dumps(event)
 
     try:
         while not finished and page < total_pages:
@@ -255,21 +280,25 @@ async def import_all_cves_stream(results_per_page=2000):
             else:
                 finished = True
 
-            yield json.dumps({
+            event = {
                 "type": "progress",
                 "imported": total_imported,
                 "total": total_results
-            })
+            }
+            print("📤 Evento SSE progress:", event)
+            yield json.dumps(event)
 
-            page += 1  # ✅ ESTA LÍNEA ES IMPRESCINDIBLE
-
+            page += 1
             await asyncio.sleep(0.01)
 
-
-        yield f'{{"type": "done", "imported": {total_imported}}}'
+        event = {"type": "done", "imported": total_imported}
+        print("📤 Evento SSE done:", event)
+        yield json.dumps(event)
 
     except Exception as e:
-        yield f'{{"type": "error", "message": "{str(e)}"}}'
+        event = {"type": "error", "message": clean_text(str(e))}
+        print("📤 Evento SSE error:", event)
+        yield json.dumps(event)
         db.rollback()
     finally:
         db.close()
