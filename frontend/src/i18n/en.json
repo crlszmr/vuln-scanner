@@ -105,6 +105,11 @@
     "delete_success": "✅ All CVEs have been deleted",
     "delete_error": "❌ Error deleting CVEs: {{error}}",
     "imported": "imported",
+    "checking_nvd": "Checking new CVEs availables at NVD...",
+    "no_new_cves": "DB up to date. There are no new CVEs to import.",
+    "loading_status": "Getting current import status...",
+    "loading_ids": "Getting CVE list from NVD...",
+    "aborted_by_user": "Import aborted by user",
     "subtitle": "Manage import and removal of vulnerabilities from official sources."
   }
 }

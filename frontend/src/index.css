@@ -18,8 +18,14 @@ body {
   animation: fadeIn 0.3s ease-out;
 }
 
+/* 👇 NUEVA animación para spinner */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 @layer base {
-body {
+  body {
     margin: 0;
     padding: 0;
     font-family: 'San Francisco', 'Inter', 'Helvetica Neue', Arial, sans-serif;
@@ -31,35 +37,35 @@ body {
     color: inherit;
     text-decoration: none;
   }
-  
+
   * {
     box-sizing: border-box;
   }
-  
+
   input, button, textarea, select {
     font: inherit;
   }
-  
+
   h1, h2, h3, h4, h5, h6 {
     font-weight: 600;
   }
-  
+
   .modal-enter {
     opacity: 0;
     transform: translateY(20px);
   }
-  
+
   .modal-enter-active {
     opacity: 1;
     transform: translateY(0);
     transition: opacity 0.3s ease, transform 0.3s ease;
   }
-  
+
   .modal-exit {
     opacity: 1;
     transform: translateY(0);
   }
-  
+
   .modal-exit-active {
     opacity: 0;
     transform: translateY(20px);

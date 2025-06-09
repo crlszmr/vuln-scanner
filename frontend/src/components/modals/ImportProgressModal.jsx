@@ -1,15 +1,20 @@
 import ReactDOM from "react-dom";
 import { theme } from "@/styles/theme";
+import { useTranslation } from "react-i18next";
 
 export default function ImportProgressModal({
   isOpen,
   onClose,
+  onStart,
   onStop,
   imported,
   total,
   label,
   status,
+  waitingForSSE,
+  pendingImport,
 }) {
+  const { t } = useTranslation();
   if (!isOpen) return null;
 
   const canClose = status !== "running";
@@ -31,25 +36,48 @@ export default function ImportProgressModal({
         </button>
 
         {/* Título */}
-        <h2 style={styles.title}>Importando CVEs</h2>
+        <h2 style={styles.title}>Importación de CVEs</h2>
 
-        {/* Barra */}
+        {/* Contenido */}
         <div style={styles.progressWrapper}>
-          <div style={styles.progressText}>
-            {imported} / {total || "?"} importados
-          </div>
-          <div style={styles.barOuter}>
-            <div
-              style={{
-                ...styles.barInner,
-                width: total > 0 ? `${(imported / total) * 100}%` : "0%",
-              }}
-            />
-          </div>
-          <div style={styles.statusText}>{label}</div>
+          {waitingForSSE ? (
+            <div style={styles.spinnerWrapper}>
+              <div style={styles.spinner}></div>
+              <div style={styles.statusText}>
+                {label || t("cve.loading_status")}
+              </div>
+            </div>
+          ) : status === "idle" ? (
+            <div style={styles.statusText}>{t("cve.from_api")}</div>
+          ) : status === "completed" && total === 0 ? (
+            <div style={styles.statusText}>
+              {label || t("cve.no_new_cves")}
+            </div>
+          ) : (
+            <>
+              <div style={styles.progressText}>
+                {imported} / {total} importados
+              </div>
+              <div style={styles.barOuter}>
+                <div
+                  style={{
+                    ...styles.barInner,
+                    width: total > 0 ? `${(imported / total) * 100}%` : "0%",
+                  }}
+                />
+              </div>
+              <div style={styles.statusText}>{label}</div>
+            </>
+          )}
         </div>
 
-        {/* Botón de parada */}
+        {/* Botones de acción */}
+        {(status === "idle" || pendingImport) && !waitingForSSE && (
+          <button onClick={onStart} style={styles.startButton}>
+            Iniciar
+          </button>
+        )}
+
         {status === "running" && (
           <button onClick={onStop} style={styles.stopButton}>
             Detener
@@ -69,7 +97,7 @@ const styles = {
     left: 0,
     width: "100vw",
     height: "100vh",
-    backgroundColor: "rgba(15, 23, 42, 0.8)", // fondo oscuro
+    backgroundColor: "rgba(15, 23, 42, 0.8)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -123,6 +151,17 @@ const styles = {
     marginTop: "0.75rem",
     color: "#94a3b8",
   },
+  startButton: {
+    marginTop: "2rem",
+    padding: "0.75rem 1.5rem",
+    fontSize: "1rem",
+    fontWeight: 600,
+    borderRadius: "8px",
+    backgroundColor: "#3b82f6",
+    color: "white",
+    border: "none",
+    cursor: "pointer",
+  },
   stopButton: {
     marginTop: "2rem",
     padding: "0.75rem 1.5rem",
@@ -133,5 +172,21 @@ const styles = {
     color: "white",
     border: "none",
     cursor: "pointer",
+  },
+  spinnerWrapper: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: "1.5rem",
+    gap: "1rem",
+  },
+  spinner: {
+    width: "36px",
+    height: "36px",
+    border: "4px solid #94a3b8",
+    borderTop: "4px solid #22c55e",
+    borderRadius: "50%",
+    animation: "spin 1s linear infinite",
   },
 };

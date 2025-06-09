@@ -7,7 +7,7 @@ class CveDescription(Base):
     __tablename__ = "cve_descriptions"
 
     id = Column(Integer, primary_key=True, index=True)
-    cve_id = Column(Integer, ForeignKey("vulnerabilities.id"), nullable=False)
+    cve_id = Column(Integer, ForeignKey("vulnerabilities.id", ondelete="CASCADE"), nullable=False)
     lang = Column(String, nullable=False)
     value = Column(Text, nullable=False)
 

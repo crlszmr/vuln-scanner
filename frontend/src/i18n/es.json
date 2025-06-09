@@ -105,6 +105,11 @@
     "delete_success": "✅ Todos los CVEs han sido eliminados",
     "delete_error": "❌ Error al eliminar los CVEs: {{error}}",
     "imported": "importados",
-     "subtitle": "Gestiona la importación y eliminación de vulnerabilidades desde fuentes oficiales."
+    "checking_nvd": "Comprobando si hay nuevos CVEs en la NVD...",
+    "no_new_cves": "BD actualizada. No hay nuevos CVEs en NVD para importar.",
+    "loading_status": "Obteniendo estado actual de la importación...",
+    "loading_ids": "Obteniendo lista de CVEs desde la NVD...",
+    "aborted_by_user": "Importación detenida por el usuario",
+    "subtitle": "Gestiona la importación y eliminación de vulnerabilidades desde fuentes oficiales."
   }
 }

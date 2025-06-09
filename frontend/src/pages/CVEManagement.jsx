@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNotification } from "@/context/NotificationContext";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { PageWrapper } from "@/components/layouts/PageWrapper";
@@ -14,64 +14,190 @@ export default function CVEManagement() {
   const [label, setLabel] = useState("");
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [pendingImport, setPendingImport] = useState(false);
+  const [waitingForSSE, setWaitingForSSE] = useState(false);
   const eventSourceRef = useRef(null);
 
   const { addNotification } = useNotification();
   const { t } = useTranslation();
 
-  const handleImportFromSSE = (url, labelText) => {
-    setStatus("running");
-    setImported(0);
-    setTotal(0);
-    setLabel(labelText);
-    setLoading(true);
-    setShowModal(true);
-    addNotification(t("cve.import_start", { source: labelText }), "info");
+  useEffect(() => {
+  const checkImportStatus = async () => {
+    const runningFlag = localStorage.getItem("cve_import_status");
 
-    const eventSource = new EventSource(url);
-    eventSourceRef.current = eventSource;
+    if (runningFlag === "running") {
+      setShowModal(true);
+      setStatus("running");
+      setWaitingForSSE(true);
+      setLabel(t("cve.importing"));
+    }
 
-    eventSource.onmessage = (event) => {
-      try {
+    try {
+      const res = await fetch("http://localhost:8000/nvd/cve-import-status");
+      const statusData = await res.json();
+
+      if (statusData.running) {
+        setShowModal(true);
+        setStatus("running");
+        setImported(statusData.imported || 0);
+        setTotal(statusData.total || 0);
+        setLabel(statusData.label || t("cve.importing"));
+        setWaitingForSSE(true);
+        localStorage.setItem("cve_import_status", "running");
+
+        if (!eventSourceRef.current) {
+          const eventSource = new EventSource("http://localhost:8000/nvd/cve-import-stream");
+          eventSourceRef.current = eventSource;
+
+          eventSource.onmessage = (event) => {
+            try {
+              const cleanData = event.data.startsWith("data: ") ? event.data.slice(6) : event.data;
+              const data = JSON.parse(cleanData);
+
+              if (data.type === "label") {
+                setLabel(data.label);
+                return;
+              }
+
+              if (!data.type && data.running) {
+                setLabel(data.label || t("cve.importing"));
+                setImported(data.imported || 0);
+                setTotal(data.total || 0);
+                setStatus("running");
+                return;
+              }
+
+              if (data.type === "start") {
+                setTotal(data.total || data.files || 0);
+                setLabel(data.label || t("cve.importing"));
+              } else if (data.type === "progress") {
+                setImported(data.imported);
+                setTotal(data.total || total);
+                setLabel(data.file ? `${t("cve.file")}: ${data.file}` : t("cve.importing"));
+              } else if (data.type === "done") {
+                setImported(data.imported);
+                setStatus("completed");
+                setLoading(false);
+                setLabel(data.imported === 0 ? t("cve.no_new_cves") : t("cve.completed"));
+                eventSource.close();
+                eventSourceRef.current = null;
+                localStorage.removeItem("cve_import_status");
+                addNotification(t("cve.import_success", { count: data.imported }), "success");
+              } else if (data.type === "error") {
+                throw new Error(data.message || "Error inesperado");
+              }
+
+              if (data.type) {
+                setWaitingForSSE(false);
+              }
+            } catch (err) {
+              setStatus("error");
+              setLoading(false);
+              setLabel(t("cve.error_processing"));
+              eventSource.close();
+              eventSourceRef.current = null;
+              localStorage.removeItem("cve_import_status");
+              addNotification(t("cve.import_error", { error: err.message }), "error");
+            }
+          };
+
+          eventSource.onerror = () => {
+            setWaitingForSSE(false);
+            setStatus("error");
+            setLoading(false);
+            setLabel(t("cve.connection_error"));
+            eventSource.close();
+            eventSourceRef.current = null;
+            localStorage.removeItem("cve_import_status");
+            addNotification(t("cve.connection_error"), "error");
+          };
+        }
+      }
+    } catch (err) {
+      console.error("❌ Error consultando estado de importación:", err);
+      setWaitingForSSE(false);
+    }
+  };
+
+  checkImportStatus();
+}, []);
+
+
+  const handleStartImport = async () => {
+    try {
+      setPendingImport(false);
+      localStorage.setItem("cve_import_status", "running");
+      setStatus("running");
+      setImported(0);
+      setTotal(0);
+      setLoading(true);
+      setShowModal(true);
+      setWaitingForSSE(true);
+      setLabel(t("cve.checking_nvd"));
+
+      await fetch("http://localhost:8000/nvd/cve-import-start", { method: "POST" });
+
+      const eventSource = new EventSource("http://localhost:8000/nvd/cve-import-stream");
+      eventSourceRef.current = eventSource;
+
+      eventSource.onmessage = (event) => {
         const cleanData = event.data.startsWith("data: ") ? event.data.slice(6) : event.data;
         const data = JSON.parse(cleanData);
 
+        if (data.type === "label") {
+          setLabel(data.label);
+          return;
+        }
+
+        if (!data.type && data.imported !== undefined) {
+          setImported(data.imported);
+          setTotal(data.total || total);
+          return;
+        }
+
         if (data.type === "start") {
           setTotal(data.total || data.files || 0);
-          setLabel(t("cve.importing"));
+          setLabel(data.label || t("cve.importing"));
         } else if (data.type === "progress") {
           setImported(data.imported);
           setTotal(data.total || total);
           setLabel(data.file ? `${t("cve.file")}: ${data.file}` : t("cve.importing"));
         } else if (data.type === "done") {
           setImported(data.imported);
-          setStatus("finished");
+          setStatus("completed");
           setLoading(false);
-          setLabel(t("cve.completed"));
+          setLabel(data.imported === 0 ? t("cve.no_new_cves") : t("cve.completed"));
           eventSource.close();
           eventSourceRef.current = null;
+          localStorage.removeItem("cve_import_status");
           addNotification(t("cve.import_success", { count: data.imported }), "success");
         } else if (data.type === "error") {
           throw new Error(data.message || "Error inesperado");
         }
-      } catch (err) {
+
+        if (data.type) {
+          setWaitingForSSE(false);
+        }
+      };
+
+      eventSource.onerror = () => {
+        setWaitingForSSE(false);
         setStatus("error");
         setLoading(false);
-        setLabel(t("cve.error_processing"));
+        setLabel(t("cve.connection_error"));
         eventSource.close();
         eventSourceRef.current = null;
-        addNotification(t("cve.import_error", { error: err.message }), "error");
-      }
-    };
-
-    eventSource.onerror = () => {
+        localStorage.removeItem("cve_import_status");
+        addNotification(t("cve.connection_error"), "error");
+      };
+    } catch (err) {
+      setWaitingForSSE(false);
       setStatus("error");
       setLoading(false);
-      setLabel(t("cve.connection_error"));
-      eventSource.close();
-      eventSourceRef.current = null;
-      addNotification(t("cve.connection_error"), "error");
-    };
+      setLabel(t("cve.error_starting"));
+      localStorage.removeItem("cve_import_status");
+      addNotification(t("cve.error_starting"), "error");
+    }
   };
 
   const handleDeleteAll = () => {
@@ -98,16 +224,23 @@ export default function CVEManagement() {
     setShowModal(false);
     setStatus("idle");
     setLabel("");
+    localStorage.removeItem("cve_import_status");
   };
 
-  const handleStopImport = () => {
+  const handleStopImport = async () => {
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
+
+    await fetch("http://localhost:8000/nvd/cve-import-stop", { method: "POST" });
+
     setStatus("idle");
     setLoading(false);
-    setLabel(t("cve.completed"));
+    setLabel(t("cve.aborted_by_user"));
+    setWaitingForSSE(false);  // ✅ Oculta spinner
+    setPendingImport(true);   // ✅ Vuelve a mostrar botón "Iniciar"
+    localStorage.removeItem("cve_import_status");
   };
 
   return (
@@ -138,9 +271,15 @@ export default function CVEManagement() {
               title={t("cve.import_button")}
               subtitle={t("cve.from_api")}
               color="#16a34a"
-              onClick={() => handleImportFromSSE("http://localhost:8000/nvd/cve-import-stream", t("cve.from_api"))}
+              onClick={() => {
+                setShowModal(true);
+                setStatus("idle");
+                setImported(0);
+                setTotal(0);
+                setLabel(t("cve.from_api"));
+                setPendingImport(true);
+              }}
             />
-
             <CVEPanel
               icon={<Trash2 size={64} />}
               title={t("cve.delete_button")}
@@ -154,11 +293,14 @@ export default function CVEManagement() {
         <ImportProgressModal
           isOpen={showModal}
           onClose={handleCloseModal}
+          onStart={handleStartImport}
           onStop={handleStopImport}
           imported={imported}
           total={total}
           label={label}
           status={status}
+          waitingForSSE={waitingForSSE}
+          pendingImport={pendingImport}
         />
       </PageWrapper>
     </MainLayout>
