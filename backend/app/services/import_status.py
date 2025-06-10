@@ -33,6 +33,7 @@ def get_import_status():
 
 
 def reset_status():
+    """Reinicia el estado del importador a estado 'idle' sin emitir parada."""
     _status.update({
         "running": False,
         "imported": 0,
@@ -43,7 +44,6 @@ def reset_status():
     })
     global current_task
     current_task = None
-    _stop_event.set()
 
 
 async def publish(event: dict):
@@ -60,6 +60,7 @@ def stop_import():
         current_task.cancel()
     _stop_event.set()
     _status["running"] = False
+    _status["label"] = "Importación detenida por el usuario"
 
 
 def is_running():

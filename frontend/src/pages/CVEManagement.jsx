@@ -24,70 +24,48 @@ export default function CVEManagement() {
 
   const setupEventSource = (eventSource) => {
     eventSource.onmessage = (event) => {
-      try {
-        const cleanData = event.data.startsWith("data: ") ? event.data.slice(6) : event.data;
-        const data = JSON.parse(cleanData);
+  try {
+    const cleanData = event.data.startsWith("data: ") ? event.data.slice(6) : event.data;
+    const data = JSON.parse(cleanData);
+    console.log("📥 Evento SSE recibido:", data); // 🧪 DEBUG
 
-        if (data.type === "label") {
-          setLabel(data.label);
-          setWaitingForSSE(false);
-          setShowModal(true);
-          setStatus("running");
-          setWaitingForSSE(true);
-          return;
-        }
+    if (data.type === "start") {
+      console.log("🚀 Procesando evento 'start'");
+      setStatus("running");
+      setImported(0);
+      setTotal(data.total || 0);
+      setLabel(data.label || t("cve.importing"));
+      setLoading(true);
+      setWaitingForSSE(false);
+      setShowModal(true);
+      return;
+    }
 
-        if (!data.type && data.imported !== undefined) {
-          setImported(data.imported);
-          setTotal(data.total || total);
-          return;
-        }
+    if (data.type === "progress") {
+      setStatus("running");
+      setImported(data.imported);
+      setTotal(data.total);
+      setLabel(data.file ? `${t("cve.file")}: ${data.file}` : t("cve.importing"));
+    }
 
-        if (data.type === "start") {
-          setTotal(data.total); // Ensure total is explicitly set from the start event
-          setLabel(data.label || t("cve.importing"));
-        } else if (data.type === "progress") {
-          setImported(data.imported);
-          setTotal(data.total); // Always use data.total from progress, or the initial total if not provided
-          setLabel(data.file ? `${t("cve.file")}: ${data.file}` : t("cve.importing"));
-        } else if (data.type === "done") {
-            setImported(data.imported);
-            setStatus("completed");
-            setLoading(false);
-            setLabel(data.imported === 0 ? t("cve.no_new_cves") : t("cve.completed"));
-            eventSource.close();
-            eventSourceRef.current = null;
-            localStorage.removeItem("cve_import_status");
-            addNotification(t("cve.import_success", { count: data.imported }), "success");
-        } else if (data.type === "warning") {
-            // *** CAMBIO CLAVE AQUÍ ***
-            setStatus("warning"); // Establece el status para que el modal lo lea
-            setWarningMessage(data.message || t("cve.too_many_new")); // Guarda el mensaje para el modal
-            setLabel(data.message || t("cve.too_many_new")); // También actualiza el label del modal
-            setLoading(false);
-            eventSource.close();
-            eventSourceRef.current = null;
-            localStorage.removeItem("cve_import_status");
-            // No llamar a addNotification aquí si queremos que solo aparezca en el modal
-            // La notificación en el modal ya se gestiona a través de los props
-            return;
-        } else if (data.type === "error") {
-            throw new Error(data.message || "Error inesperado");
-        }
+    if (data.type === "done") {
+      console.log("✅ Evento 'done' recibido");
+      setStatus("completed");
+      setImported(data.imported);
+      setLoading(false);
+      setLabel(data.imported === 0 ? t("cve.no_new_cves") : t("cve.completed"));
+      if (eventSourceRef.current) eventSourceRef.current.close();
+      eventSourceRef.current = null;
+      localStorage.removeItem("cve_import_status");
+      addNotification(t("cve.import_success", { count: data.imported }), "success");
+    }
 
-        if (data.type) {
-          setWaitingForSSE(false);
-        }
-      } catch (err) {
-          setStatus("error");
-          setLoading(false);
-          setLabel(t("cve.error_processing"));
-          eventSource.close();
-          eventSourceRef.current = null;
-          localStorage.removeItem("cve_import_status");
-          addNotification(t("cve.import_error", { error: err.message }), "error");
-      }
-    };
+    if (data.type) setWaitingForSSE(false);
+  } catch (err) {
+    console.error("❌ Error procesando evento:", err);
+  }
+};
+
 
     eventSource.onerror = () => {
       setWaitingForSSE(false);
@@ -147,23 +125,31 @@ export default function CVEManagement() {
 
   const handleStartImport = async () => {
     try {
+      // ✅ Reinicia por completo el estado visual
+      setStatus("idle");
+      setLabel(""); // ❗ Evita que se conserve el "Completado"
+      setWaitingForSSE(true);
       setPendingImport(false);
-      localStorage.setItem("cve_import_status", "running");
-      setStatus("running");
+      setWarningMessage("");
       setImported(0);
       setTotal(0);
-      setLoading(true);
       setShowModal(true);
-      setWaitingForSSE(true);
-      setLabel(t("cve.checking_nvd"));
-      setWarningMessage(""); // Limpiar cualquier mensaje de advertencia anterior
-      eventSourceRef.current = null; // Asegurarse de que el eventSource anterior esté cerrado
+      setLoading(true);
+      localStorage.setItem("cve_import_status", "running");
+
+
+
+
+      // 🧹 Asegúrate de cerrar cualquier SSE anterior
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
+        eventSourceRef.current = null;
       }
 
+      // 🚀 Iniciar la importación
       await fetch("http://localhost:8000/nvd/cve-import-start", { method: "POST" });
 
+      // 🔁 Conectar al nuevo SSE y esperar eventos
       const eventSource = new EventSource("http://localhost:8000/nvd/cve-import-stream");
       eventSourceRef.current = eventSource;
       setupEventSource(eventSource);
@@ -176,6 +162,7 @@ export default function CVEManagement() {
       addNotification(t("cve.error_starting"), "error");
     }
   };
+
 
   const handleDeleteAll = () => {
     setLoading(true);

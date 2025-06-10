@@ -62,7 +62,7 @@ export default function ImportProgressModal({
             </div>
           ) : status === "idle" || pendingImport ? (
             <div style={styles.statusText}>{t("cve.from_api")}</div>
-          ) : status === "completed" && total === 0 ? (
+          ) : status === "completed" && !waitingForSSE ? (
             <div style={styles.statusText}>
               {label || t("cve.no_new_cves")}
             </div>

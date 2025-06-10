@@ -279,7 +279,7 @@ async def import_all_cves_stream(results_per_page=2000):
         if existing_count == 0:
             print("📂 BD vacía. Cargando todos los CVEs desde NVD.")
             total_results = get_total_cve_count_from_nvd()
-            yield json.dumps({"type": "start", "total": total_results, "label": "Cargando todos los CVEs..."})
+            yield json.dumps({"type": "start", "total": total_results, "label": "Cargando..."})
 
             total_pages = (total_results // results_per_page) + 1# <--- esta línea es clave
 
