@@ -114,6 +114,7 @@
     "cves_imported": " CVEs imported",
     "stop_import": "Stop",
     "import_modal_title": "CVE Import",
+    "start": "Start",
     "subtitle": "Manage import and removal of vulnerabilities from official sources."
   }
 }

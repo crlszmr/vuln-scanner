@@ -245,29 +245,47 @@ def save_cves_to_db(db: Session, data: list[tuple[VulnerabilityCreate, list[dict
 def clean_text(value: str) -> str:
     return value.replace("\n", "").replace("\r", "").strip()
 
-async def import_all_cves_stream(results_per_page=2000):
-    from app.database import SessionLocal
-    from app.services.importer import parse_cves_from_nvd, save_cves_to_db # Asumo que save_cves_to_db está en 'importer'
-    from sqlalchemy import text
-    import asyncio
-    import json
-    from app.models.vulnerability import Vulnerability # Asegúrate de importar
+# app/services/cve_importer.py
 
+from sqlalchemy import select, text
+# No importamos _stop_event aquí
+# from .imports import * # Asegúrate de que esto no importe _stop_event
+import os
+from sqlalchemy.dialects.postgresql import insert
+from app.services.nvd import get_total_cve_count_from_nvd, get_all_cve_ids, get_cves_by_id, get_cves_by_page
+from datetime import datetime, timedelta
+from sqlalchemy.orm import Session
+from app.models.vulnerability import Vulnerability
+from sqlalchemy import func
+import json # Asegurarse de que json esté importado
+
+# Asegúrate de que el 't' para traducciones esté disponible si lo usas aquí,
+# o si no, usa directamente los strings.
+# Por simplicidad, voy a usar strings directos en esta versión, asumiendo que las traducciones
+# se aplican en el frontend o en un nivel superior si 't' no está disponible aquí.
+# Si 't' es una función que puedes importar o pasar, puedes mantenerla.
+# Para este ejemplo, usaré strings literales que corresponden a lo que 't' traduciría.
+
+# ... (otras funciones como parse_cves_from_nvd, save_cves_to_db, clean_text) ...
+
+async def import_all_cves_stream(results_per_page=2000):
     db = SessionLocal()
     total_imported = 0
-    EXCESSIVE_NEW_CVES_THRESHOLD = 1000 
+    EXCESSIVE_NEW_CVES_THRESHOLD = 1000
 
     try:
         existing_count = db.execute(text("SELECT COUNT(*) FROM vulnerabilities")).scalar()
 
-        # BD vacía → importación completa (sin cambios aquí)
         if existing_count == 0:
             print("📂 BD vacía. Cargando todos los CVEs desde NVD.")
             total_results = get_total_cve_count_from_nvd()
             yield json.dumps({"type": "start", "total": total_results, "label": "Cargando todos los CVEs..."})
 
-            total_pages = (total_results // results_per_page) + 1
+            total_pages = (total_results // results_per_page) + 1# <--- esta línea es clave
 
+
+            # Iterar por páginas para la importación completa
+            current_cve_count = 0 # Para llevar un conteo de CVEs procesados en la importación completa
             for page in range(total_pages):
                 start_index = page * results_per_page
                 print(f"🌍 Página {page+1}/{total_pages} (startIndex={start_index})")
@@ -275,80 +293,79 @@ async def import_all_cves_stream(results_per_page=2000):
                 vulns_data_parsed = parse_cves_from_nvd(data)
 
                 if vulns_data_parsed:
-                    imported_in_batch = save_cves_to_db(db, vulns_data_parsed)
-                    total_imported += imported_in_batch
+                    batch_size = 50
+                    for i in range(0, len(vulns_data_parsed), batch_size):
+                        sub_batch = vulns_data_parsed[i:i + batch_size]
+                        imported_in_subbatch = save_cves_to_db(db, sub_batch)
+                        total_imported += imported_in_subbatch
 
-                    yield json.dumps({
+                        yield json.dumps({
                         "type": "progress",
                         "imported": total_imported,
                         "total": total_results
-                    })
-                    await asyncio.sleep(0.001)
+                        })
+                        await asyncio.sleep(0.001)
 
-            yield json.dumps({"type": "done", "imported": total_imported})
+            yield json.dumps({"type": "done", "imported": total_imported, "label": "Importación completada."})
             print(f"✅ Carga completa finalizada: {total_imported} CVEs insertados.")
             return
 
-        # BD tiene datos → proceso incremental (tu lógica actual, pero mejorada)
+        # BD tiene datos → proceso incremental
         print("🔎 Iniciando proceso incremental (solo CVEs faltantes)...")
 
-        # Paso 1: Obtener todos los IDs de NVD (esto sigue siendo una operación pesada, pero es tu preferencia)
-        # Esto es lo que va a imprimir "Solicitando página X/149"
-        all_nvd_ids_generator = get_all_cve_ids(results_per_page=results_per_page)
-        
-        # Para evitar problemas de memoria si la lista de IDs es enorme,
-        # procesaremos los IDs en chunks para obtener los nuevos.
-        
-        # NOTA: Aunque get_all_cve_ids es un generador que cede IDs por página,
-        # para luego hacer `new_cve_ids = [cve_id for cve_id in all_cve_ids ...]`
-        # el `all_cve_ids` se construye en memoria.
-        # Si la lista de todos los CVEs es muy grande (millones), esto podría ser ineficiente en memoria.
-        # Si te encuentras con problemas de memoria, deberíamos buscar un enfoque híbrido
-        # o procesar los `page_ids` directamente.
-        
-        # Para mantener tu enfoque actual (filtrar IDs faltantes), continuaremos construyendo la lista completa
-        # Esto asume que `all_cve_ids` (la lista completa de IDs de NVD) es manejable en memoria.
+        print("Obteniendo el conteo total de CVEs en NVD y en la base de datos...")
+        nvd_total_results = get_total_cve_count_from_nvd()
+        db_total_results = db.execute(select(func.count(Vulnerability.cve_id))).scalar()
+
+        if nvd_total_results == db_total_results:
+            yield json.dumps({
+                "type": "done",
+                "imported": 0,
+                "label": "No hay nuevos CVEs que importar."
+            })
+            print("✅ No hay nuevos CVEs que importar (conteo de NVD y BD coinciden).")
+            return
+
+        # Fase 1: Descargando todos los CVE IDs de NVD para comparación
+        # El total de esta fase será el número de CVEs en NVD, no las páginas.
+        # Esto permitirá que el porcentaje refleje la descarga de los IDs individuales
+        # o el progreso general de la fase, no solo las páginas.
+        # Si get_all_cve_ids ya maneja el progreso interno y la paginación,
+        # podríamos refactorizar para que emita eventos progress directamente.
+        # Por ahora, mantendremos la estimación por páginas para el porcentaje de esta fase.
+
+        estimated_nvd_pages = (nvd_total_results // results_per_page) + (1 if nvd_total_results % results_per_page > 0 else 0)
+
+        yield json.dumps({
+            "type": "start",
+            "total": estimated_nvd_pages, # El total es el número de páginas a recorrer para obtener IDs
+            "label": "Obteniendo lista de CVEs desde NVD para comparación...",
+            "percentage": 0,
+            "stage": "fetching_ids"
+        })
+
         print("🌐 Descargando todos los CVE IDs de NVD para comparación...")
-        
-        # Recolectar todos los IDs de NVD del generador
         all_nvd_ids = []
-        for page_ids in all_nvd_ids_generator:
-            all_nvd_ids.extend(page_ids)
-            # Podrías aquí emitir un evento de progreso si quieres que el usuario vea
-            # el progreso de esta primera fase de "descarga de IDs"
-            # yield json.dumps({"type": "status", "message": f"IDs descargados: {len(all_nvd_ids)}"})
-            await asyncio.sleep(0.001) # Pequeña pausa para permitir el procesamiento de eventos
+        page_processed_count = 0
+        for page_ids_batch in get_all_cve_ids(results_per_page=results_per_page):
+            all_nvd_ids.extend(page_ids_batch)
+            page_processed_count += 1
+            
+            current_percentage = round((page_processed_count / estimated_nvd_pages) * 100) if estimated_nvd_pages > 0 else 0
+            yield json.dumps({
+                "type": "progress",
+                "imported": page_processed_count, # Los "imported" aquí son las páginas procesadas
+                "total": estimated_nvd_pages,    # El "total" aquí son las páginas totales a procesar
+                "percentage": current_percentage,
+                "label": f"Obteniendo lista de CVEs desde NVD ({current_percentage}% completado)",
+                "stage": "fetching_ids"
+            })
+            await asyncio.sleep(0.001)
 
         print(f"✅ Se han descargado {len(all_nvd_ids)} IDs de NVD.")
 
-        # Paso 2: Obtener los IDs existentes en tu base de datos
-        db_cve_ids = {
-            row[0]
-            for row in db.query(Vulnerability.cve_id)
-            .filter(Vulnerability.cve_id.in_(all_nvd_ids)) # Solo consultar los que están en la lista de NVD
-            .all()
-        }
-        
-        # Esto es más eficiente que el anterior
-        # db_cve_ids = {row[0] for row in db.execute(text("SELECT cve_id FROM vulnerabilities")).scalars()}
-        # ya que solo selecciona los IDs que NVD tiene, en lugar de todos los de la DB.
-        # Sin embargo, si la lista all_nvd_ids es muy grande, `filter(Vulnerability.cve_id.in_(all_nvd_ids))`
-        # podría generar una sentencia SQL muy larga.
+        db_cve_ids = set(db.execute(select(Vulnerability.cve_id)).scalars().all())
 
-        # Mejor enfoque para `db_cve_ids` si `all_nvd_ids` es gigante (pero para <= 1000 CVEs esto está bien):
-        # Obtener todos los IDs de la base de datos de forma paginada si es necesario,
-        # o simplemente:
-        # existing_ids_result = db.execute(select(Vulnerability.cve_id)).scalars().all()
-        # db_cve_ids = set(existing_ids_result)
-        # Esto es lo más robusto si tu DB es grande.
-
-        # Adaptando a tu código original de obtener existentes:
-        # No necesitas el `in_(all_nvd_ids)` si lo que quieres es `existing_ids` globales
-        existing_ids_result = db.execute(select(Vulnerability.cve_id)).scalars().all()
-        db_cve_ids = set(existing_ids_result)
-
-        # Paso 3: Identificar los CVEs que no están en la base de datos
-        # Convertir a mayúsculas para asegurar la comparación (tu código ya hace esto)
         new_cve_ids = [
             cve_id for cve_id in all_nvd_ids
             if cve_id.strip().upper() not in db_cve_ids
@@ -356,6 +373,11 @@ async def import_all_cves_stream(results_per_page=2000):
 
         total_to_import = len(new_cve_ids)
         print(f"📊 Se han detectado {total_to_import} CVEs nuevos para importar.")
+
+        if total_to_import == 0:
+            yield json.dumps({"type": "done", "imported": 0, "label": "No hay nuevos CVEs que importar."})
+            print("⚠️ No hay nuevos CVEs que importar (después de la comparación de IDs).")
+            return
 
         if total_to_import > EXCESSIVE_NEW_CVES_THRESHOLD:
             warning_message = (
@@ -366,54 +388,53 @@ async def import_all_cves_stream(results_per_page=2000):
             print("⚠️ IMPORTACIÓN CANCELADA: Demasiados CVEs nuevos para un incremental.")
             return
 
-        if total_to_import == 0:
-            yield json.dumps({"type": "done", "imported": 0})
-            print("⚠️ No hay nuevos CVEs que importar.")
-            return
-
+        # Fase 2: Importando los CVEs faltantes
         yield json.dumps({
             "type": "start",
-            "total": total_to_import, # <--- ¡Este es el total correcto para la barra de progreso!
-            "label": "Importando CVEs faltantes..."
+            "total": total_to_import, # El total es el número de CVEs a importar en esta fase
+            "label": "Importando CVEs faltantes...",
+            "percentage": 0,
+            "stage": "importing_cves"
         })
 
-        # Paso 4: Obtener detalles e importar los CVEs nuevos en lotes
-        # La función get_cves_by_id ahora maneja internamente lotes de 10.
-        # Aquí, tu batch_size controla cuántos CVEs nuevos pasas a `get_cves_by_id` de una vez.
-        # Puedes mantener el batch_size que tenías (e.g., 100 o 200) para tu bucle principal,
-        # ya que `get_cves_by_id` hará sub-lotes de 10.
-        
-        # Considera un `batch_size` para el bucle externo que sea un múltiplo de 10 (el batch interno de NVD)
-        # Por ejemplo, si tu batch_size aquí es 100, `get_cves_by_id` recibirá 100 IDs y hará 10 peticiones a NVD.
-        external_batch_size = 100 # Puedes ajustar esto
+        external_batch_size = 10
+        current_imported_cves_this_stage = 0 # Conteo para esta etapa específica
         
         for i in range(0, total_to_import, external_batch_size):
             batch_ids = new_cve_ids[i:i + external_batch_size]
             
-            # **DEBUGGING PRINT (opcional, para confirmar que los batches son correctos)**
-            # print(f"📤 Preparando para solicitar detalles de {len(batch_ids)} CVEs para importación: {batch_ids}")
-            
-            data_from_nvd = get_cves_by_id(batch_ids) # Esta llamada ahora es más eficiente
+            data_from_nvd = get_cves_by_id(batch_ids) 
             vulns_data_parsed = parse_cves_from_nvd(data_from_nvd)
 
-            if vulns_data_parsed:
+            if vulns_data_parsed: 
                 imported_in_batch = save_cves_to_db(db, vulns_data_parsed)
-                total_imported += imported_in_batch
+                total_imported += imported_in_batch # total_imported es el global para el final
+                current_imported_cves_this_stage += imported_in_batch # Conteo para la barra de esta etapa
 
-                yield json.dumps({
-                    "type": "progress",
-                    "imported": total_imported,
-                    "total": total_to_import
-                })
-                await asyncio.sleep(0.001)
+            current_percentage = round((current_imported_cves_this_stage / total_to_import) * 100) if total_to_import > 0 else 0
+            yield json.dumps({
+                "type": "progress",
+                "imported": current_imported_cves_this_stage, # "Imported" para esta etapa (CVEs nuevos)
+                "total": total_to_import,                     # "Total" para esta etapa (CVEs nuevos)
+                "percentage": current_percentage,
+                "label": f"Importando CVEs faltantes ({current_percentage}% completado)",
+                "stage": "importing_cves"
+            })
+            await asyncio.sleep(0.001)
 
-        yield json.dumps({"type": "done", "imported": total_imported})
-        print(f"✅ Proceso incremental finalizado: {total_imported} CVEs nuevos insertados.")
+        yield json.dumps({"type": "done", "imported": total_imported, "label": "Importación completada."})
+        
+        if total_imported == total_to_import:
+            print(f"✅ Proceso incremental finalizado: {total_imported} CVEs nuevos insertados.")
+        elif total_imported > 0: 
+            print(f"✅ Proceso incremental finalizado: {total_imported} CVEs insertados (de {total_to_import} intentados). Algunos CVEs no pudieron ser importados.")
+        else: 
+            print(f"⚠️ Proceso incremental finalizado: No se importaron CVEs. Posiblemente los CVEs identificados no tienen detalles públicos en NVD o hubo otros errores.")
 
     except Exception as e:
-        err = {"type": "error", "message": clean_text(str(e))}
-        print("❌ Error:", err)
-        yield json.dumps(err)
+        err_message = f"Error durante la importación: {str(e)}"
+        print(f"❌ Error: {err_message}")
+        yield json.dumps({"type": "error", "message": err_message})
         db.rollback()
     finally:
         db.close()

@@ -115,6 +115,7 @@
     "stop_import": "Detener",
     "of": "de",
     "import_modal_title": "Importación de CVEs",
+    "start": "Iniciar",
     "subtitle": "Gestiona la importación y eliminación de vulnerabilidades desde fuentes oficiales."
   }
 }
