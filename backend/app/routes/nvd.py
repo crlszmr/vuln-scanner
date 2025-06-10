@@ -146,7 +146,7 @@ async def launch_cve_import():
     if import_status.is_running():
         return {"message": "Importación ya en curso", "status": import_status.get_import_status()}
 
-    task = asyncio.create_task(import_status.start_background_import())
+    task = asyncio.create_task(import_status.start_background_import(import_all_cves_stream))
     import_status.set_task(task)
 
     return {"message": "Importación iniciada", "status": import_status.get_import_status()}

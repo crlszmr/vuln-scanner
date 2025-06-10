@@ -1,8 +1,8 @@
 import asyncio
 import json
 from typing import Optional
+
 from app.services.nvd import get_all_cve_ids, get_cves_by_id
-from app.services.importer import parse_cves_from_nvd, save_cves_to_db
 from app.database import SessionLocal
 from app.models.vulnerability import Vulnerability
 from app.services.nvd import get_total_cve_count_from_nvd
@@ -20,7 +20,6 @@ _event_queue: asyncio.Queue = asyncio.Queue()
 _stop_event = asyncio.Event()
 current_task: Optional[asyncio.Task] = None
 
-
 def get_import_status():
     return {
         "running": _status["running"],
@@ -31,9 +30,7 @@ def get_import_status():
         "error": _status["error"]
     }
 
-
 def reset_status():
-    """Reinicia el estado del importador a estado 'idle' sin emitir parada."""
     _status.update({
         "running": False,
         "imported": 0,
@@ -45,14 +42,15 @@ def reset_status():
     global current_task
     current_task = None
 
+def should_stop():
+    print(f"📍 should_stop() llamado desde: {__name__}, _stop_event.is_set()={_stop_event.is_set()}")
+    return _stop_event.is_set()
 
 async def publish(event: dict):
     await _event_queue.put(json.dumps(event))
 
-
 def get_event_queue():
     return _event_queue
-
 
 def stop_import():
     global current_task, _stop_event, _event_queue
@@ -65,25 +63,17 @@ def stop_import():
     _status["running"] = False
     _status["label"] = "Importación detenida por el usuario"
 
-    # Reiniciar eventos y cola para permitir reinicio limpio
-    _stop_event = asyncio.Event()
-    _event_queue = asyncio.Queue()
-
-
 def is_running():
     return current_task is not None and not current_task.done()
-
 
 def set_task(task: asyncio.Task):
     global current_task
     current_task = task
 
-
 def update_status(key: str, value):
     _status[key] = value
 
-
-async def start_background_import():
+async def start_background_import(import_function):
     global _event_queue, _stop_event
     print("🚀 Comenzando importación de CVEs en segundo plano")
     await asyncio.sleep(0)
@@ -97,9 +87,6 @@ async def start_background_import():
     _stop_event.clear()
     _event_queue = asyncio.Queue()
 
-    from app.services.importer import import_all_cves_stream
-
-    # 🔔 Emitir evento de inicio inmediato para mostrar el modal
     _status["label"] = "Obteniendo lista de CVEs desde la NVD..."
     _status["imported"] = 0
     _status["total"] = 0
@@ -110,7 +97,7 @@ async def start_background_import():
     })
 
     try:
-        async for raw_event in import_all_cves_stream(results_per_page=2000):
+        async for raw_event in import_function(results_per_page=2000):
             event = json.loads(raw_event)
 
             if _stop_event.is_set():
@@ -184,3 +171,9 @@ async def start_background_import():
             "total": _status["total"]
         })
         reset_status()
+
+    finally:
+        # ✅ Aquí sí se reinicia para futuras importaciones
+        _stop_event = asyncio.Event()
+        _event_queue = asyncio.Queue()
+

@@ -3,6 +3,9 @@ from .imports import *
 import os
 from sqlalchemy.dialects.postgresql import insert
 from app.services.nvd import get_all_cve_ids, get_total_cve_count_from_nvd, get_cves_by_id # Asegúrate de que get_cves_by_id esté aquí
+from app.services import import_status
+
+
 
 
 
@@ -286,7 +289,19 @@ async def import_all_cves_stream(results_per_page=2000):
 
             # Iterar por páginas para la importación completa
             current_cve_count = 0 # Para llevar un conteo de CVEs procesados en la importación completa
+
             for page in range(total_pages):
+                stop_flag = import_status.should_stop()
+                print(f"🧪 should_stop() en página {page + 1}: {stop_flag}")
+                if stop_flag:
+                    print("🛑 Cancelado por el usuario → saliendo del bucle de páginas")
+                    yield json.dumps({
+                        "type": "done",
+                        "imported": total_imported,
+                        "label": "Importación detenida por el usuario"
+                    })
+                    return
+
                 start_index = page * results_per_page
                 print(f"🌍 Página {page+1}/{total_pages} (startIndex={start_index})")
                 data = get_cves_by_page(start_index=start_index, results_per_page=results_per_page)
@@ -295,14 +310,25 @@ async def import_all_cves_stream(results_per_page=2000):
                 if vulns_data_parsed:
                     batch_size = 50
                     for i in range(0, len(vulns_data_parsed), batch_size):
+                        stop_flag_inner = import_status.should_stop()
+                        print(f"🧪 should_stop() en sublote de página {page + 1}: {stop_flag_inner}")
+                        if stop_flag_inner:
+                            print("🛑 Cancelado por el usuario → saliendo del sublote")
+                            yield json.dumps({
+                                "type": "done",
+                                "imported": total_imported,
+                                "label": "Importación detenida por el usuario"
+                            })
+                            return
+
                         sub_batch = vulns_data_parsed[i:i + batch_size]
                         imported_in_subbatch = save_cves_to_db(db, sub_batch)
                         total_imported += imported_in_subbatch
 
                         yield json.dumps({
-                        "type": "progress",
-                        "imported": total_imported,
-                        "total": total_results
+                            "type": "progress",
+                            "imported": total_imported,
+                            "total": total_results
                         })
                         await asyncio.sleep(0.001)
 
@@ -401,6 +427,9 @@ async def import_all_cves_stream(results_per_page=2000):
         current_imported_cves_this_stage = 0 # Conteo para esta etapa específica
         
         for i in range(0, total_to_import, external_batch_size):
+            if import_status.should_stop():
+                print("🛑 Cancelación detectada antes de procesar CVEs incrementales")
+                break
             batch_ids = new_cve_ids[i:i + external_batch_size]
             
             data_from_nvd = get_cves_by_id(batch_ids) 
