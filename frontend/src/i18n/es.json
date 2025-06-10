@@ -107,7 +107,7 @@
     "imported": "importados",
     "checking_nvd": "Comprobando si hay nuevos CVEs en la NVD...",
     "no_new_cves": "BD actualizada. No hay nuevos CVEs en NVD para importar.",
-    "loading_status": "Obteniendo estado actual de la importación...",
+    "loading_status": "Conectando con NVD...",
     "loading_ids": "Obteniendo lista de CVEs desde la NVD...",
     "aborted_by_user": "Importación detenida por el usuario",
     "too_many_new": "Hay demasiados CVEs nuevos. Por favor, elimina todos los registros existentes e importa desde cero.",
@@ -116,6 +116,7 @@
     "of": "de",
     "import_modal_title": "Importación de CVEs",
     "start": "Iniciar",
+    "fetching_ids_progress": "{{percent}}% Completado",
     "subtitle": "Gestiona la importación y eliminación de vulnerabilidades desde fuentes oficiales."
   }
 }

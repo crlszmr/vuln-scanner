@@ -55,12 +55,19 @@ def get_event_queue():
 
 
 def stop_import():
-    global current_task
+    global current_task, _stop_event, _event_queue
+    print("🛑 stop_import() → Deteniendo importación manualmente")
+
     if current_task and not current_task.done():
         current_task.cancel()
+
     _stop_event.set()
     _status["running"] = False
     _status["label"] = "Importación detenida por el usuario"
+
+    # Reiniciar eventos y cola para permitir reinicio limpio
+    _stop_event = asyncio.Event()
+    _event_queue = asyncio.Queue()
 
 
 def is_running():
@@ -77,6 +84,7 @@ def update_status(key: str, value):
 
 
 async def start_background_import():
+    global _event_queue, _stop_event
     print("🚀 Comenzando importación de CVEs en segundo plano")
     await asyncio.sleep(0)
 
@@ -87,6 +95,7 @@ async def start_background_import():
     reset_status()
     _status["running"] = True
     _stop_event.clear()
+    _event_queue = asyncio.Queue()
 
     from app.services.importer import import_all_cves_stream
 
@@ -120,18 +129,26 @@ async def start_background_import():
                 _status["imported"] = 0
                 _status["total"] = event.get("total", 0)
                 _status["label"] = event.get("label", "Importando CVEs...")
+                _status["stage"] = event.get("stage", None)
+                _status["percentage"] = event.get("percentage", None)
+
                 await publish({
                     "type": "start",
                     "total": _status["total"],
-                    "label": _status["label"]
+                    "label": _status["label"],
+                    "stage": _status["stage"],
+                    "percentage": _status["percentage"]
                 })
 
             elif event.get("type") == "progress":
                 _status["imported"] = event.get("imported", _status["imported"])
                 _status["total"] = event.get("total", _status["total"])
+                _status["label"] = event.get("label", _status["label"])
+                _status["stage"] = event.get("stage", _status.get("stage"))
+                _status["percentage"] = event.get("percentage", _status.get("percentage"))
 
-            elif event.get("type") == "warning": # Handle warning type
-                _status["running"] = False # Set running to False on warning
+            elif event.get("type") == "warning":
+                _status["running"] = False
                 _status["error"] = event.get("message")
                 await publish(event)
                 reset_status()

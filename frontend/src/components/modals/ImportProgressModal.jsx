@@ -14,6 +14,8 @@ export default function ImportProgressModal({
   waitingForSSE,
   pendingImport,
   warningMessage,
+  stage,
+  percentage,
 }) {
   const { t } = useTranslation();
   if (!isOpen) return null;
@@ -23,6 +25,7 @@ export default function ImportProgressModal({
   // Formatear números para mostrar puntos de miles
   const formattedImported = imported.toLocaleString('es-ES');
   const formattedTotal = total.toLocaleString('es-ES');
+  console.log("🧾 Modal props:", { status, stage, total, imported, label });
 
   return ReactDOM.createPortal(
     <div style={styles.backdrop}>
@@ -60,7 +63,7 @@ export default function ImportProgressModal({
                 {label || t("cve.loading_status")}
               </div>
             </div>
-          ) : status === "idle" || pendingImport ? (
+          ) : (status === "idle" || pendingImport) && !waitingForSSE ? (
             <div style={styles.statusText}>{t("cve.from_api")}</div>
           ) : status === "completed" && !waitingForSSE ? (
             <div style={styles.statusText}>
@@ -69,21 +72,42 @@ export default function ImportProgressModal({
           ) : (
             <>
               {status === "running" && (
-                <>
-                  <div style={styles.progressText}>
-                    {formattedImported} {t("cve.of")} {formattedTotal} {t("cve.cves_imported")} {/* CAMBIO AQUI */}
+              <>
+                {/* Mostrar spinner SOLO mientras no haya total disponible */}
+                {total === 0 ? (
+                  <div style={styles.spinnerWrapper}>
+                    <div style={styles.spinner}></div>
+                    <div style={styles.statusText}>{label}</div>
                   </div>
-                  <div style={styles.barOuter}>
-                    <div
-                      style={{
-                        ...styles.barInner,
-                        width: total > 0 ? `${(imported / total) * 100}%` : "0%",
-                      }}
-                    />
-                  </div>
-                </>
-              )}
-              <div style={styles.statusText}>{label}</div>
+                ) : (
+                  <>
+                    <div style={styles.progressText}>
+                      {stage === "fetching_ids"
+                        ? `${percentage}% completado`
+                        : `${formattedImported} ${t("cve.of")} ${formattedTotal} ${t("cve.cves_imported")}`}
+                    </div>
+
+                    <div style={styles.barOuter}>
+                      <div
+                        style={{
+                          ...styles.barInner,
+                          width:
+                            stage === "fetching_ids"
+                              ? `${percentage}%`
+                              : `${(imported / total) * 100}%`,
+                          transition: "width 0.5s ease" // ⬅️ transición suave opcional
+                        }}
+                      />
+                    </div>
+
+                    <div style={styles.statusText}>{label}</div>
+                  </>
+                )}
+              </>
+            )}
+
+
+
             </>
           )}
         </div>

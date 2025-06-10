@@ -316,7 +316,7 @@ async def import_all_cves_stream(results_per_page=2000):
         print("Obteniendo el conteo total de CVEs en NVD y en la base de datos...")
         nvd_total_results = get_total_cve_count_from_nvd()
         db_total_results = db.execute(select(func.count(Vulnerability.cve_id))).scalar()
-
+        print(f"📊 Conteo de NVD: {nvd_total_results}, Conteo en BD: {db_total_results}")
         if nvd_total_results == db_total_results:
             yield json.dumps({
                 "type": "done",
@@ -357,7 +357,7 @@ async def import_all_cves_stream(results_per_page=2000):
                 "imported": page_processed_count, # Los "imported" aquí son las páginas procesadas
                 "total": estimated_nvd_pages,    # El "total" aquí son las páginas totales a procesar
                 "percentage": current_percentage,
-                "label": f"Obteniendo lista de CVEs desde NVD ({current_percentage}% completado)",
+                "label": f"Obteniendo lista de CVEs desde NVD...",
                 "stage": "fetching_ids"
             })
             await asyncio.sleep(0.001)

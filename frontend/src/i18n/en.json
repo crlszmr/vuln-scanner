@@ -107,7 +107,7 @@
     "imported": "imported",
     "checking_nvd": "Checking new CVEs availables at NVD...",
     "no_new_cves": "DB up to date. There are no new CVEs to import.",
-    "loading_status": "Getting current import status...",
+    "loading_status": "Conneting to NVD...",
     "loading_ids": "Getting CVE list from NVD...",
     "aborted_by_user": "Import aborted by user",
     "cve.too_many_new": "There are too many new CVEs. Please delete all existing records and import from scratch.",
@@ -115,6 +115,7 @@
     "stop_import": "Stop",
     "import_modal_title": "CVE Import",
     "start": "Start",
+    "fetching_ids_progress": "{{percent}}% Completed",
     "subtitle": "Manage import and removal of vulnerabilities from official sources."
   }
 }
