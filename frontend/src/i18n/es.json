@@ -117,6 +117,13 @@
     "import_modal_title": "Importación de CVEs",
     "start": "Iniciar",
     "fetching_ids_progress": "{{percent}}% Completado",
+    "delete_title": "Eliminar CVEs",
+    "delete_confirmation": "Se eliminarán {{count}} CVEs presentes en la BD. ¿Deseas continuar?",
+    "confirm_delete": "Eliminar",
+    "cancel": "Cancelar",
+    "deleting_status": "Eliminando...",
+    "nothing_to_delete": "No hay CVEs en la BD para eliminar.",
+    "accept": "Aceptar",
     "subtitle": "Gestiona la importación y eliminación de vulnerabilidades desde fuentes oficiales."
   }
 }

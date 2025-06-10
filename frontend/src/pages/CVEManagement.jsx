@@ -6,6 +6,8 @@ import { theme } from "@/styles/theme";
 import { CloudDownload, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ImportProgressModal from "@/components/modals/ImportProgressModal";
+import DeleteConfirmationModal from "@/components/modals/DeleteConfirmationModal";
+
 
 export default function CVEManagement() {
   const [status, setStatus] = useState("idle");
@@ -23,6 +25,9 @@ export default function CVEManagement() {
 
   const { addNotification } = useNotification();
   const { t } = useTranslation();
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [cveCount, setCveCount] = useState(0);
 
   const setupEventSource = (eventSource) => {
     eventSource.onmessage = (event) => {
@@ -207,26 +212,38 @@ export default function CVEManagement() {
 
 
 
-  const handleDeleteAll = () => {
-    setLoading(true);
-    fetch("http://localhost:8000/nvd/cve-delete-all", { method: "DELETE" })
-      .then((res) => {
-        if (!res.ok) throw new Error("Server error");
-        return res.json();
-      })
-      .then(() => {
-        addNotification(t("cve.delete_success"), "success");
-        setStatus("idle");
-        setImported(0);
-        setTotal(0);
-        setLabel("");
-        setWarningMessage("");
-      })
-      .catch((err) => {
-        addNotification(t("cve.delete_error", { error: err.message }), "error");
-      })
-      .finally(() => setLoading(false));
+  const handleDeleteAll = async () => {
+    try {
+      const res = await fetch("http://localhost:8000/nvd/cve-count");
+      const data = await res.json();
+      setCveCount(data.count || 0);
+      setShowDeleteModal(true);
+    } catch (err) {
+      addNotification(t("cve.delete_error", { error: err.message }), "error");
+    }
   };
+
+  const handleConfirmDelete = async () => {
+  setDeleting(true);
+  try {
+    const res = await fetch("http://localhost:8000/nvd/cve-delete-all", { method: "DELETE" });
+    if (!res.ok) throw new Error("Server error");
+    addNotification(t("cve.delete_success"), "success");
+    setStatus("idle");
+    setImported(0);
+    setTotal(0);
+    setLabel("");
+    setShowDeleteModal(false);
+  } catch (err) {
+    addNotification(t("cve.delete_error", { error: err.message }), "error");
+  } finally {
+    setDeleting(false);
+  }
+};
+
+const handleCancelDelete = () => {
+  setShowDeleteModal(false);
+};
 
   const handleCloseModal = () => {
     setShowModal(false);
@@ -347,6 +364,14 @@ export default function CVEManagement() {
           warningMessage={warningMessage}
           stage={stage}            // 👈 Nuevo prop
           percentage={percentage}  // 👈 Nuevo prop
+        />
+        <DeleteConfirmationModal
+          isOpen={showDeleteModal}
+          onCancel={handleCancelDelete}
+          onConfirm={handleConfirmDelete}
+          onClose={handleCancelDelete}
+          deleting={deleting}
+          count={cveCount}
         />
       </PageWrapper>
     </MainLayout>

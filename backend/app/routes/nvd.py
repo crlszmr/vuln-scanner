@@ -23,6 +23,10 @@ from app.models.user import User
 from app.services import import_status
 import json
 import asyncio
+from sqlalchemy import text
+
+
+from app.models.vulnerability import Vulnerability
 
 router = APIRouter(prefix="/nvd", tags=["nvd"])
 
@@ -181,3 +185,25 @@ def stop_import():
     from app.services import import_status
     import_status.stop_import()
     return {"message": "Importación detenida manualmente"}
+
+@router.delete("/cve-delete-all", status_code=200)
+def delete_all_cves():
+    db = SessionLocal()
+    try:
+        db.execute(text("TRUNCATE TABLE vulnerabilities CASCADE"))
+        db.commit()
+        return {"message": "Todos los CVEs eliminados correctamente."}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al eliminar CVEs: {str(e)}")
+    finally:
+        db.close()
+
+@router.get("/cve-count")
+def cve_count():
+    db = SessionLocal()
+    try:
+        count = db.query(Vulnerability).count()
+        return {"count": count}
+    finally:
+        db.close()
