@@ -129,6 +129,13 @@ async def start_background_import():
                 _status["imported"] = event.get("imported", _status["imported"])
                 _status["total"] = event.get("total", _status["total"])
 
+            elif event.get("type") == "warning": # Handle warning type
+                _status["running"] = False # Set running to False on warning
+                _status["error"] = event.get("message")
+                await publish(event)
+                reset_status()
+                break
+
             elif event.get("type") == "done":
                 _status["running"] = False
                 _status["done"] = True

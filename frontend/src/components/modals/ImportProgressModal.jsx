@@ -13,11 +13,16 @@ export default function ImportProgressModal({
   status,
   waitingForSSE,
   pendingImport,
+  warningMessage,
 }) {
   const { t } = useTranslation();
   if (!isOpen) return null;
 
   const canClose = status !== "running";
+
+  // Formatear números para mostrar puntos de miles
+  const formattedImported = imported.toLocaleString('es-ES');
+  const formattedTotal = total.toLocaleString('es-ES');
 
   return ReactDOM.createPortal(
     <div style={styles.backdrop}>
@@ -36,18 +41,26 @@ export default function ImportProgressModal({
         </button>
 
         {/* Título */}
-        <h2 style={styles.title}>Importación de CVEs</h2>
+        <h2 style={styles.title}>{t("cve.import_modal_title")}</h2>
 
         {/* Contenido */}
         <div style={styles.progressWrapper}>
-          {waitingForSSE ? (
+          {status === "warning" ? (
+            <div style={styles.warningBox}>
+              <div style={styles.warningIcon}>⚠️</div>
+              <div style={styles.warningText}>{warningMessage || t("cve.too_many_new")}</div>
+              <div style={styles.warningSuggestion}>
+                {t("cve.delete_and_reimport_suggestion")}
+              </div>
+            </div>
+          ) : waitingForSSE && status !== "warning" ? (
             <div style={styles.spinnerWrapper}>
               <div style={styles.spinner}></div>
               <div style={styles.statusText}>
                 {label || t("cve.loading_status")}
               </div>
             </div>
-          ) : status === "idle" ? (
+          ) : status === "idle" || pendingImport ? (
             <div style={styles.statusText}>{t("cve.from_api")}</div>
           ) : status === "completed" && total === 0 ? (
             <div style={styles.statusText}>
@@ -55,32 +68,42 @@ export default function ImportProgressModal({
             </div>
           ) : (
             <>
-              <div style={styles.progressText}>
-                {imported} / {total} importados
-              </div>
-              <div style={styles.barOuter}>
-                <div
-                  style={{
-                    ...styles.barInner,
-                    width: total > 0 ? `${(imported / total) * 100}%` : "0%",
-                  }}
-                />
-              </div>
+              {status === "running" && (
+                <>
+                  <div style={styles.progressText}>
+                    {formattedImported} {t("cve.of")} {formattedTotal} {t("cve.cves_imported")} {/* CAMBIO AQUI */}
+                  </div>
+                  <div style={styles.barOuter}>
+                    <div
+                      style={{
+                        ...styles.barInner,
+                        width: total > 0 ? `${(imported / total) * 100}%` : "0%",
+                      }}
+                    />
+                  </div>
+                </>
+              )}
               <div style={styles.statusText}>{label}</div>
             </>
           )}
         </div>
 
         {/* Botones de acción */}
-        {(status === "idle" || pendingImport) && !waitingForSSE && (
+        {(status === "idle" || pendingImport) && !waitingForSSE && status !== "warning" && (
           <button onClick={onStart} style={styles.startButton}>
-            Iniciar
+            {t("cve.start")}
           </button>
         )}
 
         {status === "running" && (
           <button onClick={onStop} style={styles.stopButton}>
-            Detener
+            {t("cve.stop_import")}
+          </button>
+        )}
+        
+        {status === "warning" && (
+          <button onClick={onClose} style={styles.startButton}>
+            {t("cve.close")}
           </button>
         )}
       </div>
@@ -106,8 +129,9 @@ const styles = {
     backgroundColor: theme.colors.surface || "#1e293b",
     borderRadius: "16px",
     padding: "2rem",
-    minWidth: "400px",
-    maxWidth: "90vw",
+    width: "450px", // <-- ANCHO FIJO AQUI (ejemplo de 450px, puedes ajustarlo)
+    // minWidth: "400px", // Esto ya no es tan necesario con un width fijo
+    // maxWidth: "90vw", // Esto tampoco es tan necesario con un width fijo
     textAlign: "center",
     position: "relative",
     color: "white",
@@ -189,4 +213,30 @@ const styles = {
     borderRadius: "50%",
     animation: "spin 1s linear infinite",
   },
+  warningBox: {
+    backgroundColor: "#facc15",
+    color: "#78350f",
+    padding: "1rem 1.5rem",
+    borderRadius: "12px",
+    fontWeight: 500,
+    fontSize: "1rem",
+    // Eliminamos maxWidth aquí, ya que el modal tiene un width fijo
+    margin: "0 auto",
+    boxShadow: theme.shadow.medium,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '0.75rem',
+  },
+  warningIcon: {
+    fontSize: '2.5rem',
+  },
+  warningText: {
+    fontWeight: 'bold',
+    fontSize: '1.1rem',
+  },
+  warningSuggestion: {
+    fontSize: '0.9rem',
+    textAlign: 'center',
+  }
 };

@@ -89,7 +89,7 @@
     "import_button": "Import CVEs",
     "from_api": "From NVD API",
     "import_start": "🚀 Starting import from {{source}}",
-    "importing": "Importing...",
+    "importing": "Fetching from NVD...",
     "file": "File",
     "completed": "Completed.",
     "import_success": "✅ {{count}} items successfully imported.",
@@ -110,6 +110,10 @@
     "loading_status": "Getting current import status...",
     "loading_ids": "Getting CVE list from NVD...",
     "aborted_by_user": "Import aborted by user",
+    "cve.too_many_new": "There are too many new CVEs. Please delete all existing records and import from scratch.",
+    "cves_imported": " CVEs imported",
+    "stop_import": "Stop",
+    "import_modal_title": "CVE Import",
     "subtitle": "Manage import and removal of vulnerabilities from official sources."
   }
 }

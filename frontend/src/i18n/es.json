@@ -89,7 +89,7 @@
     "import_button": "Importar CVEs",
     "from_api": "Desde la NVD API",
     "import_start": "🚀 Iniciando importación desde {{source}}",
-    "importing": "Importando...",
+    "importing": "Importando desde NVD...",
     "file": "Archivo",
     "completed": "Completado.",
     "import_success": "✅ {{count}} elementos importados correctamente.",
@@ -110,6 +110,11 @@
     "loading_status": "Obteniendo estado actual de la importación...",
     "loading_ids": "Obteniendo lista de CVEs desde la NVD...",
     "aborted_by_user": "Importación detenida por el usuario",
+    "too_many_new": "Hay demasiados CVEs nuevos. Por favor, elimina todos los registros existentes e importa desde cero.",
+    "cves_imported": " CVEs importados",
+    "stop_import": "Detener",
+    "of": "de",
+    "import_modal_title": "Importación de CVEs",
     "subtitle": "Gestiona la importación y eliminación de vulnerabilidades desde fuentes oficiales."
   }
 }
