@@ -256,10 +256,11 @@ async def import_all_cves_stream(results_per_page=2000):
     total_imported = 0
 
     try:
+        # Si la base de datos está vacía, hacemos carga completa por páginas
         existing_count = db.execute(text("SELECT COUNT(*) FROM vulnerabilities")).scalar()
 
         if existing_count == 0:
-            print("\U0001f4ed BD vacía. Se hará carga masiva completa desde la NVD API.")
+            print("📂 BD vacía. Cargando todos los CVEs desde NVD.")
             total_results = get_total_cve_count_from_nvd()
             yield json.dumps({"type": "start", "total": total_results})
 
@@ -267,12 +268,12 @@ async def import_all_cves_stream(results_per_page=2000):
 
             for page in range(total_pages):
                 start_index = page * results_per_page
-                print(f"🌐 Solicitando página {page+1}/{total_pages} (startIndex={start_index})")
+                print(f"🌍 Página {page+1}/{total_pages} (startIndex={start_index})")
                 data = get_cves_by_page(start_index=start_index, results_per_page=results_per_page)
                 vulns = parse_cves_from_nvd(data)
 
                 if vulns:
-                    chunk_size = 500
+                    chunk_size = 50
                     for j in range(0, len(vulns), chunk_size):
                         chunk = vulns[j:j + chunk_size]
                         before = total_imported
@@ -281,7 +282,7 @@ async def import_all_cves_stream(results_per_page=2000):
 
                         yield json.dumps({
                             "type": "progress",
-                            "imported": before + len(chunk),
+                            "imported": total_imported,
                             "total": total_results
                         })
                         await asyncio.sleep(0.001)
@@ -290,42 +291,52 @@ async def import_all_cves_stream(results_per_page=2000):
             print(f"✅ Carga completa finalizada: {total_imported} CVEs insertados.")
             return
 
-        yield json.dumps({"type": "status", "message": "checking"})
+        # Proceso incremental (BD ya tiene datos)
+        print("🔎 Iniciando proceso incremental (solo nuevos CVEs)...")
 
-        def fetch_all_cve_ids_from_nvd() -> list[str]:
-            return get_all_cve_ids()
+        yield json.dumps({
+            "type": "label",
+            "label": "Comprobando si hay nuevos CVEs en la NVD..."
+        })
 
-        def filter_new_cve_ids(db: Session, all_ids: list[str]) -> list[str]:
-            all_ids_clean = [
-                str(cve_id).strip().upper()
-                for cve_id in all_ids
-                if isinstance(cve_id, (str, int, float))  # evitar listas u objetos
-            ]
-            existing_ids = set(
-                str(cve_id).strip().upper()
-                for (cve_id,) in db.execute(text("SELECT cve_id FROM vulnerabilities")).fetchall()
-            )
-            return [cve_id for cve_id in all_ids_clean if cve_id not in existing_ids]
 
-        all_cve_ids = fetch_all_cve_ids_from_nvd()
-        new_cve_ids = filter_new_cve_ids(db, all_cve_ids)
+        # Obtener todos los CVEs actuales desde NVD
+        all_cve_ids = list(get_all_cve_ids())
+        if not all_cve_ids:
+            yield json.dumps({
+                "type": "error",
+                "message": "No se pudieron obtener los CVE IDs desde la NVD"
+            })
+            return
+        print(f"📋 Total CVEs en NVD: {len(all_cve_ids)}")
 
-        print(f"🧮 CVEs nuevos detectados: {len(new_cve_ids)}")
+        # Obtener los CVE_ID existentes en la base de datos
+        existing_ids = set(
+            str(cve_id).strip().upper()
+            for (cve_id,) in db.execute(text("SELECT cve_id FROM vulnerabilities")).fetchall()
+        )
+
+        # Filtrar solo los que no están en la BD
+        new_cve_ids = [cve_id for cve_id in all_cve_ids if str(cve_id).strip().upper() not in existing_ids]
         total_new = len(new_cve_ids)
-        yield json.dumps({"type": "start", "total": total_new})
+        print(f"🆕 Nuevos CVEs detectados: {total_new}")
+
+        # 🔔 Emitir evento start inmediatamente como en el caso de BD vacía
+        yield json.dumps({"type": "start", "total": total_new, "label": "Importando nuevos CVEs..."})
 
         if total_new == 0:
             yield json.dumps({"type": "done", "imported": 0})
+            print("⚠️ No hay nuevos CVEs que importar.")
             return
 
+        # Procesar en batches
         batch_size = 10
         for i in range(0, total_new, batch_size):
+
             batch_ids = new_cve_ids[i:i + batch_size]
-            print(f"📤 Descargando batch: {batch_ids}")
+            print(f"📤 Procesando batch: {batch_ids}")
 
             data = get_cves_by_id(batch_ids)
-            print(f"📦 CVEs devueltos por NVD: {len(data.get('vulnerabilities', []))}")
-
             vulns = parse_cves_from_nvd(data)
             imported = save_cves_to_db(db, vulns)
             total_imported += imported
@@ -335,7 +346,7 @@ async def import_all_cves_stream(results_per_page=2000):
                 "imported": total_imported,
                 "total": total_new
             })
-
+            await asyncio.sleep(0.001)
 
         yield json.dumps({"type": "done", "imported": total_imported})
         print(f"✅ Proceso incremental finalizado: {total_imported} nuevos CVEs insertados.")
@@ -347,6 +358,7 @@ async def import_all_cves_stream(results_per_page=2000):
         db.rollback()
     finally:
         db.close()
+
 
 
 

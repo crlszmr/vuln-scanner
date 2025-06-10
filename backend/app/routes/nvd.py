@@ -114,8 +114,17 @@ async def stream_cve_import(request: Request):
 
     async def event_generator():
         initial_status = import_status.get_import_status()
-        print(f"📨 Enviando estado inicial: {initial_status}")
-        yield f"data: {json.dumps(initial_status)}\n\n"
+        print(f"📨 Estado actual import_status: {initial_status}")
+
+        # 🔧 Enviar evento de tipo label forzado (SÍ o SÍ)
+        initial_event = {
+            "type": "label",
+            "label": initial_status.get("label", "Esperando eventos..."),
+            "imported": initial_status.get("imported", 0),
+            "total": initial_status.get("total", 0)
+        }
+        print(f"📤 Enviando evento SSE inicial (tipo label): {initial_event}")
+        yield f"data: {json.dumps(initial_event)}\n\n"
 
         while not await request.is_disconnected():
             event = await import_status.get_event_queue().get()
@@ -123,6 +132,7 @@ async def stream_cve_import(request: Request):
             yield f"data: {event}\n\n"
 
     return EventSourceResponse(event_generator())
+
 
 
 @router.post("/cve-import-start", status_code=status.HTTP_202_ACCEPTED)

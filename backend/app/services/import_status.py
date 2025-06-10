@@ -89,31 +89,63 @@ async def start_background_import():
 
     from app.services.importer import import_all_cves_stream
 
+    # 🔔 Emitir evento de inicio inmediato para mostrar el modal
+    _status["label"] = "Obteniendo lista de CVEs desde la NVD..."
+    _status["imported"] = 0
+    _status["total"] = 0
+    await publish({
+        "type": "start",
+        "total": 0,
+        "label": _status["label"]
+    })
+
     try:
         async for raw_event in import_all_cves_stream(results_per_page=2000):
             event = json.loads(raw_event)
 
             if _stop_event.is_set():
                 print("🛑 Importación detenida manualmente")
+                _status["label"] = "Importación detenida por el usuario"
+                _status["running"] = False
+                await publish({
+                    "type": "done",
+                    "imported": _status["imported"],
+                    "total": _status["total"]
+                })
+                reset_status()
                 break
 
-            if event.get("type") == "progress":
-                _status["imported"] = event.get("imported", _status["imported"])
-                _status["total"] = event.get("total", _status["total"])
-
-            elif event.get("type") == "start":
+            if event.get("type") == "start":
                 _status["imported"] = 0
                 _status["total"] = event.get("total", 0)
-                _status["label"] = "Importando CVEs..."
-                await publish({"type": "label", "label": _status["label"]})
+                _status["label"] = event.get("label", "Importando CVEs...")
+                await publish({
+                    "type": "start",
+                    "total": _status["total"],
+                    "label": _status["label"]
+                })
+
+            elif event.get("type") == "progress":
+                _status["imported"] = event.get("imported", _status["imported"])
+                _status["total"] = event.get("total", _status["total"])
 
             elif event.get("type") == "done":
                 _status["running"] = False
                 _status["done"] = True
+                await publish({
+                    "type": "done",
+                    "imported": _status["imported"],
+                    "total": _status["total"]
+                })
+                reset_status()
+                break
 
             elif event.get("type") == "error":
                 _status["running"] = False
                 _status["error"] = event.get("message", "Unknown error")
+                await publish({"type": "error", "message": _status["error"]})
+                reset_status()
+                break
 
             await publish(event)
 
@@ -121,7 +153,9 @@ async def start_background_import():
         print("❌ Importación cancelada por asyncio.CancelledError")
         _status["label"] = "Importación cancelada"
         _status["running"] = False
-        await publish({"type": "done", "imported": _status["imported"]})
-
-    finally:
+        await publish({
+            "type": "done",
+            "imported": _status["imported"],
+            "total": _status["total"]
+        })
         reset_status()
