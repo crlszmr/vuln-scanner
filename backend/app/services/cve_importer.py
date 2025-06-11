@@ -343,6 +343,29 @@ async def import_all_cves_stream(results_per_page=2000):
         nvd_total_results = get_total_cve_count_from_nvd()
         db_total_results = db.execute(select(func.count(Vulnerability.cve_id))).scalar()
         print(f"📊 Conteo de NVD: {nvd_total_results}, Conteo en BD: {db_total_results}")
+        estimated_to_import = nvd_total_results - db_total_results
+        print(f"🧮 Estimación rápida → Nuevos CVEs = {estimated_to_import}")
+
+        if estimated_to_import > EXCESSIVE_NEW_CVES_THRESHOLD:
+            # Forzar estado intermedio antes de cancelar
+            yield json.dumps({
+                "type": "start",
+                "total": estimated_to_import,
+                "label": "Demasiados CVEs nuevos detectados",
+                "stage": "check_estimation"
+            })
+
+            await asyncio.sleep(0.01)
+
+            # Enviar código de advertencia en lugar de mensaje literal
+            yield json.dumps({
+                "type": "warning",
+                "code": "too_many_new_cves"
+            })
+
+            print("⚠️ IMPORTACIÓN CANCELADA: Demasiados CVEs nuevos según estimación rápida.")
+            return
+
         if nvd_total_results == db_total_results:
             yield json.dumps({
                 "type": "done",
@@ -403,15 +426,6 @@ async def import_all_cves_stream(results_per_page=2000):
         if total_to_import == 0:
             yield json.dumps({"type": "done", "imported": 0, "label": "No hay nuevos CVEs que importar."})
             print("⚠️ No hay nuevos CVEs que importar (después de la comparación de IDs).")
-            return
-
-        if total_to_import > EXCESSIVE_NEW_CVES_THRESHOLD:
-            warning_message = (
-                f"Se han detectado {total_to_import} CVEs nuevos, lo cual supera el umbral permitido de {EXCESSIVE_NEW_CVES_THRESHOLD}. "
-                "Por favor, considera eliminar todos los registros existentes y realizar una importación completa desde cero."
-            )
-            yield json.dumps({"type": "warning", "message": warning_message})
-            print("⚠️ IMPORTACIÓN CANCELADA: Demasiados CVEs nuevos para un incremental.")
             return
 
         # Fase 2: Importando los CVEs faltantes

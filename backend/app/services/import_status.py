@@ -138,6 +138,7 @@ async def start_background_import(import_function):
                 _status["running"] = False
                 _status["error"] = event.get("message")
                 await publish(event)
+                await asyncio.sleep(0)  # 🔄 da tiempo al frontend a conectarse
                 reset_status()
                 break
 

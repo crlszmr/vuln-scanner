@@ -110,7 +110,7 @@
     "loading_status": "Conneting to NVD...",
     "loading_ids": "Getting CVE list from NVD...",
     "aborted_by_user": "Import aborted by user",
-    "too_many_new": "There are too many new CVEs. Please delete all existing records and import from scratch.",
+    "too_many_new": "There are too many new CVEs.",
     "cves_imported": " CVEs imported",
     "stop_import": "Stop",
     "of": "of",
@@ -124,6 +124,7 @@
     "deleting_status": "Deleting CVEs...",
     "nothing_to_delete": "There are no CVEs to delete in DB.",
     "accept": "Accept",
+    "delete_and_reimport_suggestion": "Please delete all existing records and re-import from scratch.",
     "subtitle": "Manage import and removal of vulnerabilities from official sources."
   }
 }

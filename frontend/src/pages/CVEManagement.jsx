@@ -75,6 +75,26 @@ export default function CVEManagement() {
           addNotification(t("cve.import_success", { count: data.imported }), "success");
         }
 
+        if (data.type === "warning") {
+          console.log("⚠️ Evento WARNING:", data);
+          setStatus("warning");
+          setWarningMessage(data.message || t("cve.too_many_new"));
+          setImported(0);
+          setTotal(0);
+          setStage("");
+          setPercentage(0);
+          setWaitingForSSE(false);
+
+          if (eventSourceRef.current) {
+            eventSourceRef.current.close();
+            eventSourceRef.current = null;
+          }
+
+          localStorage.removeItem("cve_import_status");
+          setLoading(false);
+          return;
+        }
+
         if (data.type === "label") {
           console.log("🔖 Evento LABEL: ", data);
           setLabel(data.label || "");

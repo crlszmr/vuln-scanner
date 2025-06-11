@@ -110,7 +110,7 @@
     "loading_status": "Conectando con NVD...",
     "loading_ids": "Obteniendo lista de CVEs desde la NVD...",
     "aborted_by_user": "Importación detenida por el usuario",
-    "too_many_new": "Hay demasiados CVEs nuevos. Por favor, elimina todos los registros existentes e importa desde cero.",
+    "too_many_new_warning": "Hay demasiados CVEs nuevos para actualizar. Por favor, elimina todos los CVEs existentes e importa de nuevo desde cero.",
     "cves_imported": " CVEs importados",
     "stop_import": "Detener",
     "of": "de",
