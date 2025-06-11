@@ -2,6 +2,10 @@ import ReactDOM from "react-dom";
 import { theme } from "@/styles/theme";
 import { useTranslation } from "react-i18next";
 
+/**
+ * Modal que muestra el progreso de importación de CVEs con soporte para
+ * estados de advertencia, carga y progreso visual.
+ */
 export default function ImportProgressModal({
   isOpen,
   onClose,
@@ -28,7 +32,7 @@ export default function ImportProgressModal({
   return ReactDOM.createPortal(
     <div style={styles.backdrop}>
       <div style={styles.modal}>
-        {/* Cerrar */}
+        {/* Botón para cerrar el modal */}
         <button
           onClick={canClose ? onClose : null}
           disabled={!canClose}
@@ -41,10 +45,10 @@ export default function ImportProgressModal({
           ✖
         </button>
 
-        {/* Título */}
+        {/* Título del modal */}
         <h2 style={styles.title}>{t("cve.import_modal_title")}</h2>
 
-        {/* Contenido */}
+        {/* Contenido dinámico del modal según estado */}
         <div style={styles.progressWrapper}>
           {isWarning ? (
             <div style={styles.statusText}>
@@ -100,7 +104,7 @@ export default function ImportProgressModal({
           )}
         </div>
 
-        {/* Botones */}
+        {/* Botones de acción */}
         {(status === "idle" || pendingImport) &&
           !waitingForSSE &&
           status !== "warning" && (

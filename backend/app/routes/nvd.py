@@ -6,12 +6,9 @@ from app.services.nvd import get_cves_by_keyword
 from app.services.importer import (
     parse_cves_from_nvd,
     save_cves_to_db,
-    import_all_cves,
     import_all_weaknesses_from_file,
     download_weakness_xml_if_needed,
     import_all_cves_stream,
-    import_all_cves_from_files,
-    import_all_cves_from_files_stream,
     import_cpes_from_xml,
 )
 from app.database import SessionLocal
@@ -44,15 +41,6 @@ def import_cves_by_keyword(keyword: str = Query(..., description="Palabra clave 
     return JSONResponse(
         status_code=status.HTTP_202_ACCEPTED,
         content={"message": f"{imported} CVEs imported with keyword '{keyword}'."}
-    )
-
-
-@router.post(CVE_IMPORT_ALL, status_code=status.HTTP_202_ACCEPTED)
-def import_all_cves_from_nvd_ep():
-    imported_count = import_all_cves()
-    return JSONResponse(
-        status_code=status.HTTP_202_ACCEPTED,
-        content={"message": f"{imported_count} CVEs imported successfully."}
     )
 
 
@@ -114,11 +102,9 @@ def import_all_cpes_from_xml_ep():
 
 @router.get("/cve-import-stream")
 async def stream_cve_import(request: Request):
-    print("📡 Cliente conectado al stream SSE")
 
     async def event_generator():
         initial_status = import_status.get_import_status()
-        print(f"📨 Estado actual import_status: {initial_status}")
 
         # 🔧 Enviar evento de tipo label forzado (SÍ o SÍ)
         initial_event = {
@@ -127,12 +113,10 @@ async def stream_cve_import(request: Request):
             "imported": initial_status.get("imported", 0),
             "total": initial_status.get("total", 0)
         }
-        print(f"📤 Enviando evento SSE inicial (tipo label): {initial_event}")
         yield f"data: {json.dumps(initial_event)}\n\n"
 
         while not await request.is_disconnected():
             event = await import_status.get_event_queue().get()
-            print(f"📤 Enviando evento SSE: {event}")
             yield f"data: {event}\n\n"
 
     return EventSourceResponse(event_generator())
@@ -157,28 +141,6 @@ async def launch_cve_import():
 @router.get("/cve-import-status", status_code=200)
 def get_cve_import_status():
     return import_status.get_import_status()
-
-
-@router.post("/cve-import-all-from-json", status_code=status.HTTP_202_ACCEPTED)
-def import_all_cves_from_json_ep():
-    imported_count = import_all_cves_from_files()
-    return JSONResponse(
-        status_code=status.HTTP_202_ACCEPTED,
-        content={"imported": imported_count}
-    )
-
-
-@router.get("/cve-import-from-json-stream", status_code=status.HTTP_202_ACCEPTED)
-async def stream_import_from_json(request: Request):
-    async def event_generator():
-        print("🚀 Iniciando generador de eventos SSE")
-        async for event in import_all_cves_from_files_stream():
-            print(f"📤 Enviando evento SSE: {event}")
-            if await request.is_disconnected():
-                print("⚠️ Cliente desconectado")
-                break
-            yield event
-    return EventSourceResponse(event_generator())
 
 @router.post("/cve-import-stop", status_code=200)
 def stop_import():

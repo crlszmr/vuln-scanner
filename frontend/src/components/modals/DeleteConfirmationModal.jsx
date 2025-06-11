@@ -2,13 +2,14 @@ import ReactDOM from "react-dom";
 import { theme } from "@/styles/theme";
 import { useTranslation } from "react-i18next";
 
+// Modal de confirmación para eliminación de todos los CVEs
 export default function DeleteConfirmationModal({
   isOpen,
   onCancel,
   onConfirm,
   onClose,
   deleting,
-  count
+  count,
 }) {
   const { t } = useTranslation();
   if (!isOpen) return null;
@@ -16,14 +17,14 @@ export default function DeleteConfirmationModal({
   return ReactDOM.createPortal(
     <div style={styles.backdrop}>
       <div style={styles.modal}>
-        {/* Cierre con X */}
+        {/* Botón de cierre en esquina superior */}
         <button
           onClick={deleting ? null : onClose}
           disabled={deleting}
           style={{
             ...styles.closeButton,
             opacity: deleting ? 0.4 : 1,
-            cursor: deleting ? "not-allowed" : "pointer"
+            cursor: deleting ? "not-allowed" : "pointer",
           }}
         >
           ✖
@@ -31,37 +32,36 @@ export default function DeleteConfirmationModal({
 
         <h2 style={styles.title}>{t("cve.delete_title")}</h2>
 
+        {/* Contenido principal del modal */}
         {deleting ? (
-            <div style={styles.spinnerWrapper}>
-                <div style={styles.spinner}></div>
-                <div style={styles.statusText}>{t("cve.deleting_status")}</div>
+          <div style={styles.spinnerWrapper}>
+            <div style={styles.spinner}></div>
+            <div style={styles.statusText}>{t("cve.deleting_status")}</div>
+          </div>
+        ) : count === 0 ? (
+          <>
+            <p style={styles.confirmText}>{t("cve.nothing_to_delete")}</p>
+            <div style={styles.buttonGroup}>
+              <button onClick={onCancel} style={styles.startButton}>
+                {t("cve.accept")}
+              </button>
             </div>
-            ) : count === 0 ? (
-            <>
-                <p style={styles.confirmText}>{t("cve.nothing_to_delete")}</p>
-                <div style={styles.buttonGroup}>
-                <button onClick={onCancel} style={styles.startButton}>
-                    {t("cve.accept")}
-                </button>
-                </div>
-            </>
-            ) : (
-            <>
-                <p style={styles.confirmText}>
-                {t("cve.delete_confirmation", { count: count.toLocaleString("es-ES") })}
-                </p>
-                <div style={styles.buttonGroup}>
-                <button onClick={onCancel} style={styles.cancelButton}>
-                    {t("cve.cancel")}
-                </button>
-                <button onClick={onConfirm} style={styles.deleteButton}>
-                    {t("cve.confirm_delete")}
-                </button>
-                </div>
-            </>
-            )}
-
-
+          </>
+        ) : (
+          <>
+            <p style={styles.confirmText}>
+              {t("cve.delete_confirmation", { count: count.toLocaleString("es-ES") })}
+            </p>
+            <div style={styles.buttonGroup}>
+              <button onClick={onCancel} style={styles.cancelButton}>
+                {t("cve.cancel")}
+              </button>
+              <button onClick={onConfirm} style={styles.deleteButton}>
+                {t("cve.confirm_delete")}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>,
     document.getElementById("modal-root")
@@ -108,12 +108,12 @@ const styles = {
   confirmText: {
     fontSize: "1rem",
     marginBottom: "1.5rem",
-    color: "#e2e8f0"
+    color: "#e2e8f0",
   },
   buttonGroup: {
     display: "flex",
     justifyContent: "center",
-    gap: "1rem"
+    gap: "1rem",
   },
   deleteButton: {
     backgroundColor: "#dc2626",
@@ -133,7 +133,7 @@ const styles = {
     border: "none",
     cursor: "pointer",
   },
-    startButton: {
+  startButton: {
     marginTop: "1rem",
     padding: "0.75rem 1.5rem",
     fontSize: "1rem",
@@ -148,7 +148,7 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: "1rem"
+    gap: "1rem",
   },
   spinner: {
     width: "36px",
@@ -161,5 +161,5 @@ const styles = {
   statusText: {
     marginTop: "0.5rem",
     color: "#94a3b8",
-  }
+  },
 };

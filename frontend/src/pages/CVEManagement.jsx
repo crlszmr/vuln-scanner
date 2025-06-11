@@ -8,14 +8,16 @@ import { useTranslation } from "react-i18next";
 import ImportProgressModal from "@/components/modals/ImportProgressModal";
 import DeleteConfirmationModal from "@/components/modals/DeleteConfirmationModal";
 
-
 export default function CVEManagement() {
+  // Estado principal del flujo de importación de CVEs
   const [status, setStatus] = useState("idle");
   const [imported, setImported] = useState(0);
   const [total, setTotal] = useState(0);
   const [label, setLabel] = useState("");
-  const [stage, setStage] = useState("");              // 👈 Nuevo estado
-  const [percentage, setPercentage] = useState(0);     // 👈 Nuevo estado
+  const [stage, setStage] = useState("");
+  const [percentage, setPercentage] = useState(0);
+
+  // Estado visual del modal y procesos relacionados
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [pendingImport, setPendingImport] = useState(false);
@@ -23,22 +25,22 @@ export default function CVEManagement() {
   const [warningMessage, setWarningMessage] = useState("");
   const eventSourceRef = useRef(null);
 
-  const { addNotification } = useNotification();
-  const { t } = useTranslation();
+  // Estado para eliminar CVEs
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [cveCount, setCveCount] = useState(0);
 
+  const { addNotification } = useNotification();
+  const { t } = useTranslation();
+
+  // Configura y gestiona los eventos SSE emitidos desde el backend
   const setupEventSource = (eventSource) => {
     eventSource.onmessage = (event) => {
-      console.log("📥 SSE → raw:", event.data);
       try {
         const cleanData = event.data.startsWith("data: ") ? event.data.slice(6) : event.data;
         const data = JSON.parse(cleanData);
-        console.log("📥 Evento SSE recibido:", data);
 
         if (data.type === "start") {
-          console.log("🚀 Evento START: ", data);
           setStatus("running");
           setImported(0);
           setTotal(data.total || 0);
@@ -52,7 +54,6 @@ export default function CVEManagement() {
         }
 
         if (data.type === "progress") {
-          console.log("📊 Evento PROGRESS: ", data);
           setStatus("running");
           setImported(data.imported);
           setTotal(data.total);
@@ -62,7 +63,6 @@ export default function CVEManagement() {
         }
 
         if (data.type === "done") {
-          console.log("✅ Evento DONE: ", data);
           setStatus("completed");
           setImported(data.imported);
           setLoading(false);
@@ -76,7 +76,6 @@ export default function CVEManagement() {
         }
 
         if (data.type === "warning") {
-          console.log("⚠️ Evento WARNING:", data);
           setStatus("warning");
           setWarningMessage(data.message || t("cve.too_many_new"));
           setImported(0);
@@ -96,15 +95,14 @@ export default function CVEManagement() {
         }
 
         if (data.type === "label") {
-          console.log("🔖 Evento LABEL: ", data);
           setLabel(data.label || "");
-          setStatus("running");          // ✅ fuerza el estado activo desde el principio
-          setWaitingForSSE(false);       // ✅ detiene el spinner si está activo
+          setStatus("running");
+          setWaitingForSSE(false);
         }
 
         if (data.type) setWaitingForSSE(false);
-      } catch (err) {
-        console.error("❌ Error procesando evento:", err);
+      } catch (_) {
+        // Silenciado intencionalmente
       }
     };
 
@@ -120,6 +118,7 @@ export default function CVEManagement() {
     };
   };
 
+  // Al cargar el componente, comprobamos si había una importación activa para reanudarla
   useEffect(() => {
     const checkImportStatus = async () => {
       const runningFlag = localStorage.getItem("cve_import_status");
@@ -158,7 +157,7 @@ export default function CVEManagement() {
             setupEventSource(eventSource);
           }
         }
-      } catch (err) {
+      } catch (_) {
         setWaitingForSSE(false);
       }
     };
@@ -166,25 +165,8 @@ export default function CVEManagement() {
     checkImportStatus();
   }, []);
 
-  const resetImportState = () => {
-    setStatus("idle");
-    setLabel("");
-    setWaitingForSSE(true);
-    setPendingImport(false);
-    setWarningMessage("");
-    setImported(0);
-    setTotal(0);
-    setStage("");
-    setPercentage(0);
-    setLoading(true);
-    localStorage.setItem("cve_import_status", "running");
-  };
-
   const handleStartImport = async () => {
     try {
-      console.log("🟢 handleStartImport → Iniciando importación");
-
-      // Reinicia estado de importación
       setStatus("idle");
       setLabel("");
       setStage("");
@@ -197,30 +179,18 @@ export default function CVEManagement() {
       setLoading(true);
       localStorage.setItem("cve_import_status", "running");
 
-      // 🧹 Cerrar stream anterior si existía
       if (eventSourceRef.current) {
-        console.log("🔌 Cerrando SSE anterior");
         eventSourceRef.current.close();
         eventSourceRef.current = null;
       }
 
-      // 🚀 Iniciar en backend
-      const res = await fetch("http://localhost:8000/nvd/cve-import-start", {
-        method: "POST",
-      });
+      const res = await fetch("http://localhost:8000/nvd/cve-import-start", { method: "POST" });
+      if (!res.ok) throw new Error();
 
-      if (!res.ok) throw new Error("Error al lanzar importación");
-
-      console.log("📤 Enviado POST /cve-import-start");
-
-      // 🔁 Conectar nuevo SSE
       const eventSource = new EventSource("http://localhost:8000/nvd/cve-import-stream");
-      console.log("📡 Conectado a nuevo SSE");
-
       eventSourceRef.current = eventSource;
       setupEventSource(eventSource);
-    } catch (err) {
-      console.error("❌ handleStartImport → Error:", err);
+    } catch (_) {
       setWaitingForSSE(false);
       setStatus("error");
       setLoading(false);
@@ -229,8 +199,6 @@ export default function CVEManagement() {
       addNotification(t("cve.error_starting"), "error");
     }
   };
-
-
 
   const handleDeleteAll = async () => {
     try {
@@ -244,26 +212,26 @@ export default function CVEManagement() {
   };
 
   const handleConfirmDelete = async () => {
-  setDeleting(true);
-  try {
-    const res = await fetch("http://localhost:8000/nvd/cve-delete-all", { method: "DELETE" });
-    if (!res.ok) throw new Error("Server error");
-    addNotification(t("cve.delete_success"), "success");
-    setStatus("idle");
-    setImported(0);
-    setTotal(0);
-    setLabel("");
-    setShowDeleteModal(false);
-  } catch (err) {
-    addNotification(t("cve.delete_error", { error: err.message }), "error");
-  } finally {
-    setDeleting(false);
-  }
-};
+    setDeleting(true);
+    try {
+      const res = await fetch("http://localhost:8000/nvd/cve-delete-all", { method: "DELETE" });
+      if (!res.ok) throw new Error("Server error");
+      addNotification(t("cve.delete_success"), "success");
+      setStatus("idle");
+      setImported(0);
+      setTotal(0);
+      setLabel("");
+      setShowDeleteModal(false);
+    } catch (err) {
+      addNotification(t("cve.delete_error", { error: err.message }), "error");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
-const handleCancelDelete = () => {
-  setShowDeleteModal(false);
-};
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+  };
 
   const handleCloseModal = () => {
     setShowModal(false);
@@ -297,9 +265,7 @@ const handleCancelDelete = () => {
       eventSourceRef.current = null;
     }
 
-    fetch("http://localhost:8000/nvd/cve-import-stop", { method: "POST" }).catch((err) => {
-      console.error("❌ Error al detener la importación:", err);
-    });
+    fetch("http://localhost:8000/nvd/cve-import-stop", { method: "POST" }).catch(() => {});
   };
 
   return (
@@ -382,9 +348,10 @@ const handleCancelDelete = () => {
           waitingForSSE={waitingForSSE}
           pendingImport={pendingImport}
           warningMessage={warningMessage}
-          stage={stage}            // 👈 Nuevo prop
-          percentage={percentage}  // 👈 Nuevo prop
+          stage={stage}
+          percentage={percentage}
         />
+
         <DeleteConfirmationModal
           isOpen={showDeleteModal}
           onCancel={handleCancelDelete}

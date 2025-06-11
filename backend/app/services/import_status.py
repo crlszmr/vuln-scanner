@@ -1,12 +1,12 @@
 import asyncio
 import json
 from typing import Optional
+from datetime import datetime
 
-from app.services.nvd import get_all_cve_ids, get_cves_by_id
 from app.database import SessionLocal
 from app.models.vulnerability import Vulnerability
-from app.services.nvd import get_total_cve_count_from_nvd
 
+# Estado actual de la importación
 _status = {
     "running": False,
     "imported": 0,
@@ -16,20 +16,20 @@ _status = {
     "error": None
 }
 
+# Elementos de control de eventos e interrupciones
 _event_queue: asyncio.Queue = asyncio.Queue()
 _stop_event = asyncio.Event()
 current_task: Optional[asyncio.Task] = None
 
-def get_import_status():
-    return {
-        "running": _status["running"],
-        "imported": _status["imported"],
-        "total": _status["total"],
-        "label": _status["label"],
-        "done": _status["done"],
-        "error": _status["error"]
-    }
+def _log(message: str):
+    """Registra un log con marca de tiempo."""
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}")
 
+# Permite consultar el estado actual desde otras partes del sistema
+def get_import_status():
+    return _status.copy()
+
+# Restaura el estado a valores iniciales
 def reset_status():
     _status.update({
         "running": False,
@@ -42,19 +42,23 @@ def reset_status():
     global current_task
     current_task = None
 
+# Devuelve si se ha solicitado detener la importación
 def should_stop():
-    print(f"📍 should_stop() llamado desde: {__name__}, _stop_event.is_set()={_stop_event.is_set()}")
+    _log("Verificando si se ha solicitado detener la importación.")
     return _stop_event.is_set()
 
+# Publica un evento SSE al frontend
 async def publish(event: dict):
     await _event_queue.put(json.dumps(event))
 
+# Devuelve la cola de eventos SSE
 def get_event_queue():
     return _event_queue
 
+# Detiene manualmente la importación
 def stop_import():
     global current_task, _stop_event, _event_queue
-    print("🛑 stop_import() → Deteniendo importación manualmente")
+    _log("Solicitud de detención manual de la importación.")
 
     if current_task and not current_task.done():
         current_task.cancel()
@@ -63,23 +67,26 @@ def stop_import():
     _status["running"] = False
     _status["label"] = "Importación detenida por el usuario"
 
+# Devuelve si hay una tarea en curso
 def is_running():
     return current_task is not None and not current_task.done()
 
+# Asigna la tarea actual
 def set_task(task: asyncio.Task):
     global current_task
     current_task = task
 
+# Permite actualizar el estado dinámicamente
 def update_status(key: str, value):
     _status[key] = value
 
+# Ejecuta la función de importación en segundo plano
 async def start_background_import(import_function):
     global _event_queue, _stop_event
-    print("🚀 Comenzando importación de CVEs en segundo plano")
-    await asyncio.sleep(0)
+    _log("Inicio de importación de CVEs en segundo plano.")
 
     if _status["running"]:
-        print("⚠️ Ya hay una importación en curso")
+        _log("Ya hay una importación en curso. Abortando nuevo intento.")
         return
 
     reset_status()
@@ -88,8 +95,6 @@ async def start_background_import(import_function):
     _event_queue = asyncio.Queue()
 
     _status["label"] = "Obteniendo lista de CVEs desde la NVD..."
-    _status["imported"] = 0
-    _status["total"] = 0
     await publish({
         "type": "start",
         "total": 0,
@@ -101,61 +106,51 @@ async def start_background_import(import_function):
             event = json.loads(raw_event)
 
             if _stop_event.is_set():
-                print("🛑 Importación detenida manualmente")
-                _status["label"] = "Importación detenida por el usuario"
-                _status["running"] = False
-                await publish({
-                    "type": "done",
-                    "imported": _status["imported"],
-                    "total": _status["total"]
-                })
+                _log("Importación detenida por el usuario durante ejecución.")
+                _status.update({"running": False, "label": "Importación detenida por el usuario"})
+                await publish({"type": "done", "imported": _status["imported"], "total": _status["total"]})
                 reset_status()
                 break
 
-            if event.get("type") == "start":
-                _status["imported"] = 0
-                _status["total"] = event.get("total", 0)
-                _status["label"] = event.get("label", "Importando CVEs...")
-                _status["stage"] = event.get("stage", None)
-                _status["percentage"] = event.get("percentage", None)
+            event_type = event.get("type")
 
-                await publish({
-                    "type": "start",
-                    "total": _status["total"],
-                    "label": _status["label"],
-                    "stage": _status["stage"],
-                    "percentage": _status["percentage"]
+            if event_type == "start":
+                _status.update({
+                    "imported": 0,
+                    "total": event.get("total", 0),
+                    "label": event.get("label", "Importando CVEs..."),
+                    "stage": event.get("stage"),
+                    "percentage": event.get("percentage")
+                })
+                await publish({**event})
+
+            elif event_type == "progress":
+                _status.update({
+                    "imported": event.get("imported", _status["imported"]),
+                    "total": event.get("total", _status["total"]),
+                    "label": event.get("label", _status["label"]),
+                    "stage": event.get("stage", _status.get("stage")),
+                    "percentage": event.get("percentage", _status.get("percentage"))
                 })
 
-            elif event.get("type") == "progress":
-                _status["imported"] = event.get("imported", _status["imported"])
-                _status["total"] = event.get("total", _status["total"])
-                _status["label"] = event.get("label", _status["label"])
-                _status["stage"] = event.get("stage", _status.get("stage"))
-                _status["percentage"] = event.get("percentage", _status.get("percentage"))
-
-            elif event.get("type") == "warning":
-                _status["running"] = False
-                _status["error"] = event.get("message")
-                await publish(event)
-                await asyncio.sleep(0)  # 🔄 da tiempo al frontend a conectarse
+            elif event_type == "warning":
+                message = event.get("message") or "Se recibió un aviso sin mensaje detallado."
+                _log(f"Aviso: {message}")
+                _status.update({"running": False, "error": message})
+                await publish({**event, "message": message})
                 reset_status()
                 break
 
-            elif event.get("type") == "done":
-                _status["running"] = False
-                _status["done"] = True
-                await publish({
-                    "type": "done",
-                    "imported": _status["imported"],
-                    "total": _status["total"]
-                })
+            elif event_type == "done":
+                _log("Importación finalizada correctamente.")
+                _status.update({"running": False, "done": True})
+                await publish({"type": "done", "imported": _status["imported"], "total": _status["total"]})
                 reset_status()
                 break
 
-            elif event.get("type") == "error":
-                _status["running"] = False
-                _status["error"] = event.get("message", "Unknown error")
+            elif event_type == "error":
+                _log(f"Error durante importación: {event.get('message', 'Unknown error')}")
+                _status.update({"running": False, "error": event.get("message", "Unknown error")})
                 await publish({"type": "error", "message": _status["error"]})
                 reset_status()
                 break
@@ -163,18 +158,12 @@ async def start_background_import(import_function):
             await publish(event)
 
     except asyncio.CancelledError:
-        print("❌ Importación cancelada por asyncio.CancelledError")
-        _status["label"] = "Importación cancelada"
-        _status["running"] = False
-        await publish({
-            "type": "done",
-            "imported": _status["imported"],
-            "total": _status["total"]
-        })
+        _log("Importación cancelada por asyncio.CancelledError.")
+        _status.update({"running": False, "label": "Importación cancelada"})
+        await publish({"type": "done", "imported": _status["imported"], "total": _status["total"]})
         reset_status()
 
     finally:
-        # ✅ Aquí sí se reinicia para futuras importaciones
+        # Restablecimiento para futuras importaciones
         _stop_event = asyncio.Event()
         _event_queue = asyncio.Queue()
-
