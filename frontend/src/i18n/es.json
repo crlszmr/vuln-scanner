@@ -1,12 +1,129 @@
 {
-    "login": {
-      "title": "Iniciar sesión",
-      "email": "Correo electrónico",
-      "password": "Contraseña",
-      "button": "Entrar",
-      "invalidCredentials": "Credenciales no válidas",
-      "error": "Error al iniciar sesión",
-      "success": "¡Sesión iniciada! Token guardado."
-    }
+  "register": {
+    "title": "Crear Cuenta",
+    "subtitle": "Protege tus sistemas con inteligencia: registra tu cuenta y analiza vulnerabilidades en segundos.",
+    "username": "Nombre de usuario",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "confirm_password": "Confirmar contraseña",
+    "button": "Crear Cuenta",
+    "username_taken": "El nombre de usuario ya está en uso"
+  },
+  "login": {
+    "title": "Iniciar Sesión",
+    "subtitle": "Introduce tus credenciales para acceder a tu panel de seguridad.",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "button": "Entrar"
+  },
+  "messages": {
+    "user_created": "Usuario creado correctamente",
+    "username_required": "El nombre de usuario es obligatorio",
+    "username_invalid": "El nombre de usuario debe ser una cadena de entre 3 y 20 caracteres compuesta por letras, números, guiones o guiones bajos",
+    "username_already_taken": "El nombre de usuario ya está en uso",
+    "email_required": "El correo electrónico es obligatorio",
+    "email_invalid": "El correo electrónico no tiene un formato válido",
+    "email_already_taken": "El correo electrónico ya está registrado",
+    "password_required": "La contraseña es obligatoria",
+    "password_mismatch": "Las contraseñas no coinciden",
+    "password_invalid": "La contraseña debe cumplir con los siguientes requisitos:",
+    "password_rules_list": [
+      "Al menos 8 caracteres",
+      "Al menos una letra mayúscula",
+      "Al menos una letra minúscula",
+      "Al menos un número",
+      "Al menos un símbolo (!@#$%^&*()_+-=[]{};':\"\\|,.<>/?~)"
+    ],
+    "login_success": "Inicio de sesión exitoso.",
+    "login_failed": "Usuario o contraseña incorrectos.",
+    "role_unknown": "Rol no reconocido. Contacta con el administrador.",
+    "connection_error": "No se pudo conectar al servidor.",
+    "email_too_long": "El correo electrónico no puede superar los 254 caracteres.",
+    "password_too_long": "La contraseña no puede superar los 128 caracteres.",
+    "error_generic": "Algo salió mal. Por favor, inténtalo de nuevo."
+  },
+  "dashboard": {
+    "title": "Cuadro de Mando",
+    "subtitle": "Elige lo que quieres hacer",
+    "my_devices": "Mis equipos",
+    "config_detector": "Detector de configuración"
+  },
+  "navbar": {
+    "login": "Iniciar sesión",
+    "register": "Registrarse",
+    "dashboard": "Cuadro de Mando",
+    "admin_panel": "Panel de Administración",
+    "logout": "Cerrar sesión"
+  },
+  "home": {
+    "title": "Bienvenido a VulnScanner",
+    "description": "Gestiona, importa y analiza vulnerabilidades de software de forma sencilla. Una plataforma profesional para administradores IT y expertos en ciberseguridad.",
+    "get_started": "Empezar"
+  },
+  "admin": {
+    "title": "Panel de Administración",
+    "subtitle": "Gestiona la importación y configuración de datos del sistema.",
+    "cve_title": "Gestión de Vulnerabilidades",
+    "cve_code": "(CVEs)",
+    "cpe_title": "Gestión de Plataformas",
+    "cpe_code": "(CPEs)",
+    "cwe_title": "Gestión de Debilidades",
+    "cwe_code": "(CWEs)",
+    "import_start": "Importación iniciada",
+    "import_success": "Importación completada",
+    "import_error": "Error en la importación",
+    "user_title": "Gestión de Usuarios"
+  },
+  "detector": {
+    "title": "Detector de configuración",
+    "subtitle": "Descarga y ejecuta la herramienta para generar automáticamente la configuración de tu equipo.",
+    "download_button": "Descargar ConfigDetector",
+    "instructions_title": "Después de descargar la herramienta:",
+    "step1": "Ejecuta el fichero 'ConfigDetector.exe' en tu equipo.",
+    "step2": "Se genera en el mismo directorio el fichero de configuración 'system_config.json'.",
+    "step3_prefix": "Sube el fichero 'system_config.json' recién generado a VulnScanner desde ",
+    "step3_link": "Dashboard > Mis equipos > Crear nuevo equipo"
+  },
+  "cve": {
+    "title": "Gestión de CVEs",
+    "import_button": "Importar CVEs",
+    "from_api": "Desde la NVD API",
+    "import_start": "🚀 Iniciando importación desde {{source}}",
+    "importing": "Importando desde NVD...",
+    "file": "Archivo",
+    "completed": "Completado.",
+    "import_success": "✅ {{count}} elementos importados correctamente.",
+    "import_complete": "Importación completada",
+    "items_imported": "elementos importados con éxito.",
+    "import_error": "❌ Error en la importación: {{error}}",
+    "import_error_title": "Error en la importación",
+    "import_error_message": "Ha ocurrido un error durante la importación.",
+    "connection_error": "❌ Error de conexión con el servidor",
+    "error_processing": "Error al procesar datos",
+    "delete_button": "Eliminar CVEs",
+    "all": "Todos",
+    "delete_success": "✅ Todos los CVEs han sido eliminados",
+    "delete_error": "❌ Error al eliminar los CVEs: {{error}}",
+    "imported": "importados",
+    "checking_nvd": "Comprobando si hay nuevos CVEs en la NVD...",
+    "no_new_cves": "BD actualizada. No hay nuevos CVEs en NVD para importar.",
+    "loading_status": "Conectando con NVD...",
+    "loading_ids": "Obteniendo lista de CVEs desde la NVD...",
+    "aborted_by_user": "Importación detenida por el usuario",
+    "too_many_new_warning": "Hay demasiados CVEs nuevos para actualizar. Por favor, elimina todos los CVEs existentes e importa de nuevo desde cero.",
+    "cves_imported": " CVEs importados",
+    "stop_import": "Detener",
+    "of": "de",
+    "import_modal_title": "Importación de CVEs",
+    "start": "Iniciar",
+    "fetching_ids_progress": "{{percent}}% Completado",
+    "delete_title": "Eliminar CVEs",
+    "delete_confirmation": "Se eliminarán {{count}} CVEs presentes en la BD. ¿Deseas continuar?",
+    "confirm_delete": "Eliminar",
+    "cancel": "Cancelar",
+    "deleting_status": "Eliminando...",
+    "nothing_to_delete": "No hay CVEs en la BD para eliminar.",
+    "accept": "Aceptar",
+    "subtitle": "Gestiona la importación y eliminación de vulnerabilidades desde fuentes oficiales."
   }
-  
+}

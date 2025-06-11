@@ -7,7 +7,7 @@ class CveReference(Base):
     __tablename__ = "cve_references"
 
     id = Column(Integer, primary_key=True, index=True)
-    cve_id = Column(Integer, ForeignKey("vulnerabilities.id"), nullable=False)
+    cve_id = Column(Integer, ForeignKey("vulnerabilities.id", ondelete="CASCADE"), nullable=False)
     url = Column(String, nullable=False)
     name = Column(String, nullable=True)
     tags = Column(String, nullable=True)

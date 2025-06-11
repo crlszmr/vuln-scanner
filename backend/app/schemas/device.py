@@ -42,3 +42,7 @@ class Device(DeviceBase):
 
 class Config:
     from_attributes = True
+
+
+class CVEMarkRequest(BaseModel):
+    cve_ids: List[str]

@@ -1,4 +1,5 @@
 import { theme } from '@/styles/theme';
+import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 
 export function MainLayout({ children }) {
   return (
@@ -11,9 +12,11 @@ export function MainLayout({ children }) {
         flexDirection: 'column',
         fontFamily: theme.font.family,
         transition: theme.transition.base,
+        position: 'relative', // necesario para posicionar el botón
       }}
     >
-      {/* Solo el contenido */}
+      <LanguageSwitcher /> {/* 🔁 Botón de idioma */}
+      
       <main
         style={{
           flex: 1,

@@ -1,12 +1,130 @@
 {
-    "login": {
-      "title": "Login",
-      "email": "Email",
-      "password": "Password",
-      "button": "Sign In",
-      "invalidCredentials": "Invalid credentials",
-      "error": "Login failed",
-      "success": "Logged in! Token saved."
-    }
+  "register": {
+    "title": "Create Account",
+    "subtitle": "Secure your systems with intelligence: sign up and analyze vulnerabilities in seconds.",
+    "username": "Username",
+    "email": "Email",
+    "password": "Password",
+    "confirm_password": "Confirm Password",
+    "button": "Sign up",
+    "username_taken": "Username is already taken"
+  },
+  "login": {
+    "title": "Login",
+    "subtitle": "Enter your credentials to access your security dashboard.",
+    "email": "Email",
+    "password": "Password",
+    "button": "Sign in"
+  },
+  "messages": {
+    "user_created": "User created successfully",
+    "username_required": "Username is required",
+    "username_invalid": "Username must be a string between 3 and 20 characters long, containing letters, numbers, dashes, or underscores",
+    "username_already_taken": "Username is already taken",
+    "email_required": "Email is required",
+    "email_invalid": "Invalid email format",
+    "email_already_taken": "Email is already registered",
+    "password_required": "Password is required",
+    "password_mismatch": "Passwords do not match",
+    "password_invalid": "Password must meet the following requirements:",
+    "password_rules_list": [
+      "At least 8 characters",
+      "At least one uppercase letter",
+      "At least one lowercase letter",
+      "At least one digit",
+      "At least one special character (!@#$%^&*()_+-=[]{};':\"\\|,.<>/?~)"
+    ],
+    "login_success": "Login successful.",
+    "login_failed": "Incorrect username or password.",
+    "role_unknown": "Unknown role. Please contact the administrator.",
+    "connection_error": "Could not connect to the server.",
+    "email_too_long": "Email cannot exceed 254 characters.",
+    "password_too_long": "Password cannot exceed 128 characters.",
+    "error_generic": "Something went wrong. Please try again."
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Choose what you want to do",
+    "my_devices": "My Devices",
+    "config_detector": "Configuration Detector"
+  },
+  "navbar": {
+    "login": "Login",
+    "register": "Register",
+    "dashboard": "Dashboard",
+    "admin_panel": "Admin Panel",
+    "logout": "Logout"
+  },
+  "home": {
+    "title": "Welcome to VulnScanner",
+    "description": "Easily manage, import, and analyze software vulnerabilities. A professional platform for IT administrators and cybersecurity experts.",
+    "get_started": "Get Started"
+  },
+  "admin": {
+    "title": "Admin Panel",
+    "subtitle": "Manage import and configuration of system data.",
+    "cve_title": "Vulnerabilities Management",
+    "cve_code": "(CVEs)",
+    "cpe_title": "Platforms Management",
+    "cpe_code": "(CPEs)",
+    "cwe_title": "Weaknesses Management",
+    "cwe_code": "(CWEs)",
+    "import_start": "Import started",
+    "import_success": "Import finished",
+    "import_error": "Import error",
+    "user_title": "User Management"
+  },
+  "detector": {
+    "title": "Configuration Detector",
+    "subtitle": "Download and run the tool to automatically generate your system configuration.",
+    "download_button": "Download ConfigDetector",
+    "instructions_title": "After downloading the tool:",
+    "step1": "Run the 'ConfigDetector.exe' file on your computer.",
+    "step2": "The configuration file 'system_config.json' will be generated in the same directory.",
+    "step3_prefix": "Upload the 'system_config.json' file to VulnScanner via ",
+    "step3_link": "Dashboard > My Devices > Create New Device"
+  },
+  "cve": {
+    "title": "CVE Management",
+    "import_button": "Import CVEs",
+    "from_api": "From NVD API",
+    "import_start": "🚀 Starting import from {{source}}",
+    "importing": "Fetching from NVD...",
+    "file": "File",
+    "completed": "Completed.",
+    "import_success": "✅ {{count}} items successfully imported.",
+    "import_complete": "Import Completed",
+    "items_imported": "items successfully imported.",
+    "import_error": "❌ Import error: {{error}}",
+    "import_error_title": "Import Error",
+    "import_error_message": "An error occurred during the import.",
+    "connection_error": "❌ Server connection error",
+    "error_processing": "Error processing data",
+    "delete_button": "Delete CVEs",
+    "all": "All",
+    "delete_success": "✅ All CVEs have been deleted",
+    "delete_error": "❌ Error deleting CVEs: {{error}}",
+    "imported": "imported",
+    "checking_nvd": "Checking new CVEs availables at NVD...",
+    "no_new_cves": "DB up to date. There are no new CVEs to import.",
+    "loading_status": "Conneting to NVD...",
+    "loading_ids": "Getting CVE list from NVD...",
+    "aborted_by_user": "Import aborted by user",
+    "too_many_new": "There are too many new CVEs.",
+    "cves_imported": " CVEs imported",
+    "stop_import": "Stop",
+    "of": "of",
+    "import_modal_title": "CVE Import",
+    "start": "Start",
+    "fetching_ids_progress": "{{percent}}% Completed",
+    "delete_title": "Delete CVEs",
+    "delete_confirmation": "{{count}} CVEs will be deleted. Proceed?",
+    "confirm_delete": "Delete",
+    "cancel": "Cancel",
+    "deleting_status": "Deleting CVEs...",
+    "nothing_to_delete": "There are no CVEs to delete in DB.",
+    "accept": "Accept",
+    "delete_and_reimport_suggestion": "Please delete all existing records and re-import from scratch.",
+    "subtitle": "Manage import and removal of vulnerabilities from official sources."
   }
-  
+}

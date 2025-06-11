@@ -10,6 +10,11 @@ from app.routes.auth import get_current_user
 from app.schemas import VulnerabilityCreate, VulnerabilityResponse, VulnerabilityUpdate, DetailedVulnerabilityResponse
 from app.config.translations import get_message
 from app.config.endpoints import *
+from typing import List
+from app.crud import device_matches
+from app.schemas import user as User
+from app.models.device import Device
+
 
 
 router = APIRouter(prefix=VULNERABILITIES_BASE, tags=["vulnerabilities"])

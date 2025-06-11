@@ -20,6 +20,7 @@ class DeviceMatch(Base):
     match_type = Column(String, nullable=True)
     match_score = Column(Float, nullable=True)
     needs_review = Column(Boolean, default=False)
+    solved = Column(Boolean, default=False, nullable=False)
 
     device_config = relationship("DeviceConfig", back_populates="matches")
     cve_cpe = relationship(

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, Body
 from sqlalchemy.orm import Session
 from app import crud, models, schemas
 from app.database import get_db
@@ -16,6 +16,8 @@ from app.models.device_match import DeviceMatch
 from app.models.device_config import DeviceConfig
 from sqlalchemy import func
 from app.models.vulnerability import Vulnerability
+from app.schemas.device import CVEMarkRequest
+
 
 
 
@@ -155,21 +157,33 @@ async def match_platforms_with_progress(
         yield {"event": "message", "data": "[DONE]"}
 
     return EventSourceResponse(event_generator())
+
 @router.get("/devices/{device_id}/vulnerabilities")
-def get_vulnerabilities_by_severity(device_id: int, severity: str = None, db: Session = Depends(get_db)):
+def get_vulnerabilities_by_severity(
+    device_id: int,
+    severity: str = None,
+    year: int = None,
+    db: Session = Depends(get_db)
+):
     query = (
         db.query(Vulnerability)
         .join(DeviceMatch, Vulnerability.cve_id == DeviceMatch.cve_name)
         .join(DeviceConfig, DeviceMatch.device_config_id == DeviceConfig.id)
         .filter(DeviceConfig.device_id == device_id)
+        .filter(DeviceMatch.solved == False)  # 👈 solo las no solucionadas
     )
+
     if severity:
         if severity.upper() == "NONE":
             query = query.filter(Vulnerability.severity.is_(None))
         else:
             query = query.filter(Vulnerability.severity == severity)
 
+    if year:
+        query = query.filter(Vulnerability.cve_id.startswith(f"CVE-{year}"))  # 👈 por año desde cve_id
+
     return query.distinct().all()
+
 
 
 @router.get("/devices/{device_id}/vulnerability-stats")
@@ -179,6 +193,7 @@ def get_vulnerability_stats(device_id: int, db: Session = Depends(get_db)):
         .join(DeviceMatch, Vulnerability.cve_id == DeviceMatch.cve_name)
         .join(DeviceConfig, DeviceMatch.device_config_id == DeviceConfig.id)
         .filter(DeviceConfig.device_id == device_id)
+        .filter(DeviceMatch.solved == False)  # 👈 excluir solucionadas
         .group_by(Vulnerability.severity)
     )
     data = {sev if sev is not None else "NONE": count for sev, count in base_query.all()}
@@ -188,6 +203,31 @@ def get_vulnerability_stats(device_id: int, db: Session = Depends(get_db)):
         .join(DeviceMatch, Vulnerability.cve_id == DeviceMatch.cve_name)
         .join(DeviceConfig, DeviceMatch.device_config_id == DeviceConfig.id)
         .filter(DeviceConfig.device_id == device_id)
+        .filter(DeviceMatch.solved == False)  # 👈 excluir solucionadas
     )
     data["ALL"] = total_query.scalar()
     return data
+
+@router.post("/devices/{device_id}/vulnerabilities/mark-solved")
+def mark_vulnerabilities_as_solved(
+    device_id: int,
+    request: CVEMarkRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Verificar propiedad del dispositivo
+    device = db.query(models.Device).filter_by(id=device_id, user_id=current_user.id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+
+    # Buscar coincidencias y marcar como solucionadas
+    matches = db.query(DeviceMatch).join(DeviceConfig).filter(
+        DeviceConfig.device_id == device_id,
+        DeviceMatch.cve_name.in_(request.cve_ids)
+    ).all()
+
+    for match in matches:
+        match.solved = True
+
+    db.commit()
+    return {"status": "ok", "marked": request.cve_ids}

@@ -1,190 +1,170 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import axios from "axios";
-import { motion } from "framer-motion";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { PageWrapper } from "@/components/layouts/PageWrapper";
 import { API_ROUTES } from "@/config/apiRoutes";
-import { Button } from "@/components/ui/button";
-import { theme } from "@/styles/theme";
+import { APP_ROUTES } from "@/config/appRoutes";
 
-export default function DeviceConfig() {
-  const { deviceId } = useParams();
-  const [device, setDevice] = useState(null);
-  const [matches, setMatches] = useState({});
-  const [expanded, setExpanded] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [lastSummary, setLastSummary] = useState(null);
+export default function DeviceVulnerabilitiesList() {
+  const { deviceId, severity } = useParams();
+  const [vulns, setVulns] = useState([]);
+  const [startYear, setStartYear] = useState("");
+  const [endYear, setEndYear] = useState("");
+  const [selected, setSelected] = useState([]);
 
-  useEffect(() => {
-    axios.get(API_ROUTES.DEVICES.DEVICE_CONFIG(deviceId), { withCredentials: true })
-      .then((res) => setDevice(res.data))
-      .catch((err) => console.error("Error loading device config:", err))
-      .finally(() => setLoading(false));
-  }, [deviceId]);
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: currentYear - 1998 }, (_, i) => 1999 + i);
 
-  useEffect(() => {
-    if (!deviceId) return;
-    axios.get(API_ROUTES.DEVICES.DEVICE_MATCHES(deviceId), { withCredentials: true })
-      .then(res => {
-        const grouped = {};
-        for (const m of res.data) {
-          if (!grouped[m.device_config_id]) grouped[m.device_config_id] = [];
-          grouped[m.device_config_id].push(m);
-        }
-        setMatches(grouped);
-      })
-      .catch(err => console.error("Error loading matches:", err));
-  }, [deviceId]);
+  const fetchVulnerabilities = async () => {
+    const normalizedSeverity = severity?.toUpperCase();
+    const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-  const handleMatchRefresh = () => {
-    setRefreshing(true);
-    axios.post(API_ROUTES.DEVICES.MATCH_REFRESH(deviceId), {}, { withCredentials: true })
-      .then(res => {
-        setLastSummary(res.data);
-        return axios.get(API_ROUTES.DEVICES.DEVICE_MATCHES(deviceId), { withCredentials: true });
-      })
-      .then(res => {
-        const grouped = {};
-        for (const m of res.data) {
-          if (!grouped[m.device_config_id]) grouped[m.device_config_id] = [];
-          grouped[m.device_config_id].push(m);
-        }
-        setMatches(grouped);
-      })
-      .catch(err => console.error("Error actualizando matches:", err))
-      .finally(() => setRefreshing(false));
+    let allResults = [];
+
+    const yearRange =
+      startYear && endYear
+        ? years.filter((y) => y >= parseInt(startYear) && y <= parseInt(endYear))
+        : [""];
+
+    for (const year of yearRange) {
+      let url = `${baseURL}/devices/${deviceId}/vulnerabilities`;
+      const queryParams = [];
+
+      if (normalizedSeverity && normalizedSeverity !== "ALL") {
+        queryParams.push(`severity=${normalizedSeverity}`);
+      }
+      if (year) {
+        queryParams.push(`year=${year}`);
+      }
+      if (queryParams.length > 0) {
+        url += `?${queryParams.join("&")}`;
+      }
+
+      try {
+        const res = await axios.get(url, { withCredentials: true });
+        const data = Array.isArray(res.data) ? res.data : [];
+        allResults = [...allResults, ...data];
+      } catch (err) {
+        console.error(`❌ Error año ${year}:`, err);
+      }
+    }
+
+    // Eliminar duplicados por cve_id
+    const unique = {};
+    for (const v of allResults) {
+      unique[v.cve_id] = v;
+    }
+
+    setVulns(Object.values(unique));
+    setSelected([]);
   };
 
-  const grouped = { o: [], h: [], a: [] };
-  if (device?.config) {
-    for (const c of device.config) {
-      grouped[c.type]?.push(c);
-    }
-  }
+  useEffect(() => {
+    fetchVulnerabilities();
+  }, [deviceId, severity, startYear, endYear]);
 
-  const toggleExpand = (configId) => {
-    setExpanded(prev => ({ ...prev, [configId]: !prev[configId] }));
+  const toggleSelection = (cve_id) => {
+    setSelected((prev) =>
+      prev.includes(cve_id)
+        ? prev.filter((id) => id !== cve_id)
+        : [...prev, cve_id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selected.length === vulns.length) {
+      setSelected([]);
+    } else {
+      setSelected(vulns.map((v) => v.cve_id));
+    }
+  };
+
+  const markAsSolved = () => {
+    if (selected.length === 0) return;
+
+    axios
+      .post(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/devices/${deviceId}/vulnerabilities/mark-solved`,
+        { cve_ids: selected },
+        { withCredentials: true }
+      )
+      .then(() => {
+        fetchVulnerabilities();
+      })
+      .catch((err) => {
+        console.error("❌ Error marcando como solucionadas:", err);
+      });
   };
 
   return (
     <MainLayout>
-      <PageWrapper>
-        {loading ? (
-          <p className="text-muted-foreground">Cargando configuración...</p>
-        ) : (
-          <>
-            <div style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "1.5rem"
-            }}>
-              <h1 style={{
-                fontSize: "26px",
-                fontWeight: "800",
-                color: theme.colors.primary,
-                fontFamily: theme.font.family
-              }}>
-                {device.alias}
-              </h1>
-              <Button onClick={handleMatchRefresh} disabled={refreshing}>
-                {refreshing ? "Analizando..." : "Iniciar Matching"}
-              </Button>
-            </div>
-
-            {lastSummary && (
-              <p style={{ fontSize: "14px", color: theme.colors.muted, marginBottom: "1rem" }}>
-                {lastSummary.matched} de {lastSummary.total_configs} elementos con coincidencias ({lastSummary.match_percentage}%)
-              </p>
-            )}
-
-            {["o", "h", "a"].map((typeKey) => (
-              <div key={typeKey} style={{ marginBottom: "2rem" }}>
-                <h2 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "0.75rem" }}>
-                  {typeKey === "o" ? "Sistema Operativo" : typeKey === "h" ? "Hardware" : "Aplicaciones"}
-                </h2>
-
-                {grouped[typeKey].length === 0 ? (
-                  <p style={{ color: theme.colors.muted }}>No hay elementos.</p>
-                ) : (
-                  <ul style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                    {grouped[typeKey].map((item, idx) => {
-                      const configMatches = matches[item.id] || [];
-                      const isOpen = expanded[item.id];
-                      const uniqueCves = [...new Set(configMatches.map(m => m.cve_name))];
-
-                      return (
-                        <motion.li
-                          key={idx}
-                          whileHover={{ scale: 1.02 }}
-                          transition={{ duration: 0.2 }}
-                          style={{
-                            backgroundColor: theme.colors.surface,
-                            border: "1px solid #334155",
-                            borderRadius: theme.radius.xl,
-                            padding: "1.25rem",
-                            boxShadow: theme.shadow.soft,
-                            listStyle: "none",
-                            fontFamily: theme.font.family
-                          }}
-                        >
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <div style={{ fontWeight: "600" }}>
-                              <span style={{ color: theme.colors.primary }}>{item.vendor}</span> — {item.product}
-                              {item.version && <span> (v{item.version})</span>}
-                            </div>
-                            {configMatches.length > 0 && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => toggleExpand(item.id)}
-                              >
-                                {isOpen ? "Ocultar matches" : "Mostrar matches"}
-                              </Button>
-                            )}
-                          </div>
-
-                          {isOpen && (
-                            <ul style={{
-                              listStyle: "none",
-                              marginTop: "0.75rem",
-                              paddingLeft: "1rem",
-                              fontSize: "14px",
-                              color: theme.colors.muted,
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: "0.25rem"
-                            }}>
-                              {uniqueCves.map((cve, i) => (
-                                <li key={i}>
-                                  <span style={{ marginRight: "6px", color: "#60a5fa", fontWeight: "bold" }}>▸</span>
-                                  <Link
-                                    to={`/vulnerabilities/${cve}`}
-                                    style={{
-                                      color: "#60a5fa",
-                                      fontWeight: "600",
-                                      textDecoration: "none"
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.textDecoration = "underline"}
-                                    onMouseLeave={(e) => e.currentTarget.style.textDecoration = "none"}
-                                  >
-                                    {cve}
-                                  </Link>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </motion.li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
+      <PageWrapper title={`Vulnerabilidades: ${severity}`}>
+        <div style={{ padding: "1rem 2rem", display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
+          <label>Filtrar por años:</label>
+          <select value={startYear} onChange={(e) => setStartYear(e.target.value)}>
+            <option value="">Desde</option>
+            {years.map((y) => (
+              <option key={y} value={y}>{y}</option>
             ))}
-          </>
-        )}
+          </select>
+          <span>→</span>
+          <select value={endYear} onChange={(e) => setEndYear(e.target.value)}>
+            <option value="">Hasta</option>
+            {years.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+
+          <button
+            onClick={markAsSolved}
+            disabled={selected.length === 0}
+            style={{
+              padding: "6px 12px",
+              backgroundColor: selected.length > 0 ? "#1e88e5" : "#999",
+              color: "#fff",
+              border: "none",
+              borderRadius: "4px",
+              cursor: selected.length > 0 ? "pointer" : "not-allowed"
+            }}
+          >
+            Marcar como solucionadas
+          </button>
+        </div>
+
+        <ul style={{ padding: "2rem", listStyle: "none" }}>
+          {vulns.length > 0 && (
+            <li style={{ marginBottom: "1rem", display: "flex", alignItems: "center", gap: "1rem" }}>
+              <input
+                type="checkbox"
+                checked={selected.length === vulns.length}
+                onChange={toggleSelectAll}
+              />
+              <strong>Seleccionar/Deseleccionar todo</strong>
+            </li>
+          )}
+
+          {vulns.map((v) => (
+            <li key={v.cve_id} style={{ marginBottom: "1rem", display: "flex", alignItems: "center", gap: "1rem" }}>
+              <input
+                type="checkbox"
+                checked={selected.includes(v.cve_id)}
+                onChange={() => toggleSelection(v.cve_id)}
+              />
+              <div>
+                <Link
+                  to={APP_ROUTES.VULNERABILITY_DETAILS(v.cve_id)}
+                  style={{ fontWeight: 600, color: "#1e88e5" }}
+                >
+                  {v.cve_id}
+                </Link>
+                <div style={{ fontSize: "14px", color: "#ccc" }}>
+                  {v.description || "Sin descripción"}
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
       </PageWrapper>
     </MainLayout>
   );
