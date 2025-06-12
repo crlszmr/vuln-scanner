@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
  * Modal que muestra el progreso de importación de CVEs con soporte para
  * estados de advertencia, carga y progreso visual.
  */
-export default function ImportProgressModal({
+export default function ImportProgressModalCVE({
   isOpen,
   onClose,
   onStart,

@@ -12,6 +12,7 @@ from .cpe_importer import (
     import_cpes_from_xml,
     extract_all_cpes,
     collect_cpes_from_nodes,
+    import_all_cpes_stream  
 )
 
 from .cwe_importer import (

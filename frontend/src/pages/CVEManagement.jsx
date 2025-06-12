@@ -5,7 +5,7 @@ import { PageWrapper } from "@/components/layouts/PageWrapper";
 import { theme } from "@/styles/theme";
 import { CloudDownload, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import ImportProgressModal from "@/components/modals/ImportProgressModal";
+import ImportProgressModalCVE from "@/components/modals/ImportProgressModalCVE";
 import DeleteConfirmationModal from "@/components/modals/DeleteConfirmationModal";
 
 export default function CVEManagement() {
@@ -336,7 +336,7 @@ export default function CVEManagement() {
           )}
         </div>
 
-        <ImportProgressModal
+        <ImportProgressModalCVE
           isOpen={showModal}
           onClose={handleCloseModal}
           onStart={handleStartImport}

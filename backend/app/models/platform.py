@@ -25,7 +25,11 @@ class Platform(Base):
     )
     titles = relationship("CpeTitle", back_populates="platform", cascade="all, delete-orphan")
     references = relationship("CPEReference", back_populates="platform", cascade="all, delete-orphan")
-
+    cpe_deprecated_by = relationship(
+        "CpeDeprecatedBy",
+        back_populates="platform",
+        cascade="all, delete-orphan"
+    )
 
 
 

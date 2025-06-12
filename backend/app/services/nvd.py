@@ -56,7 +56,7 @@ def get_cve_details_from_nvd(cve_id: str) -> dict:
         return None
 
 def get_all_cve_ids(results_per_page=2000):
-    from app.services.import_status import _stop_event
+    from backend.app.services.import_status_cve import _stop_event
 
     print("📞 Entrando en get_all_cve_ids()")
     url = "https://services.nvd.nist.gov/rest/json/cves/2.0"

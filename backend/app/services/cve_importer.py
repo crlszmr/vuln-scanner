@@ -19,7 +19,7 @@ from app.services.nvd import (
     get_cves_by_id,
     get_cves_by_page
 )
-from app.services import import_status
+from app.services import import_status_cve
 from app.services.imports import (
     extract_all_cpes,
     extract_cvss_data,
@@ -183,14 +183,14 @@ async def import_all_cves_stream(results_per_page: int = 2000):
             yield json.dumps({"type": "start", "total": total_results, "label": "Cargando..."})
             total_pages = (total_results // results_per_page) + 1
             for page in range(total_pages):
-                if import_status.should_stop():
+                if import_status_cve.should_stop():
                     yield json.dumps({"type": "done", "imported": total_imported, "label": "Importación detenida por el usuario"})
                     return
                 start_index = page * results_per_page
                 data = get_cves_by_page(start_index=start_index, results_per_page=results_per_page)
                 vulns_data_parsed = parse_cves_from_nvd(data)
                 for i in range(0, len(vulns_data_parsed), 50):
-                    if import_status.should_stop():
+                    if import_status_cve.should_stop():
                         yield json.dumps({"type": "done", "imported": total_imported, "label": "Importación detenida por el usuario"})
                         return
                     sub_batch = vulns_data_parsed[i:i + 50]
@@ -239,7 +239,7 @@ async def import_all_cves_stream(results_per_page: int = 2000):
 
         current_imported = 0
         for i in range(0, total_to_import, 10):
-            if import_status.should_stop():
+            if import_status_cve.should_stop():
                 break
             batch_ids = new_cve_ids[i:i + 10]
             data_from_nvd = get_cves_by_id(batch_ids)
