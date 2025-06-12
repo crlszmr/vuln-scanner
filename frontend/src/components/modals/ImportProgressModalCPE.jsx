@@ -25,45 +25,58 @@ export default function ImportProgressModalCPE({
   const { t } = useTranslation();
   const [queue, setQueue] = useState([]);
   const [displayedLabel, setDisplayedLabel] = useState(label);
-  const timerRef = useRef(null);
+  const queueRef = useRef(queue);
+  const processingRef = useRef(false);
 
-  // Cada vez que cambia el label externo, añádelo a la cola (evita duplicados seguidos)
+  // Mantener referencia actualizada de la cola
+  useEffect(() => {
+    queueRef.current = queue;
+  }, [queue]);
+
+  // Añade cada label nuevo que llegue a la cola (evita duplicados seguidos)
   useEffect(() => {
     if (!isOpen || !label) return;
     setQueue((q) => {
-      if (q.length === 0 && displayedLabel === label) return q;
-      if (q[q.length - 1] === label) return q;
+      if ((q.length === 0 && displayedLabel === label) || q[q.length - 1] === label) return q;
       return [...q, label];
     });
     // eslint-disable-next-line
   }, [label, isOpen]);
 
-  // Procesa la cola: muestra el primero, y tras 2s lo quita para mostrar el siguiente, hasta vaciarla
+  // Procesador secuencial de la cola
   useEffect(() => {
     if (!isOpen) return;
+    if (processingRef.current) return;
+    if (queueRef.current.length === 0) return;
 
-    // Si ya se está mostrando un label, salta
-    if (queue.length === 0) return;
+    processingRef.current = true;
 
-    // Muestra el primer label de la cola
-    setDisplayedLabel(queue[0]);
+    async function processQueue() {
+      while (queueRef.current.length > 0) {
+        setDisplayedLabel(queueRef.current[0]);
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        setQueue((q) => {
+          const newQ = q.slice(1);
+          queueRef.current = newQ;
+          return newQ;
+        });
+      }
+      processingRef.current = false;
+    }
 
-    // Programa quitarlo después de 2s (o lo que quieras)
-    timerRef.current = setTimeout(() => {
-      setQueue((q) => q.slice(1)); // quita el primero de la cola
-    }, 4000);
+    processQueue();
 
-    // Cleanup: limpia el timer si cambia la cola o se desmonta
-    return () => clearTimeout(timerRef.current);
+    // Clean-up por si desmonta modal
+    return () => { processingRef.current = false; };
     // eslint-disable-next-line
-  }, [queue, isOpen]);
+  }, [isOpen, queue]);
 
-  // Al cerrar el modal, vacía cola y reinicia estado
+  // Al cerrar el modal, limpia cola y reset
   useEffect(() => {
     if (!isOpen) {
       setQueue([]);
       setDisplayedLabel(label);
-      clearTimeout(timerRef.current);
+      processingRef.current = false;
     }
     // eslint-disable-next-line
   }, [isOpen]);
@@ -93,7 +106,9 @@ export default function ImportProgressModalCPE({
   const formattedTotal = total?.toLocaleString("es-ES") ?? "0";
   const isWarning = status === "warning";
 
-  // Estilos igual...
+  // (El resto del componente: estilos, JSX, igual que antes...)
+
+  // ... pega aquí el return con los estilos y contenido igual que el código anterior ...
   const localTheme = {
     colors: {
       surface: "#1e293b",

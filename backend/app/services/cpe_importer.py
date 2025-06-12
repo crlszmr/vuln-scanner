@@ -334,7 +334,6 @@ async def import_all_cpes_stream():
 
 
         print("[CPE IMPORT] 🟡 Recorriendo items del XML (solo nuevos CPEs)...")
-        await import_status_cpe.publish({"label": "cpe.existing_count", "count": len(existing_cpes)})
         for idx, item in enumerate(items, start=1):
             if idx % 100000 == 0:
                 print(f"[CPE IMPORT]   ... procesados {idx}/{len(items)}")
