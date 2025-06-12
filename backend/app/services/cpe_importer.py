@@ -306,19 +306,21 @@ async def import_all_cpes_stream():
         print("[CPE IMPORT] 🟢 XML comprobado/descargado")
 
         print("[CPE IMPORT] 🟡 Parseando XML...")
-        # await import_status_cpe.publish({"label": "cpe.parsing_xml"})
+        await import_status_cpe.publish({"label": "cpe.parsing_xml"})
 
         tree = ET.parse(CPE_XML_PATH)
         root = tree.getroot()
         items = root.findall('.//{*}cpe-item')
-        # await import_status_cpe.publish({"label": "cpe.parsing_completed", "count": len(items)})
+        await import_status_cpe.publish({"label": "cpe.parsing_completed", "count": len(items)})
         print(f"[CPE IMPORT] 🟢 Parseo completado: {len(items)} items encontrados")
 
         from app.database import SessionLocal
         db = SessionLocal()
         print("[CPE IMPORT] 🟡 Obteniendo CPEs existentes en BD...")
+        await import_status_cpe.publish({"label": "cpe.getting_existing"})
         existing_cpes = set([row[0] for row in get_all_uris(db)])
         print(f"[CPE IMPORT] 🟢 CPEs existentes en BD: {len(existing_cpes)}")
+        await import_status_cpe.publish({"label": "cpe.existing_count", "count": len(existing_cpes)})
 
         platforms_to_insert = []
         titles_to_insert = []
@@ -330,7 +332,9 @@ async def import_all_cpes_stream():
             'cpe-lang': 'http://cpe.mitre.org/dictionary/2.0'
         }
 
+
         print("[CPE IMPORT] 🟡 Recorriendo items del XML (solo nuevos CPEs)...")
+        await import_status_cpe.publish({"label": "cpe.existing_count", "count": len(existing_cpes)})
         for idx, item in enumerate(items, start=1):
             if idx % 100000 == 0:
                 print(f"[CPE IMPORT]   ... procesados {idx}/{len(items)}")

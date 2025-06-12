@@ -160,8 +160,9 @@
     "parsing_completed": "Parseo completado: {{count}} elementos encontrados.",
     "getting_existing": "Consultando las plataformas ya existentes en la base de datos...",
     "existing_count": "{{count}} plataformas ya existen en la base de datos.",
-    "processing_new_items": "Procesando {{current}} de {{total}} CPEs...",
+    "pre_processing_new_items": "Seleccionando solo los nuevos CPEs a importar...",
     "xml_checked": "Archivo XML verificado y listo para parsear.",
-    "stop_import": "Detener"
+    "stop_import": "Detener",
+    "ready": "Iniciando importación de CPEs"
   }
 }

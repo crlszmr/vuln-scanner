@@ -161,8 +161,9 @@
     "parsing_completed": "Parsing completed: {{count}} items found.",
     "getting_existing": "Retrieving existing platforms from the database...",
     "existing_count": "{{count}} platforms already exist in the database.",
-    "processing_new_items": "Processing {{current}} of {{total}} CPEs...",
+    "pre_processing_new_items": "Selecting only new CPEs to import...",
     "xml_checked": "XML file checked and ready for parsing.",
-    "stop_import": "Stop"
+    "stop_import": "Stop",
+    "ready": "Ready to start CPE import"
   }
 }

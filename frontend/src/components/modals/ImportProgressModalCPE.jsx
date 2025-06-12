@@ -1,10 +1,7 @@
+import { useState, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 
-/**
- * Modal que muestra el progreso de importación de CPEs con soporte para
- * estados de advertencia, carga y progreso visual e internacionalización real.
- */
 export default function ImportProgressModalCPE({
   isOpen,
   onClose,
@@ -26,23 +23,67 @@ export default function ImportProgressModalCPE({
   total_deprecated,
 }) {
   const { t } = useTranslation();
+  const [queue, setQueue] = useState([]);
+  const [displayedLabel, setDisplayedLabel] = useState(label);
+  const timerRef = useRef(null);
 
-  // Identifica si está en la fase de procesamiento masivo (no mostrar barra/progreso)
-  const isProcessingItems = label === "cpe.processing_new_items";
-
-  // Mensaje final a mostrar (siempre usa label y variables, sin switch)
-  function getImportLabel() {
-    console.log("LABEL:", label);
-    return t(label, {
-      imported,
-      total,
-      count,
-      current,
-      total_platforms,
-      total_titles,
-      total_refs,
-      total_deprecated,
+  // Cada vez que cambia el label externo, añádelo a la cola (evita duplicados seguidos)
+  useEffect(() => {
+    if (!isOpen || !label) return;
+    setQueue((q) => {
+      if (q.length === 0 && displayedLabel === label) return q;
+      if (q[q.length - 1] === label) return q;
+      return [...q, label];
     });
+    // eslint-disable-next-line
+  }, [label, isOpen]);
+
+  // Procesa la cola: muestra el primero, y tras 2s lo quita para mostrar el siguiente, hasta vaciarla
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Si ya se está mostrando un label, salta
+    if (queue.length === 0) return;
+
+    // Muestra el primer label de la cola
+    setDisplayedLabel(queue[0]);
+
+    // Programa quitarlo después de 2s (o lo que quieras)
+    timerRef.current = setTimeout(() => {
+      setQueue((q) => q.slice(1)); // quita el primero de la cola
+    }, 4000);
+
+    // Cleanup: limpia el timer si cambia la cola o se desmonta
+    return () => clearTimeout(timerRef.current);
+    // eslint-disable-next-line
+  }, [queue, isOpen]);
+
+  // Al cerrar el modal, vacía cola y reinicia estado
+  useEffect(() => {
+    if (!isOpen) {
+      setQueue([]);
+      setDisplayedLabel(label);
+      clearTimeout(timerRef.current);
+    }
+    // eslint-disable-next-line
+  }, [isOpen]);
+
+  function getImportLabel() {
+    if (displayedLabel)
+      return t(displayedLabel, {
+        imported,
+        total,
+        count,
+        current,
+        total_platforms,
+        total_titles,
+        total_refs,
+        total_deprecated,
+      });
+    if (waitingForSSE) return t("cpe.waiting_sse");
+    if (pendingImport) return t("cpe.from_xml");
+    if (status === "error") return t("cpe.connection_error");
+    return t("cpe.ready");
   }
 
   if (!isOpen) return null;
@@ -52,7 +93,7 @@ export default function ImportProgressModalCPE({
   const formattedTotal = total?.toLocaleString("es-ES") ?? "0";
   const isWarning = status === "warning";
 
-  // Estilos y tema definidos localmente para que el componente sea autocontenido
+  // Estilos igual...
   const localTheme = {
     colors: {
       surface: "#1e293b",
@@ -66,7 +107,6 @@ export default function ImportProgressModalCPE({
       medium: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
     },
   };
-
   const styles = {
     backdrop: {
       position: "fixed",
@@ -171,7 +211,6 @@ export default function ImportProgressModalCPE({
   return ReactDOM.createPortal(
     <div style={styles.backdrop}>
       <div style={styles.modal}>
-        {/* Botón para cerrar el modal */}
         <button
           onClick={canClose ? onClose : null}
           disabled={!canClose}
@@ -183,11 +222,7 @@ export default function ImportProgressModalCPE({
         >
           ✖
         </button>
-
-        {/* Título del modal */}
         <h2 style={styles.title}>{t("cpe.import_modal_title")}</h2>
-
-        {/* Contenido dinámico del modal según estado */}
         <div style={styles.progressWrapper}>
           {isWarning ? (
             <div style={styles.statusText}>
@@ -199,13 +234,12 @@ export default function ImportProgressModalCPE({
               <div style={styles.statusText}>
                 {getImportLabel()}
               </div>
-              {/* SOLO muestra el progreso si no es procesamiento masivo */}
-              {!isProcessingItems && total > 0 && (
+              {total > 0 && (
                 <div style={styles.progressText}>
                   {formattedImported} / {formattedTotal}
                 </div>
               )}
-              {!isProcessingItems && (percentage > 0 && percentage < 100) && (
+              {(percentage > 0 && percentage < 100) && (
                 <div style={styles.barOuter}>
                   <div style={{
                     ...styles.barInner,
@@ -223,7 +257,6 @@ export default function ImportProgressModalCPE({
           ) : null}
         </div>
 
-        {/* Botones de acción */}
         {(status === "idle" || pendingImport) &&
           !waitingForSSE &&
           status !== "warning" && (
