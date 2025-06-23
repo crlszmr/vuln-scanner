@@ -143,7 +143,6 @@
     "aborted_by_user": "Importación cancelada por el usuario",
     "delete_success": "CPEs eliminados correctamente",
     "delete_error": "Error al eliminar CPEs: {{error}}",
-    "processing_items": "Procesando los elementos del XML para preparar la importación...",
     "inserting_platforms": "Insertando plataformas en la base de datos ({{imported}} de {{total_platforms}}).",
     "inserting_titles": "Añadiendo títulos de plataformas ({{imported}} de {{total_titles}}).",
     "inserting_references": "Registrando referencias externas ({{imported}} de {{total_refs}}).",
@@ -157,12 +156,19 @@
     "connecting_nvd": "Conectando con la base de datos de NVD...",
     "downloading_xml": "Descargando y comprobando archivo XML...",
     "parsing_xml": "Parseando XML CPE (esto puede tardar)...",
-    "parsing_completed": "Parseo completado: {{count}} elementos encontrados.",
     "getting_existing": "Consultando las plataformas ya existentes en la base de datos...",
-    "existing_count": "{{count}} plataformas ya existen en la base de datos.",
     "pre_processing_new_items": "Seleccionando solo los nuevos CPEs a importar...",
     "xml_checked": "Archivo XML verificado y listo para parsear.",
     "stop_import": "Detener",
-    "ready": "Iniciando importación de CPEs"
+    "ready": "Iniciando importación de CPEs",
+    "completion_percentage": "{{percentage}}% Completado",
+    "importing_from_nvd": "Importando desde NVD...",
+    "no_cpes_found": "Ningún CPE detectado en la BD.",
+    "parsing_completed": "Parseo completado. Encontrados {{count}} CPEs publicados por NVD.",
+    "existing_count": "{{count}} CPEs detectados en la BD.",
+    "processing_items": "Preparando importación. {{count}} de {{total}} CPEs procesados...",
+    "waiting_sse": "Esperando respuesta del servidor...",
+    "test": "Esto es una prueba de conduccion",
+    "inserting_items": "Insertando elementos en la base de datos..."
   }
 }

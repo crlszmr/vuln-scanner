@@ -97,14 +97,16 @@ export default function CPEManagement() {
         const cleanData = event.data.startsWith("data: ") ? event.data.slice(6) : event.data;
         const data = JSON.parse(cleanData);
 
-        if (["label", "start", "progress", "done"].includes(data.type)) {
+        if (["label", "start", "progress", "done", "start_inserting"].includes(data.type)) {
           setMessageQueue((queue) => [...queue, data]);
         }
 
-        if (data.imported !== undefined) setImported(data.imported);
-        if (data.total !== undefined) setTotal(data.total);
+        // Conversión segura a número eliminando puntos si vienen como string
+        if (data.imported !== undefined) setImported(Number(String(data.imported).replace(/\./g, "")));
+        if (data.total !== undefined) setTotal(Number(String(data.total).replace(/\./g, "")));
+        if (data.count !== undefined) setCount(Number(String(data.count).replace(/\./g, "")));
+
         if (data.percentage !== undefined) setPercentage(data.percentage);
-        if (data.count !== undefined) setCount(data.count);
         if (data.current !== undefined) setCurrent(data.current);
         if (data.label !== undefined) setLabel(data.label);
 
@@ -167,6 +169,7 @@ export default function CPEManagement() {
       console.error("[SSE] EventSource ERROR", err);
     };
   };
+
 
   useEffect(() => {
     const checkImportStatus = async () => {

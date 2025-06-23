@@ -280,6 +280,9 @@ def collect_cpes_from_nodes(nodes: list, cpes: list[str]):
         for child in node.get('children', []):
             collect_cpes_from_nodes(child, cpes)
 
+def miles(n):
+    return f"{n:,}".replace(",", ".")            
+
 
 async def import_all_cpes_stream():
     import os
@@ -295,7 +298,6 @@ async def import_all_cpes_stream():
     from sqlalchemy.dialects.postgresql import insert
 
     try:
-        # Solo deja este para ver que llega la conexión
         print("[CPE IMPORT] 🟢 Paso 1: Spinner y mensaje de conexión")
         import_status_cpe.start(resource="cpe", label="cpe.connecting_nvd")
 
@@ -311,7 +313,10 @@ async def import_all_cpes_stream():
         tree = ET.parse(CPE_XML_PATH)
         root = tree.getroot()
         items = root.findall('.//{*}cpe-item')
-        await import_status_cpe.publish({"label": "cpe.parsing_completed", "count": len(items)})
+        await import_status_cpe.publish({
+            "label": "cpe.parsing_completed",
+            "count": miles(len(items))
+        })
         print(f"[CPE IMPORT] 🟢 Parseo completado: {len(items)} items encontrados")
 
         from app.database import SessionLocal
@@ -320,7 +325,17 @@ async def import_all_cpes_stream():
         await import_status_cpe.publish({"label": "cpe.getting_existing"})
         existing_cpes = set([row[0] for row in get_all_uris(db)])
         print(f"[CPE IMPORT] 🟢 CPEs existentes en BD: {len(existing_cpes)}")
-        await import_status_cpe.publish({"label": "cpe.existing_count", "count": len(existing_cpes)})
+        if len(existing_cpes) == 0:
+            print("[CPE IMPORT] 🟡 Ningún CPE detectado en la BD.")
+            await import_status_cpe.publish({
+                "label": "cpe.no_cpes_found"
+            })
+        else:
+            print(f"[CPE IMPORT] 🟡 {miles(len(existing_cpes))} CPEs detectados en la BD.")
+            await import_status_cpe.publish({
+                "label": "cpe.existing_count",
+                "count": miles(len(existing_cpes))
+            })
 
         platforms_to_insert = []
         titles_to_insert = []
@@ -332,12 +347,11 @@ async def import_all_cpes_stream():
             'cpe-lang': 'http://cpe.mitre.org/dictionary/2.0'
         }
 
-
         print("[CPE IMPORT] 🟡 Recorriendo items del XML (solo nuevos CPEs)...")
         for idx, item in enumerate(items, start=1):
             if idx % 100000 == 0:
                 print(f"[CPE IMPORT]   ... procesados {idx}/{len(items)}")
-
+                await import_status_cpe.publish({"label": "cpe.processing_items", "count": miles(idx), "total": miles(len(items))})
             cpe_23 = item.find('cpe-23:cpe23-item', ns)
             if cpe_23 is None:
                 continue
@@ -384,12 +398,32 @@ async def import_all_cpes_stream():
         total_deprecated = len(deprecated_by_to_insert)
         TOTAL_TO_INSERT = total_platforms + total_titles + total_refs + total_deprecated
 
-        BATCH_SIZE = 10000
+        BATCH_SIZE = 200000
         imported_total = 0
+        progress_total = 0  # Acumulado de todo lo insertado
 
+        # Nueva barra de progreso global para la inserción
+        async def send_progress():
+            percent = int(progress_total / TOTAL_TO_INSERT * 100) if TOTAL_TO_INSERT else 100
+            await import_status_cpe.publish({
+                "type": "start_inserting",
+                "imported": progress_total,
+                "total_to_insert": TOTAL_TO_INSERT,
+                "percentage": percent,
+                "label": "cpe.inserting_items"
+            })
+
+        await import_status_cpe.publish({
+            "type": "start_inserting",
+            "label": "cpe.inserting_items",
+            "total_to_insert": TOTAL_TO_INSERT,
+            "imported": 0,
+            "percentage": 0,
+        })
+
+        # PLATFORMS
         print("[CPE IMPORT] 🟡 Insertando platforms en BD...")
         for i in range(0, total_platforms, BATCH_SIZE):
-            print(f"[CPE IMPORT]   Batch platforms {i} - {min(i+BATCH_SIZE, total_platforms)}")
             batch = platforms_to_insert[i:i+BATCH_SIZE]
             stmt = insert(Platform).values(batch)
             stmt = stmt.on_conflict_do_nothing(index_elements=['cpe_uri'])
@@ -397,11 +431,14 @@ async def import_all_cpes_stream():
             db.commit()
             imported_now = result.rowcount or len(batch)
             imported_total += imported_now
+            progress_total += imported_now
+            await send_progress()
 
-        print("[CPE IMPORT] 🟡 Mapeando platform_id para titles/references/deprecated-by...")
+        # Remapeo IDs (igual que antes)
         all_platforms = db.query(Platform).all()
         platforms_by_uri = {p.cpe_uri: p.id for p in all_platforms}
 
+        # TITLES
         titles_objs = []
         for t in titles_to_insert:
             pid = platforms_by_uri.get(t['cpe_uri'])
@@ -409,11 +446,12 @@ async def import_all_cpes_stream():
                 titles_objs.append(CpeTitleCreate(platform_id=pid, lang=t['lang'], value=t['value']))
         print(f"[CPE IMPORT] 🟡 Insertando titles en BD ({len(titles_objs)})...")
         for i in range(0, len(titles_objs), BATCH_SIZE):
-            print(f"[CPE IMPORT]   Batch titles {i} - {min(i+BATCH_SIZE, len(titles_objs))}")
             batch = titles_objs[i:i+BATCH_SIZE]
             create_titles_multi(db, batch)
-            imported_total += len(batch)
+            progress_total += len(batch)
+            await send_progress()
 
+        # REFERENCES
         refs_objs = []
         for r in references_to_insert:
             pid = platforms_by_uri.get(r['cpe_uri'])
@@ -421,11 +459,12 @@ async def import_all_cpes_stream():
                 refs_objs.append(CPEReferenceCreate(platform_id=pid, ref=r['ref'], type=r['type']))
         print(f"[CPE IMPORT] 🟡 Insertando references en BD ({len(refs_objs)})...")
         for i in range(0, len(refs_objs), BATCH_SIZE):
-            print(f"[CPE IMPORT]   Batch references {i} - {min(i+BATCH_SIZE, len(refs_objs))}")
             batch = refs_objs[i:i+BATCH_SIZE]
             create_refs_multi(db, batch)
-            imported_total += len(batch)
+            progress_total += len(batch)
+            await send_progress()
 
+        # DEPRECATED-BY
         deprecated_objs = []
         for d in deprecated_by_to_insert:
             pid = platforms_by_uri.get(d['cpe_uri'])
@@ -433,22 +472,14 @@ async def import_all_cpes_stream():
                 deprecated_objs.append(CpeDeprecatedByCreate(platform_id=pid, cpe_uri=d['cpe_uri_by']))
         print(f"[CPE IMPORT] 🟡 Insertando deprecated-by en BD ({len(deprecated_objs)})...")
         for i in range(0, len(deprecated_objs), BATCH_SIZE):
-            print(f"[CPE IMPORT]   Batch deprecated-by {i} - {min(i+BATCH_SIZE, len(deprecated_objs))}")
             batch = deprecated_objs[i:i+BATCH_SIZE]
             create_deprecated_multi(db, batch)
-            imported_total += len(batch)
+            progress_total += len(batch)
+            await send_progress()
 
         db.commit()
         print("[CPE IMPORT] 🟢 Importación completada.")
-        # Si quieres, aquí puedes dejar SOLO el evento final (done), para saber si el frontend recibe al menos uno:
-        # await import_status_cpe.publish({
-        #     "type": "done",
-        #     "imported": imported_total,
-        #     "total": TOTAL_TO_INSERT,
-        #     "label": "cpe.import_completed",
-        #     "stage": "completed"
-        # })
-        import_status_cpe.finish(resource="cpe", imported=imported_total, total=TOTAL_TO_INSERT, label="Importación completada.")
+        import_status_cpe.finish(resource="cpe", imported=progress_total, total=TOTAL_TO_INSERT, label="cpe.import_completed")
 
     except Exception as e:
         print(f"[CPE IMPORT] ❌ Error: {str(e)}")

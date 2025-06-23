@@ -28,10 +28,36 @@ export default function ImportProgressModalCPE({
   const queueRef = useRef(queue);
   const processingRef = useRef(false);
 
+  const isInsertPhase =
+  (status === "running") &&
+  percentage !== undefined &&
+  percentage !== null &&
+  total > 0 &&
+  (
+    displayedLabel === "cpe.inserting_items" ||
+    label === "cpe.inserting_items"  // por si acaso
+  );
+
   // Mantener referencia actualizada de la cola
   useEffect(() => {
     queueRef.current = queue;
   }, [queue]);
+
+  useEffect(() => {
+  if (label === "cpe.inserting_items" && isOpen) {
+    setDisplayedLabel("cpe.inserting_items");
+  }
+}, [label, isOpen]);
+
+useEffect(() => {
+  console.log("🧪 isInsertPhase", {
+    displayedLabel,
+    label,
+    percentage,
+    total,
+    isInsertPhase
+  });
+}, [displayedLabel, label, percentage, total]);
 
   // Añade cada label nuevo que llegue a la cola (evita duplicados seguidos)
   useEffect(() => {
@@ -102,13 +128,8 @@ export default function ImportProgressModalCPE({
   if (!isOpen) return null;
 
   const canClose = status !== "running";
-  const formattedImported = imported?.toLocaleString("es-ES") ?? "0";
-  const formattedTotal = total?.toLocaleString("es-ES") ?? "0";
   const isWarning = status === "warning";
 
-  // (El resto del componente: estilos, JSX, igual que antes...)
-
-  // ... pega aquí el return con los estilos y contenido igual que el código anterior ...
   const localTheme = {
     colors: {
       surface: "#1e293b",
@@ -173,6 +194,7 @@ export default function ImportProgressModalCPE({
       borderRadius: "8px",
       overflow: "hidden",
       height: "20px",
+      marginBottom: "0.75rem",
     },
     barInner: {
       backgroundColor: "#22c55e",
@@ -239,38 +261,35 @@ export default function ImportProgressModalCPE({
         </button>
         <h2 style={styles.title}>{t("cpe.import_modal_title")}</h2>
         <div style={styles.progressWrapper}>
-          {isWarning ? (
-            <div style={styles.statusText}>
-              {t("cpe.too_many_new_warning")}
-            </div>
-          ) : (status === "running" || waitingForSSE) ? (
-            <div style={styles.spinnerWrapper}>
-              <div style={styles.spinner}></div>
-              <div style={styles.statusText}>
-                {getImportLabel()}
+          {/* Barra de progreso SOLO si percentage está definido y NO quedan mensajes en la cola */}
+          {isInsertPhase ? (
+            <>
+              <div style={styles.progressText}>
+                {t("cpe.completion_percentage", { percentage: Math.round(percentage || 0) })}
               </div>
-              {total > 0 && (
-                <div style={styles.progressText}>
-                  {formattedImported} / {formattedTotal}
+              <div style={styles.barOuter}>
+                <div style={{
+                  ...styles.barInner,
+                  width: `${percentage || 0}%`,
+                }}></div>
+              </div>
+              <div style={styles.statusText}>
+                {t("cpe.importing_from_nvd")}
+              </div>
+            </>
+          ) : (
+            // Fase anterior: spinner y label normal
+            (status === "running" || waitingForSSE) && (
+              <div style={styles.spinnerWrapper}>
+                <div style={styles.spinner}></div>
+                <div style={styles.statusText}>
+                  {getImportLabel()}
                 </div>
-              )}
-              {(percentage > 0 && percentage < 100) && (
-                <div style={styles.barOuter}>
-                  <div style={{
-                    ...styles.barInner,
-                    width: `${percentage}%`,
-                  }}></div>
-                </div>
-              )}
-            </div>
-          ) : status === "completed" ? (
-            <div style={styles.statusText}>
-              {t("cpe.completed")}
-            </div>
-          ) : (status === "idle" || pendingImport) ? (
-            <div style={styles.statusText}>{t("cpe.from_xml")}</div>
-          ) : null}
+              </div>
+            )
+          )}
         </div>
+
 
         {(status === "idle" || pendingImport) &&
           !waitingForSSE &&
