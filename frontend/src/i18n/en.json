@@ -154,7 +154,7 @@
     "loading_status": "...",
     "import_modal_title": "CPE Import",
     "start": "Start",
-    "connecting_nvd": "Connecting to the NVD database...",
+    "connecting_nvd": "Getting loading status from NVD...",
     "downloading_xml": "Downloading and checking XML file...",
     "parsing_xml": "Parsing CPE XML (this may take a while)...",
     "getting_existing": "Retrieving existing platforms from the database...",

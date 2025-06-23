@@ -23,6 +23,10 @@ export default function CPEManagement() {
   const [waitingForSSE, setWaitingForSSE] = useState(false);
   const [warningMessage, setWarningMessage] = useState("");
   const eventSourceRef = useRef(null);
+  const [totalPlatforms, setTotalPlatforms] = useState(0);
+  const [totalTitles, setTotalTitles] = useState(0);
+  const [totalRefs, setTotalRefs] = useState(0);
+  const [totalDeprecated, setTotalDeprecated] = useState(0);
 
   // Cola de mensajes y transición
   const [messageQueue, setMessageQueue] = useState([]);
@@ -50,6 +54,24 @@ export default function CPEManagement() {
   useEffect(() => {
     console.log("currentMessage cambiado:", currentMessage);
   }, [currentMessage]);
+
+  useEffect(() => {
+    fetch("/nvd/cpe-import-status")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.running) {
+          setIsOpen(true); // muestra el modal
+          setStatus("running");
+          setLabel(data.label); // ⚠️ esto es clave
+          setImported(data.imported);
+          setTotal(data.total);
+          setPercentage(data.percentage);
+          setCount(data.imported);
+          setCurrent(data.imported);
+          setWaitingForSSE(false);
+        }
+      });
+  }, []);
 
   useEffect(() => {
     if (messageQueue.length === 0 || currentMessage) return;
@@ -104,6 +126,7 @@ export default function CPEManagement() {
         // Conversión segura a número eliminando puntos si vienen como string
         if (data.imported !== undefined) setImported(Number(String(data.imported).replace(/\./g, "")));
         if (data.total !== undefined) setTotal(Number(String(data.total).replace(/\./g, "")));
+        if (data.total_to_insert !== undefined) setTotal(Number(String(data.total_to_insert).replace(/\./g, "")));
         if (data.count !== undefined) setCount(Number(String(data.count).replace(/\./g, "")));
 
         if (data.percentage !== undefined) setPercentage(data.percentage);
@@ -202,6 +225,10 @@ export default function CPEManagement() {
           setWaitingForSSE(true);
           setCount(statusData.count ?? null);
           setCurrent(statusData.current ?? null);
+          setTotalPlatforms(statusData.total_platforms || 0);
+          setTotalTitles(statusData.total_titles || 0);
+          setTotalRefs(statusData.total_refs || 0);
+          setTotalDeprecated(statusData.total_deprecated || 0);
           localStorage.setItem("cpe_import_status", "running");
           if (!eventSourceRef.current) {
             const eventSource = new EventSource(
@@ -416,6 +443,10 @@ export default function CPEManagement() {
             percentage={percentage}
             count={count}
             current={current}
+            total_platforms={totalPlatforms}
+            total_titles={totalTitles}
+            total_refs={totalRefs}
+            total_deprecated={totalDeprecated}
         />
 
         <DeleteConfirmationModal

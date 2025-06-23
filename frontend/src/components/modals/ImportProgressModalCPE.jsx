@@ -29,51 +29,46 @@ export default function ImportProgressModalCPE({
   const processingRef = useRef(false);
 
   const isInsertPhase =
-  (status === "running") &&
-  percentage !== undefined &&
-  percentage !== null &&
-  total > 0 &&
-  (
-    displayedLabel === "cpe.inserting_items" ||
-    label === "cpe.inserting_items"  // por si acaso
-  );
+    status === "running" &&
+    percentage != null &&
+    total > 0 &&
+    (displayedLabel === "cpe.inserting_items" || label === "cpe.inserting_items");
 
-  // Mantener referencia actualizada de la cola
+  // Actualizar cola en referencia
   useEffect(() => {
     queueRef.current = queue;
   }, [queue]);
 
+  // Restaurar el label tras recarga si está en fase de inserción
   useEffect(() => {
-  if (label === "cpe.inserting_items" && isOpen) {
-    setDisplayedLabel("cpe.inserting_items");
-  }
-}, [label, isOpen]);
+    if (isOpen && label === "cpe.inserting_items") {
+      setDisplayedLabel("cpe.inserting_items");
+    }
+  }, [label, isOpen]);
 
-useEffect(() => {
-  console.log("🧪 isInsertPhase", {
-    displayedLabel,
-    label,
-    percentage,
-    total,
-    isInsertPhase
-  });
-}, [displayedLabel, label, percentage, total]);
+  // Registro para depuración
+  useEffect(() => {
+    console.log("🧪 isInsertPhase", {
+      displayedLabel,
+      label,
+      percentage,
+      total,
+      isInsertPhase,
+    });
+  }, [displayedLabel, label, percentage, total]);
 
-  // Añade cada label nuevo que llegue a la cola (evita duplicados seguidos)
+  // Añadir label nuevo a la cola (evita duplicados consecutivos)
   useEffect(() => {
     if (!isOpen || !label) return;
     setQueue((q) => {
       if ((q.length === 0 && displayedLabel === label) || q[q.length - 1] === label) return q;
       return [...q, label];
     });
-    // eslint-disable-next-line
   }, [label, isOpen]);
 
-  // Procesador secuencial de la cola
+  // Procesar secuencialmente la cola de labels
   useEffect(() => {
-    if (!isOpen) return;
-    if (processingRef.current) return;
-    if (queueRef.current.length === 0) return;
+    if (!isOpen || processingRef.current || queueRef.current.length === 0) return;
 
     processingRef.current = true;
 
@@ -92,19 +87,18 @@ useEffect(() => {
 
     processQueue();
 
-    // Clean-up por si desmonta modal
-    return () => { processingRef.current = false; };
-    // eslint-disable-next-line
+    return () => {
+      processingRef.current = false;
+    };
   }, [isOpen, queue]);
 
-  // Al cerrar el modal, limpia cola y reset
+  // Reset al cerrar modal
   useEffect(() => {
     if (!isOpen) {
       setQueue([]);
       setDisplayedLabel(label);
       processingRef.current = false;
     }
-    // eslint-disable-next-line
   }, [isOpen]);
 
   function getImportLabel() {
@@ -265,36 +259,30 @@ useEffect(() => {
         )}
 
         <div style={styles.progressWrapper}>
-
-          {/* Barra de progreso SOLO si percentage está definido y NO quedan mensajes en la cola */}
           {isInsertPhase ? (
             <>
               <div style={styles.progressText}>
                 {t("cpe.completion_percentage", { percentage: Math.round(percentage || 0) })}
               </div>
               <div style={styles.barOuter}>
-                <div style={{
-                  ...styles.barInner,
-                  width: `${percentage || 0}%`,
-                }}></div>
+                <div
+                  style={{
+                    ...styles.barInner,
+                    width: `${percentage || 0}%`,
+                  }}
+                ></div>
               </div>
-              <div style={styles.statusText}>
-                {t("cpe.importing_from_nvd")}
-              </div>
+              <div style={styles.statusText}>{t("cpe.importing_from_nvd")}</div>
             </>
           ) : (
-            // Fase anterior: spinner y label normal
             (status === "running" || waitingForSSE) && (
               <div style={styles.spinnerWrapper}>
                 <div style={styles.spinner}></div>
-                <div style={styles.statusText}>
-                  {getImportLabel()}
-                </div>
+                <div style={styles.statusText}>{getImportLabel()}</div>
               </div>
             )
           )}
         </div>
-
 
         {(status === "idle" || pendingImport) &&
           !waitingForSSE &&

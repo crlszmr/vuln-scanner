@@ -398,7 +398,7 @@ async def import_all_cpes_stream():
         total_deprecated = len(deprecated_by_to_insert)
         TOTAL_TO_INSERT = total_platforms + total_titles + total_refs + total_deprecated
 
-        BATCH_SIZE = 200000
+        BATCH_SIZE = 10000
         imported_total = 0
         progress_total = 0  # Acumulado de todo lo insertado
 
