@@ -260,7 +260,12 @@ useEffect(() => {
           ✖
         </button>
         <h2 style={styles.title}>{t("cpe.import_modal_title")}</h2>
+        {!isInsertPhase && !waitingForSSE && status !== "running" && (
+          <div style={styles.statusText}>{getImportLabel()}</div>
+        )}
+
         <div style={styles.progressWrapper}>
+
           {/* Barra de progreso SOLO si percentage está definido y NO quedan mensajes en la cola */}
           {isInsertPhase ? (
             <>
