@@ -6,8 +6,6 @@ from app.services.nvd import get_cves_by_keyword
 from app.services.importer import (
     parse_cves_from_nvd,
     save_cves_to_db,
-    import_all_weaknesses_from_file,
-    download_weakness_xml_if_needed,
     import_all_cves_stream,
     import_cpes_from_xml,
 )
@@ -22,6 +20,8 @@ import json
 import asyncio
 from sqlalchemy import text
 from app.services import import_status_cpe
+from app.services import import_status_cwe
+from app.services import import_all_cwes_stream
 
 
 from app.services.importer import import_all_cpes_stream  # asegúrate de crear esta función
@@ -46,24 +46,6 @@ def import_cves_by_keyword(keyword: str = Query(..., description="Palabra clave 
         status_code=status.HTTP_202_ACCEPTED,
         content={"message": f"{imported} CVEs imported with keyword '{keyword}'."}
     )
-
-
-@router.post(CWE_IMPORT_ALL, status_code=status.HTTP_202_ACCEPTED)
-def import_all_weaknesses_from_nvd_ep(
-    limit: int = Query(None, ge=1, description="Número máximo de debilidades a importar (None = todas)")
-):
-    download_weakness_xml_if_needed()
-    filepath = "data/cwec_v4.12.xml"
-    db = SessionLocal()
-    try:
-        count = import_all_weaknesses_from_file(filepath, db, limit=limit)
-    finally:
-        db.close()
-    return JSONResponse(
-        status_code=status.HTTP_202_ACCEPTED,
-        content={"message": f"{count} weaknesses imported successfully."}
-    )
-
 
 @router.post("/cpe-delete-all", status_code=status.HTTP_202_ACCEPTED)
 def delete_all_cpes(payload: PasswordConfirmation, background_tasks: BackgroundTasks, current_user: User = Depends(get_current_user)):
@@ -222,3 +204,35 @@ def stop_import():
 @router.get("/cpe-import-status", status_code=200)
 def get_cpe_import_status():
     return import_status_cpe.get_import_status()
+
+@router.get("/cwe-import-stream")
+async def stream_cwe_import(request: Request):
+    print("[SSE-BACKEND] Conexión recibida en /nvd/cwe-import-stream")
+
+    async def event_generator():
+        initial_status = import_status_cwe.get_import_status()
+        yield f"data: {json.dumps({**initial_status, 'type': 'label'})}\n\n"
+        while not await request.is_disconnected():
+            event = await import_status_cwe.get_event_queue().get()
+            yield f"data: {event}\n\n"
+
+    return EventSourceResponse(event_generator())
+
+@router.post("/cwe-import-start", status_code=status.HTTP_202_ACCEPTED)
+async def launch_cwe_import():
+    if import_status_cwe.is_running():
+        return {"message": "Importación ya en curso", "status": import_status_cwe.get_import_status()}
+
+    # Ejecutar en hilo porque import_all_cwes_stream es bloqueante
+    def run_import():
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(import_status_cwe.start_background_import(import_all_cwes_stream))
+        loop.close()
+
+    thread = threading.Thread(target=run_import, daemon=True)
+    thread.start()
+    import_status_cwe.set_task(thread)
+
+    return {"message": "Importación de CWEs iniciada", "status": import_status_cwe.get_import_status()}

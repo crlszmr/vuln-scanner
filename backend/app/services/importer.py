@@ -15,10 +15,6 @@ from .cpe_importer import (
     import_all_cpes_stream  
 )
 
-from .cwe_importer import (
-    download_weakness_xml_if_needed,
-    import_all_weaknesses_from_file,
-)
 
 from .utils import (
     extract_cvss_data_from_feed,    
