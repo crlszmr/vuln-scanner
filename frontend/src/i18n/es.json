@@ -203,6 +203,16 @@
     "parsing_xml": "Parseando fichero XML...",
     "parsing_completed": "Parseo completado. Total: {{count}}",
     "import_completed": "Importación completada. Total: {{count}}"
+  },
+  "matching": {
+    "title": "Análisis de Matching",
+    "start": "Iniciar",
+    "stop": "Detener",
+    "close": "Cerrar",
+    "ready": "Listo para comenzar el análisis de matching",
+    "in_progress": "Ejecutando análisis...",
+    "completed": "Matching completado con éxito",
+    "aborted": "Matching detenido por el usuario",
+    "error": "Ha ocurrido un error durante el matching"
   }
-
 }

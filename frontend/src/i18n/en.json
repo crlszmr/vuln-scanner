@@ -203,6 +203,16 @@
     "parsing_xml": "Parsing XML file...",
     "parsing_completed": "Parsing completed. Total: {{count}}",
     "import_completed": "Import completed. {{count}} CWEs imported."
+  },
+  "matching": {
+    "title": "Matching Analysis",
+    "start": "Start",
+    "stop": "Stop",
+    "close": "Close",
+    "ready": "Ready to start matching analysis",
+    "in_progress": "Running analysis...",
+    "completed": "Matching completed successfully",
+    "aborted": "Matching aborted by user",
+    "error": "An error occurred during matching"
   }
-
 }

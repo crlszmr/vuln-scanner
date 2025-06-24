@@ -17,6 +17,10 @@ from app.models.device_config import DeviceConfig
 from sqlalchemy import func
 from app.models.vulnerability import Vulnerability
 from app.schemas.device import CVEMarkRequest
+from fastapi import status
+from sqlalchemy import desc
+
+
 
 
 
@@ -231,3 +235,21 @@ def mark_vulnerabilities_as_solved(
 
     db.commit()
     return {"status": "ok", "marked": request.cve_ids}
+
+@router.get("/devices/{device_id}/last-matching", status_code=status.HTTP_200_OK)
+def get_last_device_matching(device_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    # Verifica que el dispositivo pertenece al usuario
+    device = db.query(models.Device).filter_by(id=device_id, user_id=current_user.id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail="Dispositivo no encontrado")
+
+    # Busca el match más reciente
+    last_match = (
+        db.query(DeviceMatch.timestamp)
+        .join(DeviceConfig, DeviceMatch.device_config_id == DeviceConfig.id)
+        .filter(DeviceConfig.device_id == device_id)
+        .order_by(desc(DeviceMatch.timestamp))
+        .first()
+    )
+
+    return { "timestamp": last_match[0].isoformat() if last_match else None }

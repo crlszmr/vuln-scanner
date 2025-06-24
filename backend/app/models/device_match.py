@@ -5,6 +5,8 @@ from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base
 from sqlalchemy import ForeignKeyConstraint
+from sqlalchemy import Column, DateTime
+from datetime import datetime
 
 class DeviceMatch(Base):
     __tablename__ = "device_matches"
@@ -21,6 +23,8 @@ class DeviceMatch(Base):
     match_score = Column(Float, nullable=True)
     needs_review = Column(Boolean, default=False)
     solved = Column(Boolean, default=False, nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+
 
     device_config = relationship("DeviceConfig", back_populates="matches")
     cve_cpe = relationship(

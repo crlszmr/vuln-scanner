@@ -238,7 +238,8 @@ def match_platforms_for_device(device_id: int, db: Session, yield_progress: bool
             })
 
             if yield_progress:
-                yield f"{idx}/{total} - Procesado: {raw_vendor} {raw_product} ({match_type}, {match_score})"
+                msg = f"{idx}/{total} Procesando: Vendor={config.vendor}, Product={config.product}, Version={config.version}"
+                yield msg
 
     if yield_progress:
         async def generator():
