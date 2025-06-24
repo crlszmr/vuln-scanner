@@ -28,6 +28,28 @@ export default function DeviceMatching() {
       });
   }, [id]);
 
+  // ✅ Mostrar automáticamente el modal si hay un matching en curso
+  useEffect(() => {
+    const checkIfMatchingIsRunning = async () => {
+      try {
+        const res = await fetch(API_ROUTES.DEVICES.MATCH_STATUS(id), {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.running) {
+            console.log("[🔄 DeviceMatching] Matching activo al cargar. Mostrando modal...");
+            setShowModal(true);
+          }
+        }
+      } catch (err) {
+        console.error("[❌ DeviceMatching] Error al comprobar el estado de matching:", err);
+      }
+    };
+
+    checkIfMatchingIsRunning();
+  }, [id]);
+
   const handleStartMatching = () => {
     setShowModal(true);
   };
@@ -63,7 +85,7 @@ export default function DeviceMatching() {
               borderRadius: "12px",
               fontWeight: 500,
               fontSize: "1rem",
-              width: "600px", // ✅ igual que los botones
+              width: "600px",
               marginTop: "1rem",
               marginBottom: "2rem",
               boxShadow: theme.shadow.medium,
@@ -74,7 +96,15 @@ export default function DeviceMatching() {
               : "No hay matching disponible para este equipo. Si quiere lanzar uno, pulse en Analizar este equipo."}
           </div>
 
-          <div style={{ display: "flex", flexDirection: "row", gap: "40px", flexWrap: "wrap", justifyContent: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              gap: "40px",
+              flexWrap: "wrap",
+              justifyContent: "center",
+            }}
+          >
             <CVEPanel
               icon={<RefreshCcw size={64} />}
               title="Analizar este equipo"

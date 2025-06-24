@@ -6,7 +6,7 @@ import { API_ROUTES } from "@/config/apiRoutes";
 
 export default function MatchingProgressModal({ deviceId, onClose }) {
   const { t } = useTranslation();
-  const [status, setStatus] = useState("idle");
+  const [status, setStatus] = useState("checking"); // 🛠️ cambio aquí
   const [imported, setImported] = useState(0);
   const [total, setTotal] = useState(0);
   const [label, setLabel] = useState("");
@@ -51,15 +51,11 @@ export default function MatchingProgressModal({ deviceId, onClose }) {
     eventSource.onerror = (err) => {
       console.error("[❌ SSE ERROR] Conexión SSE interrumpida:", err);
       setStatus("error");
-
-      // ⚠️ No borres el estado aquí — puede seguir corriendo en el backend
-      // localStorage.removeItem(`matching_status_${deviceId}`);
-
       eventSource.close();
     };
   };
 
-  const startMatching = () => {
+  const startMatching = async () => {
     setStatus("running");
     setImported(0);
     setTotal(0);
@@ -67,13 +63,28 @@ export default function MatchingProgressModal({ deviceId, onClose }) {
     setLabel("Iniciando análisis...");
     setDisplayedLabel("");
     localStorage.setItem(`matching_status_${deviceId}`, "running");
-    setupEventSource();
+
+    try {
+      const res = await fetch(API_ROUTES.DEVICES.MATCH_START(deviceId), {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (res.ok) {
+        setupEventSource();
+      } else {
+        setStatus("error");
+        setLabel("No se pudo iniciar el análisis.");
+      }
+    } catch (err) {
+      console.error("[❌ Matching] Error al iniciar matching:", err);
+      setStatus("error");
+      setLabel("Error al iniciar el análisis.");
+    }
   };
 
   useEffect(() => {
     const checkMatchingStatus = async () => {
-      console.log("[🔍 MatchingModal] Consultando estado en backend...");
-
       try {
         const res = await fetch(API_ROUTES.DEVICES.MATCH_STATUS(deviceId), {
           credentials: "include",
@@ -81,34 +92,32 @@ export default function MatchingProgressModal({ deviceId, onClose }) {
 
         if (!res.ok) {
           console.warn(`[⚠️ MatchingModal] Error HTTP: ${res.status}`);
+          setStatus("idle");
           return;
         }
 
         const data = await res.json();
-        console.log("[✅ MatchingModal] Estado recibido:", data);
-
         if (data.running) {
-          console.log("[🚀 MatchingModal] Matching activo, reconectando SSE...");
           setStatus("running");
           setImported(0);
           setProgress(0);
           setTotal(0);
           setQueue([]);
-          setLabel("Iniciando análisis...");
+          setLabel("Recuperando estado del análisis...");
           setDisplayedLabel("");
           localStorage.setItem(`matching_status_${deviceId}`, "running");
           setupEventSource();
         } else {
-          console.log("[⏹ MatchingModal] No hay matching activo");
+          setStatus("idle");
         }
       } catch (err) {
         console.error("[❌ MatchingModal] Error al consultar estado:", err);
+        setStatus("idle");
       }
     };
 
     checkMatchingStatus();
   }, [deviceId]);
-
 
   useEffect(() => {
     if (label && (queue.length === 0 || queue[queue.length - 1] !== label)) {
@@ -151,7 +160,6 @@ export default function MatchingProgressModal({ deviceId, onClose }) {
 
   const renderFormattedLabel = () => {
     if (!displayedLabel.toLowerCase().includes("procesando:")) return displayedLabel;
-
     const vendor = displayedLabel.match(/Vendor=([^,]*)/)?.[1];
     const product = displayedLabel.match(/Product=([^,]*)/)?.[1];
     const version = displayedLabel.match(/Version=([^\s]*)/)?.[1];
@@ -166,7 +174,7 @@ export default function MatchingProgressModal({ deviceId, onClose }) {
     );
   };
 
-  if (!deviceId) return null;
+  if (!deviceId || status === "checking") return null; // ✅ previene parpadeo
 
   return ReactDOM.createPortal(
     <div style={styles.backdrop}>
@@ -186,21 +194,25 @@ export default function MatchingProgressModal({ deviceId, onClose }) {
         <h2 style={styles.title}>{t("Proceso de Matching")}</h2>
 
         <div style={styles.progressWrapper}>
-          {status === "running" && label === "Iniciando análisis..." ? (
-            <div style={styles.spinnerWrapper}>
-              <div style={styles.spinner}></div>
-              <div style={styles.statusText}>{label}</div>
-            </div>
-          ) : status === "running" && percentage > 0 ? (
-            <>
-              <div style={styles.progressText}>{`${percentage}% completado`}</div>
-              <div style={styles.barOuter}>
-                <div style={{ ...styles.barInner, width: `${percentage}%` }}></div>
+          {status === "running" ? (
+            percentage > 0 ? (
+              <>
+                <div style={styles.progressText}>{`${percentage}% completado`}</div>
+                <div style={styles.barOuter}>
+                  <div style={{ ...styles.barInner, width: `${percentage}%` }}></div>
+                </div>
+                <div style={{ ...styles.statusText, textAlign: "left" }}>
+                  {renderFormattedLabel()}
+                </div>
+              </>
+            ) : (
+              <div style={styles.spinnerWrapper}>
+                <div style={styles.spinner}></div>
+                <div style={styles.statusText}>
+                  {label || t("Preparando el análisis...")}
+                </div>
               </div>
-              <div style={{ ...styles.statusText, textAlign: "left" }}>
-                {renderFormattedLabel()}
-              </div>
-            </>
+            )
           ) : (
             <div style={styles.statusText}>
               {status === "idle"

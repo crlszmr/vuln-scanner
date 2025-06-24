@@ -20,6 +20,8 @@ from app.schemas.device import CVEMarkRequest
 from fastapi import status
 from sqlalchemy import desc
 from app.services import import_status_matching
+from fastapi import BackgroundTasks
+
 
 router = APIRouter()
 
@@ -130,39 +132,23 @@ def refresh_device_matches(
 
 
 @router.get("/devices/{device_id}/match-platforms/progress")
-async def match_platforms_with_progress(
-    device_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    print(f"🌐 [MATCHING] Inicio del proceso de matching para device_id={device_id}")
-    device = db.query(models.Device).filter_by(id=device_id, user_id=current_user.id).first()
-    if not device:
-        print(f"❌ [MATCHING] Dispositivo no encontrado: ID={device_id}")
-        raise HTTPException(status_code=404, detail="Device not found")
+async def stream_matching_progress(device_id: int):
+    from app.services import import_status_matching
 
     async def event_generator():
-        import_status_matching.set_matching_active(device_id, True)
-        print(f"✅ [MATCHING] Flag activado para device_id={device_id}")
-        yield {"event": "message", "data": "Iniciando análisis..."}
-        await asyncio.sleep(0.5)
-
-        try:
-            result = match_platforms_for_device(device_id, db, yield_progress=True)
-
-            async for progreso in result:
-                print(f"[📡 PROGRESO] {progreso}")
-                yield {"event": "message", "data": progreso}
-
-            yield {"event": "message", "data": "[DONE]"}
-            print(f"🏁 [MATCHING] Proceso finalizado para device_id={device_id}")
-        except Exception as e:
-            print(f"💥 [MATCHING] ERROR en matching de device_id={device_id}: {e}")
-        finally:
-            import_status_matching.clear_matching_status(device_id)
-            print(f"🧹 [MATCHING] Flag limpiado para device_id={device_id}")
+        last_index = 0
+        while True:
+            await asyncio.sleep(0.5)
+            progress = import_status_matching.get_matching_progress(device_id)
+            new = progress[last_index:]
+            for msg in new:
+                yield {"event": "message", "data": msg}
+            last_index = len(progress)
+            if "[DONE]" in progress or "[ERROR]" in progress:
+                break
 
     return EventSourceResponse(event_generator())
+
 
 @router.get("/devices/{device_id}/vulnerabilities")
 def get_vulnerabilities_by_severity(
@@ -260,3 +246,38 @@ def get_last_device_matching(device_id: int, db: Session = Depends(get_db), curr
 def get_match_status(device_id: int):
     from app.services import import_status_matching
     return {"running": import_status_matching.is_matching_active(device_id)}
+
+@router.post("/devices/{device_id}/match-start")
+def start_matching_background(
+    device_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    device = db.query(models.Device).filter_by(id=device_id, user_id=current_user.id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+
+    if import_status_matching.is_matching_active(device_id):
+        return {"status": "already_running"}
+
+    import_status_matching.set_matching_active(device_id, True)
+    import_status_matching.reset_matching_progress(device_id)
+
+    def run_matching():
+        try:
+            generator = match_platforms_for_device(device_id, db, yield_progress=True)
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            async def consume():
+                async for msg in generator:
+                    import_status_matching.append_matching_progress(device_id, msg)
+            loop.run_until_complete(consume())
+        except Exception as e:
+            import_status_matching.append_matching_progress(device_id, f"[ERROR] {str(e)}")
+        finally:
+            import_status_matching.clear_matching_status(device_id)
+            import_status_matching.append_matching_progress(device_id, "[DONE]")
+
+    background_tasks.add_task(run_matching)
+    return {"status": "started"}
