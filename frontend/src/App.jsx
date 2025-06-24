@@ -27,6 +27,8 @@ import DeviceVulnerabilities from './pages/DeviceVulnerabilities';
 import DeviceVulnerabilitiesList from "@/pages/DeviceVulnerabilitiesList";
 import Detector from "@/pages/Detector"; // 🆕
 import CWEManagement from "@/pages/CWEManagement";
+import DeviceConfigDetail from "@/pages/DeviceConfigDetail";
+
 
 
 
@@ -97,6 +99,7 @@ function App() {
               <Route path={APP_ROUTES.USER_DASHBOARD} element={<ProtectedRoute requiredRole="user"><Dashboard /></ProtectedRoute>} />
               <Route path={APP_ROUTES.DEVICE_LIST} element={<ProtectedRoute requiredRole="user"><DevicesList /></ProtectedRoute>} />
               <Route path="/devices/:deviceId/config" element={<ProtectedRoute requiredRole="user"><DeviceConfig /></ProtectedRoute>} />
+              <Route path="/devices/:deviceId/config/:type" element={<ProtectedRoute requiredRole="user"><DeviceConfigDetail /></ProtectedRoute>}/>
               <Route path="/cpes" element={<ProtectedRoute requiredRole="admin"><CPEManagement /></ProtectedRoute>} />
               <Route path="/cves" element={<ProtectedRoute requiredRole="admin"><CVEManagement /></ProtectedRoute>} />
               <Route path="/cwes" element={<ProtectedRoute requiredRole="admin"><CWEManagement /></ProtectedRoute>} />

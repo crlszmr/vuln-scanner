@@ -30,5 +30,6 @@ export const API_ROUTES = {
     MATCH_START: (id) => `${API_BASE_URL}/devices/${id}/match-start`,               // ✅
     GET_LAST_MATCHING: (id) => `${API_BASE_URL}/devices/${id}/last-matching`,      // ✅
     GET_CONFIG: (id) => `${API_BASE_URL}/devices/${id}/config`,                    // ✅
+    DEVICE_CONFIG_BY_TYPE: (id, type) => `${API_BASE_URL}/devices/${id}/config/${type}`
   },
 };
