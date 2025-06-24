@@ -19,16 +19,7 @@ from app.models.vulnerability import Vulnerability
 from app.schemas.device import CVEMarkRequest
 from fastapi import status
 from sqlalchemy import desc
-
-
-
-
-
-
-
-
-
-
+from app.services import import_status_matching
 
 router = APIRouter()
 
@@ -137,28 +128,39 @@ def refresh_device_matches(
     return result["summary"]
 
 
+
 @router.get("/devices/{device_id}/match-platforms/progress")
 async def match_platforms_with_progress(
     device_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # Verificar que el dispositivo es del usuario
+    print(f"🌐 [MATCHING] Inicio del proceso de matching para device_id={device_id}")
     device = db.query(models.Device).filter_by(id=device_id, user_id=current_user.id).first()
     if not device:
+        print(f"❌ [MATCHING] Dispositivo no encontrado: ID={device_id}")
         raise HTTPException(status_code=404, detail="Device not found")
 
     async def event_generator():
+        import_status_matching.set_matching_active(device_id, True)
+        print(f"✅ [MATCHING] Flag activado para device_id={device_id}")
         yield {"event": "message", "data": "Iniciando análisis..."}
         await asyncio.sleep(0.5)
 
-        result = match_platforms_for_device(device_id, db, yield_progress=True)
+        try:
+            result = match_platforms_for_device(device_id, db, yield_progress=True)
 
-        # Si result es un generador de progreso
-        async for progreso in result:
-            yield {"event": "message", "data": progreso}
+            async for progreso in result:
+                print(f"[📡 PROGRESO] {progreso}")
+                yield {"event": "message", "data": progreso}
 
-        yield {"event": "message", "data": "[DONE]"}
+            yield {"event": "message", "data": "[DONE]"}
+            print(f"🏁 [MATCHING] Proceso finalizado para device_id={device_id}")
+        except Exception as e:
+            print(f"💥 [MATCHING] ERROR en matching de device_id={device_id}: {e}")
+        finally:
+            import_status_matching.clear_matching_status(device_id)
+            print(f"🧹 [MATCHING] Flag limpiado para device_id={device_id}")
 
     return EventSourceResponse(event_generator())
 
@@ -253,3 +255,8 @@ def get_last_device_matching(device_id: int, db: Session = Depends(get_db), curr
     )
 
     return { "timestamp": last_match[0].isoformat() if last_match else None }
+
+@router.get("/devices/{device_id}/match-status")
+def get_match_status(device_id: int):
+    from app.services import import_status_matching
+    return {"running": import_status_matching.is_matching_active(device_id)}

@@ -26,6 +26,7 @@ export const API_ROUTES = {
     DEVICE_MATCHES: (deviceId) => `${API_BASE_URL}/devices/${deviceId}/matches`,
     MATCH_REFRESH: (deviceId) => `${API_BASE_URL}/devices/${deviceId}/match-platforms/refresh`,
     MATCH_PROGRESS: (id) => `${API_BASE_URL}/devices/${id}/match-platforms/progress`,
+    MATCH_STATUS: (deviceId) => `/devices/${deviceId}/match-status`,
     GET_LAST_MATCHING: (id) => `/devices/${id}/last-matching`,
     GET_CONFIG: (id) => `/devices/${id}/config`,
   },

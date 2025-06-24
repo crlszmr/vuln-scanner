@@ -20,14 +20,7 @@ export default function MatchingProgressModal({ deviceId, onClose }) {
   const percentage = total > 0 ? Math.round((progress / total) * 100) : 0;
   const canClose = status !== "running";
 
-  const startMatching = () => {
-    setStatus("running");
-    setImported(0);
-    setTotal(0);
-    setQueue([]);
-    setLabel("");
-    setDisplayedLabel("");
-
+  const setupEventSource = () => {
     const url = API_ROUTES.DEVICES.MATCH_PROGRESS(deviceId);
     const eventSource = new EventSource(url, { withCredentials: true });
     eventSourceRef.current = eventSource;
@@ -37,6 +30,7 @@ export default function MatchingProgressModal({ deviceId, onClose }) {
 
       if (message === "[DONE]") {
         setStatus("completed");
+        localStorage.removeItem(`matching_status_${deviceId}`);
         eventSource.close();
         return;
       }
@@ -54,11 +48,67 @@ export default function MatchingProgressModal({ deviceId, onClose }) {
       }
     };
 
-    eventSource.onerror = () => {
+    eventSource.onerror = (err) => {
+      console.error("[❌ SSE ERROR] Conexión SSE interrumpida:", err);
       setStatus("error");
+
+      // ⚠️ No borres el estado aquí — puede seguir corriendo en el backend
+      // localStorage.removeItem(`matching_status_${deviceId}`);
+
       eventSource.close();
     };
   };
+
+  const startMatching = () => {
+    setStatus("running");
+    setImported(0);
+    setTotal(0);
+    setQueue([]);
+    setLabel("Iniciando análisis...");
+    setDisplayedLabel("");
+    localStorage.setItem(`matching_status_${deviceId}`, "running");
+    setupEventSource();
+  };
+
+  useEffect(() => {
+    const checkMatchingStatus = async () => {
+      console.log("[🔍 MatchingModal] Consultando estado en backend...");
+
+      try {
+        const res = await fetch(API_ROUTES.DEVICES.MATCH_STATUS(deviceId), {
+          credentials: "include",
+        });
+
+        if (!res.ok) {
+          console.warn(`[⚠️ MatchingModal] Error HTTP: ${res.status}`);
+          return;
+        }
+
+        const data = await res.json();
+        console.log("[✅ MatchingModal] Estado recibido:", data);
+
+        if (data.running) {
+          console.log("[🚀 MatchingModal] Matching activo, reconectando SSE...");
+          setStatus("running");
+          setImported(0);
+          setProgress(0);
+          setTotal(0);
+          setQueue([]);
+          setLabel("Iniciando análisis...");
+          setDisplayedLabel("");
+          localStorage.setItem(`matching_status_${deviceId}`, "running");
+          setupEventSource();
+        } else {
+          console.log("[⏹ MatchingModal] No hay matching activo");
+        }
+      } catch (err) {
+        console.error("[❌ MatchingModal] Error al consultar estado:", err);
+      }
+    };
+
+    checkMatchingStatus();
+  }, [deviceId]);
+
 
   useEffect(() => {
     if (label && (queue.length === 0 || queue[queue.length - 1] !== label)) {
@@ -94,11 +144,10 @@ export default function MatchingProgressModal({ deviceId, onClose }) {
   const stopMatching = () => {
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
+      localStorage.removeItem(`matching_status_${deviceId}`);
       setStatus("aborted");
     }
   };
-
-  if (!deviceId) return null;
 
   const renderFormattedLabel = () => {
     if (!displayedLabel.toLowerCase().includes("procesando:")) return displayedLabel;
@@ -110,13 +159,14 @@ export default function MatchingProgressModal({ deviceId, onClose }) {
     return (
       <>
         <div><strong>Procesando plataforma...</strong></div>
-        {vendor && <div>- Vendor: {vendor.trim()}</div>}
-        {product && <div>- Product: {product.trim()}</div>}
-        {version && <div>- Version: {version.trim()}</div>}
+        {vendor && <div style={styles.truncatedLine}>- Vendor: {vendor.trim()}</div>}
+        {product && <div style={styles.truncatedLine}>- Product: {product.trim()}</div>}
+        {version && <div style={styles.truncatedLine}>- Version: {version.trim()}</div>}
       </>
     );
   };
 
+  if (!deviceId) return null;
 
   return ReactDOM.createPortal(
     <div style={styles.backdrop}>
@@ -136,13 +186,20 @@ export default function MatchingProgressModal({ deviceId, onClose }) {
         <h2 style={styles.title}>{t("Proceso de Matching")}</h2>
 
         <div style={styles.progressWrapper}>
-          {status === "running" ? (
+          {status === "running" && label === "Iniciando análisis..." ? (
+            <div style={styles.spinnerWrapper}>
+              <div style={styles.spinner}></div>
+              <div style={styles.statusText}>{label}</div>
+            </div>
+          ) : status === "running" && percentage > 0 ? (
             <>
               <div style={styles.progressText}>{`${percentage}% completado`}</div>
               <div style={styles.barOuter}>
                 <div style={{ ...styles.barInner, width: `${percentage}%` }}></div>
               </div>
-              <div style={styles.statusText}>{renderFormattedLabel()}</div>
+              <div style={{ ...styles.statusText, textAlign: "left" }}>
+                {renderFormattedLabel()}
+              </div>
             </>
           ) : (
             <div style={styles.statusText}>
@@ -199,7 +256,7 @@ const styles = {
     backgroundColor: theme.colors.surface || "#1e293b",
     borderRadius: "16px",
     padding: "2rem",
-    width: "450px",
+    width: "520px",
     minHeight: "300px",
     textAlign: "center",
     position: "relative",
@@ -246,26 +303,47 @@ const styles = {
     color: "#94a3b8",
     whiteSpace: "pre-line",
   },
+  spinnerWrapper: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: "1rem",
+  },
+  spinner: {
+    border: "4px solid rgba(255, 255, 255, 0.1)",
+    borderTop: "4px solid #22c55e",
+    borderRadius: "50%",
+    width: "36px",
+    height: "36px",
+    animation: "spin 1s linear infinite",
+    marginBottom: "1rem",
+  },
   startButton: {
-    marginTop: "2rem",
-    padding: "0.75rem 1.5rem",
-    fontSize: "1rem",
+    marginTop: "3rem",
+    padding: "1rem 2.5rem",
+    fontSize: "1.125rem",
     fontWeight: 600,
-    borderRadius: "8px",
+    borderRadius: "10px",
     backgroundColor: "#3b82f6",
     color: "white",
     border: "none",
     cursor: "pointer",
   },
   stopButton: {
-    marginTop: "2rem",
-    padding: "0.75rem 1.5rem",
-    fontSize: "1rem",
+    marginTop: "2.5rem",
+    padding: "1rem 2.5rem",
+    fontSize: "1.125rem",
     fontWeight: 600,
-    borderRadius: "8px",
+    borderRadius: "10px",
     backgroundColor: "#ef4444",
     color: "white",
     border: "none",
     cursor: "pointer",
+  },
+  truncatedLine: {
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   },
 };
