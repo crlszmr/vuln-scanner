@@ -111,6 +111,9 @@ function App() {
               <Route path="/devices/:deviceId/vulnerabilities/overview" element={<ProtectedRoute requiredRole="user"><DeviceVulnerabilities /></ProtectedRoute>} />
               <Route path="/devices/:deviceId/vulnerabilities" element={<ProtectedRoute requiredRole="user"><DeviceVulnerabilitiesList /></ProtectedRoute>} />
               <Route path="/devices/:deviceId/vulnerabilities/:severity" element={<ProtectedRoute requiredRole="user"><DeviceVulnerabilitiesList /></ProtectedRoute>} />
+              <Route path="/devices/:deviceId/config/:configId/vulnerabilities" element={<ProtectedRoute requiredRole="user"><DeviceVulnerabilitiesList /></ProtectedRoute>
+  }
+/>
 
               {/* Detalles CVE */}
               <Route path="/vulnerabilities/:cveId" element={<ProtectedRoute><VulnerabilityDetails /></ProtectedRoute>} />

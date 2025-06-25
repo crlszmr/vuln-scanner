@@ -281,3 +281,54 @@ def start_matching_background(
 
     background_tasks.add_task(run_matching)
     return {"status": "started"}
+
+@router.get("/devices/{device_id}/config/with-cves", response_model=list[dict])
+def get_configs_with_cves(
+    device_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    device = db.query(models.Device).filter_by(id=device_id, user_id=current_user.id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+
+    configs = db.query(DeviceConfig).filter(DeviceConfig.device_id == device_id).all()
+
+    enriched = []
+    for config in configs:
+        matches = (
+            db.query(DeviceMatch)
+            .filter(DeviceMatch.device_config_id == config.id)
+            .order_by(DeviceMatch.timestamp.desc())
+            .all()
+        )
+
+        cve_ids = [m.cve_name for m in matches]
+
+        vulns = db.query(models.Vulnerability).filter(models.Vulnerability.cve_id.in_(cve_ids)).all()
+        vulns_dict = {v.cve_id: v for v in vulns}
+
+        cve_data = [
+            {
+                "cve_id": m.cve_name,
+                "solved": m.solved,
+                "published": vulns_dict.get(m.cve_name).published if m.cve_name in vulns_dict else None,
+                "severity": vulns_dict.get(m.cve_name).severity if m.cve_name in vulns_dict else None,
+            }
+            for m in matches
+            if m.cve_name in vulns_dict  # solo los que existen en vulnerabilidades
+        ]
+
+        last_analysis = matches[0].timestamp.isoformat() if matches else None
+
+        enriched.append({
+            "id": config.id,
+            "type": config.type,
+            "vendor": config.vendor,
+            "product": config.product,
+            "version": config.version,
+            "cves": cve_data,
+            "last_analysis": last_analysis,
+        })
+
+    return enriched

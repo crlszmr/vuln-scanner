@@ -27,33 +27,47 @@ export default function DeviceConfigDetail() {
   const [deviceInfo, setDeviceInfo] = useState(null);
   const [configs, setConfigs] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const topRef = useRef(null); // Para hacer scroll arriba
+  const topRef = useRef(null);
 
   useEffect(() => {
     const fetchConfigs = async () => {
+      console.log("🚀 Llamando a GET_ENRICHED_CONFIG...");
       try {
-        const res = await axios.get(API_ROUTES.DEVICES.GET_CONFIG(deviceId), {
+        const res = await axios.get(API_ROUTES.DEVICES.GET_ENRICHED_CONFIG(deviceId), {
           withCredentials: true,
         });
 
-        setDeviceInfo(res.data);
-        const allConfigs = Array.isArray(res.data.config) ? res.data.config : [];
-        const filtered = allConfigs
-          .filter((c) => c.type === TYPE_INTERNAL[type])
-          .sort((a, b) => {
-            const vendorComparison = a.vendor.localeCompare(b.vendor, 'es', { sensitivity: 'base' });
-            if (vendorComparison !== 0) return vendorComparison;
-            return a.product.localeCompare(b.product, 'es', { sensitivity: 'base' });
-          });
-        setConfigs(filtered);
+        console.log("✅ Respuesta recibida:", res.data);
+        setDeviceInfo({ alias: "Equipo" });
+
+        const allConfigs = Array.isArray(res.data) ? res.data : [];
+        const typeKey = TYPE_INTERNAL[type];
+        if (!typeKey) {
+          console.warn("❌ Tipo inválido:", type);
+          return;
+        }
+
+       const filtered = allConfigs
+        .filter((c) => c.type === typeKey)
+        .map((c) => ({
+          ...c,
+          cves: (c.cves || []).filter(cve => !cve.solved),
+        }))
+        .filter((c) => c.cves.length > 0)
+        .sort((a, b) => {
+          const vendorComparison = a.vendor.localeCompare(b.vendor, 'es', { sensitivity: 'base' });
+          if (vendorComparison !== 0) return vendorComparison;
+          return a.product.localeCompare(b.product, 'es', { sensitivity: 'base' });
+        });
+
+      setConfigs(filtered);
       } catch (error) {
-        console.error("❌ Error al obtener configuraciones:", error);
+        console.error("❌ Error al obtener configuraciones con CVEs:", error);
       }
     };
 
     fetchConfigs();
   }, [deviceId, type]);
-
 
   const totalPages = Math.ceil(configs.length / PAGE_SIZE);
   const paginatedConfigs = configs.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
@@ -140,7 +154,6 @@ export default function DeviceConfigDetail() {
             textAlign: "center",
           }}
         >
-          {/* Encabezado */}
           <div
             ref={topRef}
             style={{
@@ -187,7 +200,6 @@ export default function DeviceConfigDetail() {
 
           {totalPages > 1 && <Pagination />}
 
-          {/* Tarjetas */}
           <div
             style={{
               display: "flex",
@@ -197,44 +209,71 @@ export default function DeviceConfigDetail() {
               maxWidth: "960px",
             }}
           >
-            {paginatedConfigs.map((conf, idx) => (
-              <div
-                key={idx}
-                style={{
-                  backgroundColor: "#334155",
-                  color: "white",
-                  borderRadius: "16px",
-                  padding: "1.5rem 2rem",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  transition: "transform 0.2s ease, box-shadow 0.2s ease",
-                  cursor: "default",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "scale(1.01)";
-                  e.currentTarget.style.boxShadow = theme.shadow.medium;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "scale(1)";
-                  e.currentTarget.style.boxShadow = "none";
-                }}
-              >
-                <div style={{ flex: 1, textAlign: "left" }}>
-                  <p style={{ margin: "4px 0" }}><strong>Vendor:</strong> {conf.vendor}</p>
-                  <p style={{ margin: "4px 0" }}><strong>Product:</strong> {conf.product}</p>
-                  <p style={{ margin: "4px 0" }}><strong>Version:</strong> {conf.version}</p>
+            {paginatedConfigs.map((conf, idx) => {
+              console.log("🧪 Config:", conf);
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    backgroundColor: "#334155",
+                    color: "white",
+                    borderRadius: "16px",
+                    padding: "1.5rem 2rem",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                    cursor: "default",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "scale(1.01)";
+                    e.currentTarget.style.boxShadow = theme.shadow.medium;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "scale(1)";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                >
+                  <div style={{ flex: 1, textAlign: "left" }}>
+                    <p style={{ margin: "4px 0" }}><strong>Vendor:</strong> {conf.vendor}</p>
+                    <p style={{ margin: "4px 0" }}><strong>Product:</strong> {conf.product}</p>
+                    <p style={{ margin: "4px 0" }}><strong>Version:</strong> {conf.version}</p>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    {conf.cves?.length > 0 ? (
+                      <p
+                        onClick={() => navigate(APP_ROUTES.DEVICE_CONFIG_CVES(deviceId, conf.id))}
+                        style={{
+                          margin: 0,
+                          fontWeight: "bold",
+                          textDecoration: "underline",
+                          cursor: "pointer",
+                          color: "#38bdf8", // azul claro
+                        }}
+                      >
+                        {Number(conf.cves.length).toLocaleString("es-ES")} CVEs encontrados
+                      </p>
+                    ) : (
+                      <p style={{ margin: 0 }}>
+                        0 CVEs encontrados
+                      </p>
+                    )}
+                    <p style={{ margin: 0, fontSize: "0.85rem", color: "#cbd5e1" }}>
+                      Último análisis: {conf.last_analysis
+                        ? new Date(conf.last_analysis).toLocaleString("es-ES", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: false,
+                          }).replace(",", " a las")
+                        : "N/A"}
+                    </p>
+                  </div>
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <p style={{ margin: 0 }}>
-                    <strong>{conf.cve_count || 0}</strong> CVEs encontrados
-                  </p>
-                  <p style={{ margin: 0, fontSize: "0.85rem", color: "#cbd5e1" }}>
-                    Último análisis: {conf.last_analysis ? new Date(conf.last_analysis).toLocaleDateString() : "N/A"}
-                  </p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {totalPages > 1 && <Pagination />}

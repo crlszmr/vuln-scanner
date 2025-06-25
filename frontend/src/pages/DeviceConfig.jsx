@@ -18,22 +18,24 @@ export default function DeviceConfig() {
   useEffect(() => {
     const fetchConfigs = async () => {
       try {
-        const res = await axios.get(API_ROUTES.DEVICES.GET_CONFIG(deviceId), {
+        const res = await axios.get(API_ROUTES.DEVICES.GET_ENRICHED_CONFIG(deviceId), {
           withCredentials: true,
         });
 
-        setDeviceInfo(res.data);
-        const allConfigs = Array.isArray(res.data.config) ? res.data.config : [];
-        setConfigs(allConfigs);
+        setDeviceInfo({ alias: "Equipo" });
+        const allConfigs = Array.isArray(res.data) ? res.data : [];
 
-        // Calcular CVEs por tipo
         const counts = { o: 0, h: 0, a: 0 };
         for (const item of allConfigs) {
-          counts[item.type] += item.cve_count || 0;
+          console.log(item.cves)
+          const unsolved = (item.cves || []).filter(cve => !cve.solved);
+          counts[item.type] += unsolved.length;
         }
+
+        setConfigs(allConfigs);
         setCveCounts(counts);
       } catch (error) {
-        console.error("❌ Error al obtener configuraciones:", error);
+        console.error("❌ Error al obtener configuraciones enriquecidas:", error);
       }
     };
 
@@ -110,7 +112,7 @@ export default function DeviceConfig() {
                   {panel.label}
                 </h3>
                 <div style={{ fontSize: "1.25rem" }}>
-                  {cveCounts[panel.internal]} CVEs encontrados
+                  {cveCounts[panel.internal]?.toLocaleString("es-ES")} CVEs encontrados
                 </div>
               </div>
             ))}
