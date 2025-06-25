@@ -19,24 +19,63 @@ const Detector = () => {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            paddingTop: "48px",
+            paddingTop: "24px",
             paddingBottom: "32px",
             textAlign: "center",
             fontFamily: theme.font.family,
           }}
         >
-          <h1
-            style={{ fontSize: "2.5rem", fontWeight: "700", color: theme.colors.text }}
+          {/* Encabezado con botón y título */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              width: "100%",
+              maxWidth: "960px"            }}
           >
-            {t("detector.title")}
-          </h1>
+            <button
+              onClick={() => navigate(-1)}
+              style={{
+                backgroundColor: "#334155",
+                color: "white",
+                border: "none",
+                borderRadius: "12px",
+                padding: "6px 14px",
+                fontSize: "1.5rem",
+                fontWeight: "bold",
+                cursor: "pointer",
+                transition: "transform 0.2s ease, box-shadow 0.2s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "scale(1.1)";
+                e.currentTarget.style.boxShadow = theme.shadow.medium;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "scale(1)";
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              &lt;
+            </button>
 
+            <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
+              <h1 style={{ fontSize: "3rem", fontWeight: "700", color: theme.colors.text, margin: 0 }}>
+                {t("detector.title")}
+              </h1>
+            </div>
+
+            <div style={{ width: "52px" }}></div>
+          </div>
+
+          {/* Subtítulo */}
           <p
             style={{
               fontSize: "1.125rem",
               color: theme.colors.textSecondary || "#94a3b8",
               maxWidth: "640px",
-              marginTop: "1rem",
+              marginTop: "0.5rem",
+              marginBottom: "5rem",
             }}
           >
             {t("detector.subtitle")}
@@ -47,7 +86,7 @@ const Detector = () => {
             href="/ConfigDetector.exe"
             download
             style={{
-              marginTop: "2.5rem",
+              marginBottom: "3rem",
               fontSize: "1.25rem",
               backgroundColor: "#2563eb",
               color: "white",

@@ -27,7 +27,6 @@ export default function DeviceConfig() {
 
         const counts = { o: 0, h: 0, a: 0 };
         for (const item of allConfigs) {
-          console.log(item.cves)
           const unsolved = (item.cves || []).filter(cve => !cve.solved);
           counts[item.type] += unsolved.length;
         }
@@ -67,9 +66,61 @@ export default function DeviceConfig() {
             textAlign: "center",
           }}
         >
-          <h1 style={{ fontSize: "2.5rem", fontWeight: "700", marginBottom: "0.5rem" }}>
-            Vulnerabilidades de {deviceInfo?.alias || "..."}
-          </h1>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              width: "100%",
+              maxWidth: "960px",
+            }}
+          >
+            <button
+              onClick={() => navigate(-1)}
+              style={{
+                backgroundColor: "#334155",
+                color: "white",
+                border: "none",
+                borderRadius: "12px",
+                padding: "6px 14px",
+                fontSize: "1.5rem",
+                fontWeight: "bold",
+                cursor: "pointer",
+                transition: "transform 0.2s ease, box-shadow 0.2s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "scale(1.1)";
+                e.currentTarget.style.boxShadow = theme.shadow.medium;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "scale(1)";
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              &lt;
+            </button>
+
+            <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
+              <h1 style={{ fontSize: "2.5rem", fontWeight: "700", margin: 0 }}>
+                Vulnerabilidades de {deviceInfo?.alias || "..."}
+              </h1>
+            </div>
+
+            <div style={{ width: "52px" }}></div>
+          </div>
+
+          {/* Subtítulo */}
+          <p
+            style={{
+              fontSize: "1.125rem",
+              color: theme.colors.textSecondary || "#94a3b8",
+              marginTop: "1rem",
+              marginBottom: "5rem",
+              textAlign: "center",
+            }}
+          >
+            Consulta las vulnerabilidades detectadas, clasificadas por tipo de componente
+          </p>
 
           <div
             style={{

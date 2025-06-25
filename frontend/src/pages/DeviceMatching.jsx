@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { PageWrapper } from "@/components/layouts/PageWrapper";
 import { API_ROUTES } from "@/config/apiRoutes";
@@ -10,6 +10,7 @@ import { theme } from "@/styles/theme";
 
 export default function DeviceMatching() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [lastMatching, setLastMatching] = useState(null);
   const [deviceAlias, setDeviceAlias] = useState("...");
   const [showModal, setShowModal] = useState(false);
@@ -28,7 +29,6 @@ export default function DeviceMatching() {
       });
   }, [id]);
 
-  // ✅ Mostrar automáticamente el modal si hay un matching en curso
   useEffect(() => {
     const checkIfMatchingIsRunning = async () => {
       try {
@@ -67,15 +67,69 @@ export default function DeviceMatching() {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            padding: "2rem 1rem",
+            padding: "0rem",
             fontFamily: theme.font.family,
             color: theme.colors.text,
             textAlign: "center",
           }}
         >
-          <h1 style={{ fontSize: "2.5rem", fontWeight: "700", marginBottom: "0.5rem" }}>
-            Matching de vulnerabilidades para equipo "{deviceAlias}"
-          </h1>
+          {/* Encabezado */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              width: "100%",
+              maxWidth: "960px",
+              marginBottom: "1rem",
+              marginTop: "2rem",
+            }}
+          >
+            <button
+              onClick={() => navigate(-1)}
+              style={{
+                backgroundColor: "#334155",
+                color: "white",
+                border: "none",
+                borderRadius: "12px",
+                padding: "6px 14px",
+                fontSize: "1.5rem",
+                fontWeight: "bold",
+                cursor: "pointer",
+                transition: "transform 0.2s ease, box-shadow 0.2s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "scale(1.1)";
+                e.currentTarget.style.boxShadow = theme.shadow.medium;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "scale(1)";
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              &lt;
+            </button>
+
+            <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
+              <h1 style={{ fontSize: "3rem", fontWeight: "700", margin: 0 }}>
+                Matching de CVEs para {deviceAlias}
+              </h1>
+            </div>
+
+            <div style={{ width: "52px" }}></div>
+          </div>
+
+          {/* Subtítulo */}
+          <p
+            style={{
+              fontSize: "1.125rem",
+              color: theme.colors.textSecondary || "#94a3b8",
+              marginBottom: "5rem",
+              marginTop: "0rem"
+            }}
+          >
+            Análisis para detectar qué vulnerabilidades afectan a su equipo.
+          </p>
 
           <div
             style={{
@@ -86,7 +140,6 @@ export default function DeviceMatching() {
               fontWeight: 500,
               fontSize: "1rem",
               width: "600px",
-              marginTop: "1rem",
               marginBottom: "2rem",
               boxShadow: theme.shadow.medium,
             }}

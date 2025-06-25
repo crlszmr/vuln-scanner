@@ -37,64 +37,117 @@ export default function DevicesList() {
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "flex-start",
-            padding: "2rem",
+            padding: "24px",
             fontFamily: theme.font.family,
           }}
         >
-          <div
-            style={{
-              width: "100%",
-              maxWidth: "800px",
-              marginBottom: "2rem",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "1.5rem",
-            }}
-          >
-            <h1 style={{ fontSize: "24px", fontWeight: "700" }}>Mis equipos</h1>
+         <div
+  style={{
+    width: "100%",
+    maxWidth: "100%",
+    marginBottom: "2rem",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "1rem",
+  }}
+>
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      width: "100%",
+    }}
+  >
+    <button
+      onClick={() => navigate(-1)}
+      style={{
+        backgroundColor: "#334155",
+        color: "white",
+        border: "none",
+        borderRadius: "12px",
+        padding: "6px 14px",
+        fontSize: "1.5rem",
+        fontWeight: "bold",
+        cursor: "pointer",
+        transition: "transform 0.2s ease, box-shadow 0.2s ease",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "scale(1.1)";
+        e.currentTarget.style.boxShadow = theme.shadow.medium;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "scale(1)";
+        e.currentTarget.style.boxShadow = "none";
+      }}
+    >
+      &lt;
+    </button>
 
-            <AnimatePresence mode="wait">
-              {!showForm && (
-                <motion.div
-                  key="crear-btn"
-                  layout
-                  initial={{ scale: 1 }}
-                  animate={{ scale: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                <motion.div layoutId="crear-formulario" style={{ width: "auto" }}>
-                  <Button onClick={() => setShowForm(true)} variant="success">
-                    Crear nuevo equipo
-                  </Button>
-                </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+    <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
+      <h1 style={{ fontSize: "3rem", fontWeight: "bold", margin: 0 }}>
+        Mis equipos
+      </h1>
+    </div>
 
-            <AnimatePresence>
-              {showForm && (
-                <motion.div
-                  key="upload-form"
-                  layout
-                  initial={{ scale: 0.95, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.95, opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                  style={{ width: "100%", display: "flex", justifyContent: "center" }}
-                >
-                  <DeviceUploadForm
-                    onClose={() => setShowForm(false)}
-                    onSuccess={() => {
-                      setShowForm(false);
-                      fetchDevices();
-                    }}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+    <div style={{ width: "52px" }}></div>
+  </div>
+
+  {/* Subtítulo */}
+  <p
+    style={{
+      fontSize: "1.125rem",
+      color: theme.colors.textSecondary || "#94a3b8",
+      marginTop: "0rem",
+      marginBottom: "5rem",
+      textAlign: "center",
+    }}
+  >
+    Gestiona tus equipos y analiza sus vulnerabilidades
+  </p>
+
+  <AnimatePresence mode="wait">
+    {!showForm && (
+      <motion.div
+        key="crear-btn"
+        layout
+        initial={{ scale: 1 }}
+        animate={{ scale: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+      >
+        <motion.div layoutId="crear-formulario" style={{ width: "auto" }}>
+          <Button onClick={() => setShowForm(true)} variant="success">
+            Crear nuevo equipo
+          </Button>
+        </motion.div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+
+  <AnimatePresence>
+    {showForm && (
+      <motion.div
+        key="upload-form"
+        layout
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        transition={{ duration: 0.3 }}
+        style={{ width: "100%", display: "flex", justifyContent: "center" }}
+      >
+        <DeviceUploadForm
+          onClose={() => setShowForm(false)}
+          onSuccess={() => {
+            setShowForm(false);
+            fetchDevices();
+          }}
+        />
+      </motion.div>
+    )}
+  </AnimatePresence>
+</div>
 
           {devices.length === 0 ? (
             <p style={{ color: theme.colors.muted }}>
@@ -195,7 +248,6 @@ export default function DevicesList() {
                       >
                         Vulns
                       </Button>
-
                     </div>
                   </div>
                 </motion.div>

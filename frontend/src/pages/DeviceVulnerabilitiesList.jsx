@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { PageWrapper } from "@/components/layouts/PageWrapper";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 export default function DeviceVulnerabilitiesList() {
   const { deviceId, configId, severity } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [vulns, setVulns] = useState([]);
   const [startYear, setStartYear] = useState("");
   const [endYear, setEndYear] = useState("");
@@ -179,12 +180,18 @@ export default function DeviceVulnerabilitiesList() {
     transition: "transform 0.2s ease",
   });
 
+  const handleBack = () => {
+    if (configId) navigate(APP_ROUTES.DEVICE_CONFIG(deviceId));
+    else if (severity) navigate(`/devices/${deviceId}/vulnerabilities/overview`);
+    else navigate(-1);
+  };
+
   return (
     <MainLayout>
       <PageWrapper>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.5rem 2rem 0.5rem", flexWrap: "wrap" }}>
           <button
-            onClick={() => navigate(APP_ROUTES.DEVICE_CONFIG(deviceId))}
+            onClick={handleBack}
             style={{
               backgroundColor: "#334155",
               color: "white",

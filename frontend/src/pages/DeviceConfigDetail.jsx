@@ -53,7 +53,6 @@ export default function DeviceConfigDetail() {
           ...c,
           cves: (c.cves || []).filter(cve => !cve.solved),
         }))
-        .filter((c) => c.cves.length > 0)
         .sort((a, b) => {
           const vendorComparison = a.vendor.localeCompare(b.vendor, 'es', { sensitivity: 'base' });
           if (vendorComparison !== 0) return vendorComparison;
