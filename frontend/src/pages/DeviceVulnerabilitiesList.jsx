@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { PageWrapper } from "@/components/layouts/PageWrapper";
+import { Button } from "@/components/ui/Button";
 import { APP_ROUTES } from "@/config/appRoutes";
 import { theme } from "@/styles/theme";
 
@@ -27,6 +28,8 @@ export default function DeviceVulnerabilitiesList() {
 
     let allResults = [];
     let yearRange = [];
+
+    if (startYear && endYear && parseInt(startYear) > parseInt(endYear)) return;
 
     if (startYear && endYear) {
       yearRange = years.filter((y) => y >= parseInt(startYear) && y <= parseInt(endYear));
@@ -109,10 +112,16 @@ export default function DeviceVulnerabilitiesList() {
 
   const toggleSelection = (cve_id) => {
     setSelected((prev) =>
-      prev.includes(cve_id)
-        ? prev.filter((id) => id !== cve_id)
-        : [...prev, cve_id]
+      prev.includes(cve_id) ? prev.filter((id) => id !== cve_id) : [...prev, cve_id]
     );
+  };
+
+  const toggleSelectAll = () => {
+    if (vulns.every(v => selected.includes(v.cve_id))) {
+      setSelected([]);
+    } else {
+      setSelected(vulns.map(v => v.cve_id));
+    }
   };
 
   const markAsSolved = () => {
@@ -123,8 +132,7 @@ export default function DeviceVulnerabilitiesList() {
       ? `${baseURL}/devices/${deviceId}/config/${configId}/vulnerabilities/mark-solved`
       : `${baseURL}/devices/${deviceId}/vulnerabilities/mark-solved`;
 
-    axios
-      .post(endpoint, { cve_ids: selected }, { withCredentials: true })
+    axios.post(endpoint, { cve_ids: selected }, { withCredentials: true })
       .then(() => fetchVulnerabilities())
       .catch((err) => console.error("❌ Error marcando como solucionadas:", err));
   };
@@ -174,48 +182,20 @@ export default function DeviceVulnerabilitiesList() {
   return (
     <MainLayout>
       <PageWrapper>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "1.5rem 2rem 0.5rem",
-            flexWrap: "wrap"
-          }}
-        >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.5rem 2rem 1.5rem", flexWrap: "wrap" }}>
           <button
             onClick={() => navigate(APP_ROUTES.DEVICE_CONFIG(deviceId))}
-            style={{
-              backgroundColor: "#334155",
-              color: "white",
-              border: "none",
-              borderRadius: "12px",
-              padding: "6px 14px",
-              fontSize: "1.5rem",
-              fontWeight: "bold",
-              cursor: "pointer",
-              transition: "transform 0.2s ease, box-shadow 0.2s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "scale(1.1)";
-              e.currentTarget.style.boxShadow = theme.shadow.medium;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "scale(1)";
-              e.currentTarget.style.boxShadow = "none";
-            }}
+            style={{ backgroundColor: "#334155", color: "white", border: "none", borderRadius: "12px", padding: "6px 14px", fontSize: "1.5rem", fontWeight: "bold", cursor: "pointer", transition: "transform 0.2s ease, box-shadow 0.2s ease" }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.1)"; e.currentTarget.style.boxShadow = theme.shadow.medium; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; }}
           >
             &lt;
           </button>
-
-          <h1 style={{ fontSize: "1.75rem", fontWeight: "bold", textAlign: "center", flex: 1, margin: 0 }}>
-            {getTitle()}
-          </h1>
-
+          <h1 style={{ fontSize: "1.75rem", fontWeight: "bold", textAlign: "center", flex: 1, margin: 0 }}>{getTitle()}</h1>
           <div style={{ width: "52px" }}></div>
         </div>
 
-        <div style={{ display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap", justifyContent: "center", padding: "1rem 2rem" }}>
+        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "1rem", padding: "1rem 2rem", justifyContent: "flex-start" }}>
           <label>Filtrar por años:</label>
           <select value={startYear} onChange={(e) => setStartYear(e.target.value)}>
             <option value="">Desde</option>
@@ -226,24 +206,17 @@ export default function DeviceVulnerabilitiesList() {
             <option value="">Hasta</option>
             {years.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
-
-          <button
-            onClick={markAsSolved}
-            disabled={selected.length === 0}
-            style={{
-              padding: "6px 12px",
-              backgroundColor: selected.length > 0 ? "#1e88e5" : "#999",
-              color: "#fff",
-              border: "none",
-              borderRadius: "4px",
-              cursor: selected.length > 0 ? "pointer" : "not-allowed"
-            }}
-          >
-            Marcar como solucionadas
-          </button>
         </div>
-
         {totalPages > 1 && <Pagination />}
+
+        <div style={{ marginTop: "3.5rem", marginBottom: "2rem", display: "flex", justifyContent: "center" }}>
+          <div style={{ backgroundColor: theme.colors.surface, border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.xl, padding: "1rem 2rem", display: "flex", justifyContent: "center", alignItems: "center", gap: "1.5rem", flexWrap: "wrap", boxShadow: theme.shadow.soft, width: "fit-content" }}>
+            <label>
+              <input type="checkbox" onChange={toggleSelectAll} checked={vulns.length > 0 && vulns.every(v => selected.includes(v.cve_id))}/> Seleccionar todo
+            </label>
+            <Button onClick={markAsSolved} disabled={selected.length === 0}>Marcar como solucionadas</Button>
+          </div>
+        </div>
 
         <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "1rem", padding: "2rem", listStyle: "none" }}>
           {paginatedVulns.map((v) => (
