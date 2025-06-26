@@ -32,5 +32,6 @@ export const API_ROUTES = {
     GET_CONFIG: (id) => `${API_BASE_URL}/devices/${id}/config`,                    // ✅
     DEVICE_CONFIG_BY_TYPE: (id, type) => `${API_BASE_URL}/devices/${id}/config/${type}`,
     GET_ENRICHED_CONFIG: (deviceId) => `${API_BASE_URL}/devices/${deviceId}/config/with-cves`,
+    MATCH_DELETE: (deviceId) => `${API_BASE_URL}/devices/${deviceId}/match-platforms`,
   },
 };

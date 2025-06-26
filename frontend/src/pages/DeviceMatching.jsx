@@ -5,22 +5,35 @@ import { PageWrapper } from "@/components/layouts/PageWrapper";
 import { API_ROUTES } from "@/config/apiRoutes";
 import { getDateTimeString } from "@/utils/formatDateTime";
 import MatchingProgressModal from "@/components/modals/MatchingProgressModal";
+import DeleteMatchingModal from "@/components/modals/DeleteMatchingModal";
 import { RefreshCcw, Trash2 } from "lucide-react";
 import { theme } from "@/styles/theme";
+import { APP_ROUTES } from "../config/appRoutes";
 
 export default function DeviceMatching() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [lastMatching, setLastMatching] = useState(null);
   const [deviceAlias, setDeviceAlias] = useState("...");
-  const [showModal, setShowModal] = useState(false);
+  const [showMatchingModal, setShowMatchingModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  const fetchLastMatching = async () => {
+    try {
+      const res = await fetch(API_ROUTES.DEVICES.GET_LAST_MATCHING(id), {
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (data && data.timestamp) {
+        setLastMatching(data.timestamp);
+      }
+    } catch (err) {
+      console.error("[❌] Error cargando último matching:", err);
+    }
+  };
 
   useEffect(() => {
-    fetch(API_ROUTES.DEVICES.GET_LAST_MATCHING(id), { credentials: "include" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && data.timestamp) setLastMatching(data.timestamp);
-      });
+    fetchLastMatching();
 
     fetch(API_ROUTES.DEVICES.GET_CONFIG(id), { credentials: "include" })
       .then((res) => res.json())
@@ -39,7 +52,7 @@ export default function DeviceMatching() {
           const data = await res.json();
           if (data.running) {
             console.log("[🔄 DeviceMatching] Matching activo al cargar. Mostrando modal...");
-            setShowModal(true);
+            setShowMatchingModal(true);
           }
         }
       } catch (err) {
@@ -51,11 +64,16 @@ export default function DeviceMatching() {
   }, [id]);
 
   const handleStartMatching = () => {
-    setShowModal(true);
+    setShowMatchingModal(true);
   };
 
-  const handleCloseModal = () => {
-    setShowModal(false);
+  const handleCloseMatchingModal = () => {
+    setShowMatchingModal(false);
+    fetchLastMatching(); // ✅ actualiza la fecha
+  };
+
+  const handleCloseDeleteModal = () => {
+    setShowDeleteModal(false);
   };
 
   return (
@@ -86,7 +104,7 @@ export default function DeviceMatching() {
             }}
           >
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => navigate(APP_ROUTES.DEVICE_LIST)}
               style={{
                 backgroundColor: "#334155",
                 color: "white",
@@ -168,18 +186,24 @@ export default function DeviceMatching() {
               icon={<Trash2 size={64} />}
               title="Eliminar matching"
               color="#dc2626"
-              onClick={() => {
-                /* handleDeleteMatching pendiente */
-              }}
+              onClick={() => setShowDeleteModal(true)}
             />
           </div>
         </div>
 
-        {showModal && (
+        {showMatchingModal && (
           <MatchingProgressModal
             deviceId={id}
-            isOpen={showModal}
-            onClose={handleCloseModal}
+            isOpen={showMatchingModal}
+            onClose={handleCloseMatchingModal}
+          />
+        )}
+
+        {showDeleteModal && (
+          <DeleteMatchingModal
+            deviceId={id}
+            onClose={handleCloseDeleteModal}
+            onDeleted={fetchLastMatching}
           />
         )}
       </PageWrapper>

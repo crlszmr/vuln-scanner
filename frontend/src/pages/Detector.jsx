@@ -5,6 +5,7 @@ import { PageWrapper } from "@/components/layouts/PageWrapper";
 import { useNavigate } from "react-router-dom";
 import { DownloadCloud } from "lucide-react";
 import { theme } from "@/styles/theme";
+import { APP_ROUTES } from "@/config/appRoutes";
 
 const Detector = () => {
   const { t } = useTranslation();
@@ -35,7 +36,7 @@ const Detector = () => {
               maxWidth: "960px"            }}
           >
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => navigate(APP_ROUTES.USER_DASHBOARD)}
               style={{
                 backgroundColor: "#334155",
                 color: "white",

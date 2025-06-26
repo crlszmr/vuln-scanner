@@ -76,7 +76,7 @@ export default function DeviceConfig() {
             }}
           >
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => navigate(APP_ROUTES.DEVICE_LIST)}
               style={{
                 backgroundColor: "#334155",
                 color: "white",

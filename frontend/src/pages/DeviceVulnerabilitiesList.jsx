@@ -181,8 +181,7 @@ export default function DeviceVulnerabilitiesList() {
   });
 
   const handleBack = () => {
-    if (configId) navigate(APP_ROUTES.DEVICE_CONFIG(deviceId));
-    else if (severity) navigate(`/devices/${deviceId}/vulnerabilities/overview`);
+    if (severity) navigate(`/devices/${deviceId}/vulnerabilities/overview`);
     else navigate(-1);
   };
 

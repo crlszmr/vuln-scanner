@@ -5,6 +5,7 @@ import { MainLayout } from "@/components/layouts/MainLayout";
 import { PageWrapper } from "@/components/layouts/PageWrapper";
 import RiskCard from "@/components/RiskCard";
 import { API_ROUTES } from "@/config/apiRoutes";
+import { APP_ROUTES } from "../config/appRoutes";
 import { theme } from "@/styles/theme";
 
 const SEVERITY_ORDER = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "NONE", "ALL"];
@@ -55,7 +56,7 @@ export default function DeviceVulnerabilities() {
             }}
           >
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => navigate(APP_ROUTES.DEVICE_LIST)}
               style={{
                 backgroundColor: "#334155",
                 color: "white",

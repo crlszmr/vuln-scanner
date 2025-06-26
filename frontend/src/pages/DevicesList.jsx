@@ -61,7 +61,7 @@ export default function DevicesList() {
     }}
   >
     <button
-      onClick={() => navigate(-1)}
+      onClick={() => navigate(APP_ROUTES.USER_DASHBOARD)}
       style={{
         backgroundColor: "#334155",
         color: "white",

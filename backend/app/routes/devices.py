@@ -332,3 +332,29 @@ def get_configs_with_cves(
         })
 
     return enriched
+
+@router.delete("/devices/{device_id}/match-platforms")
+def delete_device_matching(
+    device_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    device = db.query(models.Device).filter_by(id=device_id, user_id=current_user.id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail="Dispositivo no encontrado")
+
+    config_ids = db.query(DeviceConfig.id).filter(DeviceConfig.device_id == device_id).all()
+    config_ids = [id for (id,) in config_ids]
+
+    if not config_ids:
+        return {"status": "no_configs"}
+
+    total_matches = db.query(DeviceMatch).filter(DeviceMatch.device_config_id.in_(config_ids)).count()
+    if total_matches == 0:
+        return {"status": "no_matches"}
+
+    db.query(DeviceMatch).filter(DeviceMatch.device_config_id.in_(config_ids)).delete(synchronize_session=False)
+    db.commit()
+
+    return {"status": "deleted", "deleted_matches": total_matches}
+

@@ -35,7 +35,7 @@ export default function Dashboard() {
             }}
           >
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => navigate("/")}
               style={{
                 backgroundColor: "#334155",
                 color: "white",
