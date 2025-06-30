@@ -177,6 +177,7 @@ function RegisterForm() {
               maxWidth: "700px",
               width: "100%",
               padding: "4rem 8rem",
+              paddingBottom: "3rem",
               borderRadius: theme.radius.lg,
               backgroundColor: theme.colors.surface,
               boxShadow: theme.shadow.soft,

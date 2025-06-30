@@ -9,6 +9,8 @@ import re
 from collections import Counter, defaultdict
 from rapidfuzz import fuzz
 import asyncio
+from packaging.version import Version, InvalidVersion
+
 
 MIN_MATCH_SCORE = 60
 
@@ -17,7 +19,7 @@ INVALID_SW = {
     "linux", "android", "ios", "mac", "macos", "unix",
     "ibm_zos", "solaris", "openbsd", "freebsd", "netbsd",
     "hpux", "aix", "vxworks", "rtos", "tizen", "watchos",
-    "tvos", "esx", "chromeos", "qnx", "iphone_os"
+    "tvos", "esx", "chromeos", "qnx", "iphone_os", "edge"
 }
 
 def normalize_separators(text: str) -> str:
@@ -61,6 +63,40 @@ def normalize_field(text: str) -> str:
 
 def escape_like(text: str) -> str:
     return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+def version_in_range(v: str, start_incl=None, start_excl=None, end_incl=None, end_excl=None) -> bool:
+    try:
+        version = Version(v)
+    except InvalidVersion:
+        return False
+    try:
+        if start_incl and version < Version(start_incl):
+            return False
+        if start_excl and version <= Version(start_excl):
+            return False
+        if end_incl and version > Version(end_incl):
+            return False
+        if end_excl and version >= Version(end_excl):
+            return False
+    except InvalidVersion:
+        return False
+    return True
+
+def filter_cpes_by_version(cpes, config_version):
+    filtered = []
+    for cpe in cpes:
+        if version_in_range(
+            config_version,
+            cpe.version_start_including,
+            cpe.version_start_excluding,
+            cpe.version_end_including,
+            cpe.version_end_excluding
+        ):
+            filtered.append(cpe)
+        else:
+            if 'chrome' in (cpe.cpe_uri or '').lower():
+                print(f"⛔️ Filtrado por rango: {cpe.cpe_uri} (version={config_version})")
+    return filtered
 
 def match_version_with_cpe_uri(matched_vendor: str, matched_product: str, target_major_version: str, db: Session):
     if not (matched_vendor and matched_product and target_major_version):
@@ -217,6 +253,7 @@ def match_platforms_for_device(device_id: int, db: Session, yield_progress: bool
 
             target_version = extract_version(raw_product or "", config_version)
             matched_cpes = match_version_with_cpe_uri(matched_vendor, matched_product, target_version, db)
+            matched_cpes = filter_cpes_by_version(matched_cpes, config_version)
 
             match_types_counter[match_type] += 1
 

@@ -14,7 +14,9 @@
     "subtitle": "Enter your credentials to access your security dashboard.",
     "email": "Email",
     "password": "Password",
-    "button": "Sign in"
+    "button": "Sign in",
+    "no_account": "Don't have an account yet?",
+    "create_here": "Create one here"
   },
   "messages": {
     "user_created": "User created successfully",
@@ -49,11 +51,16 @@
     "config_detector": "Configuration Detector"
   },
   "navbar": {
-    "login": "Login",
-    "register": "Register",
+    "login": "Sign In",
+    "register": "Sign Up",
+    "logout": "Logout",
     "dashboard": "Dashboard",
     "admin_panel": "Admin Panel",
-    "logout": "Logout"
+    "vulnerabilities_management": "Vulnerabilities Management",
+    "platforms_management": "Platforms Management",
+    "cwes_management": "Weaknesses Management",
+    "my_devices": "My Devices",
+    "config_detector": "Config. Detector"
   },
   "home": {
     "title": "Welcome to VulnScanner",

@@ -14,7 +14,9 @@
     "subtitle": "Introduce tus credenciales para acceder a tu panel de seguridad.",
     "email": "Correo electrónico",
     "password": "Contraseña",
-    "button": "Entrar"
+    "button": "Entrar",
+    "no_account": "¿Aún no tienes una cuenta?",
+    "create_here": "Crea una aquí"
   },
   "messages": {
     "user_created": "Usuario creado correctamente",
@@ -51,9 +53,14 @@
   "navbar": {
     "login": "Iniciar sesión",
     "register": "Registrarse",
-    "dashboard": "Cuadro de Mando",
+    "logout": "Cerrar sesión",
+    "dashboard": "Cuadro de mando",
     "admin_panel": "Panel de Administración",
-    "logout": "Cerrar sesión"
+    "vulnerabilities_management": "Gestión de Vulnerabilidades",
+    "platforms_management": "Gestión de Plataformas",
+    "cwes_management": "Gestión de Debilidades",
+    "my_devices": "Mis equipos",
+    "config_detector": "Detector de configuración"
   },
   "home": {
     "title": "Bienvenido a VulnScanner",

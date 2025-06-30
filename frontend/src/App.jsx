@@ -28,6 +28,8 @@ import DeviceVulnerabilitiesList from "@/pages/DeviceVulnerabilitiesList";
 import Detector from "@/pages/Detector"; // 🆕
 import CWEManagement from "@/pages/CWEManagement";
 import DeviceConfigDetail from "@/pages/DeviceConfigDetail";
+import WeaknessDetails from "@/pages/WeaknessDetails"; // o desde donde lo tengas
+
 
 
 
@@ -119,6 +121,8 @@ function App() {
               <Route path="/vulnerabilities/:cveId" element={<ProtectedRoute><VulnerabilityDetails /></ProtectedRoute>} />
 
               <Route path="/detector" element={<ProtectedRoute requiredRole="user"><Detector /></ProtectedRoute>} /> {/* 🆕 */}
+              <Route path="/weaknesses/:cweId" element={<ProtectedRoute><WeaknessDetails /></ProtectedRoute>} />
+
 
               {/* Catch-all */}
               <Route path="*" element={<Navigate to="/" />} />

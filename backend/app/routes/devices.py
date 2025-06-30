@@ -358,3 +358,25 @@ def delete_device_matching(
 
     return {"status": "deleted", "deleted_matches": total_matches}
 
+@router.delete("/devices/{device_id}")
+def delete_device(
+    device_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    device = db.query(models.Device).filter_by(id=device_id, user_id=current_user.id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail="Dispositivo no encontrado")
+
+    db.query(DeviceMatch).filter(
+        DeviceMatch.device_config_id.in_(
+            db.query(DeviceConfig.id).filter_by(device_id=device_id)
+        )
+    ).delete(synchronize_session=False)
+
+    db.query(DeviceConfig).filter_by(device_id=device_id).delete(synchronize_session=False)
+    db.delete(device)
+    db.commit()
+
+    return {"status": "deleted"}
+

@@ -4,10 +4,13 @@ export const API_ROUTES = {
   AUTH: {
     LOGIN: `${API_BASE_URL}/auth/login`,
     REGISTER: `${API_BASE_URL}/auth/register`,
+    SESSION: "/auth/session",
+
   },
   VULNERABILITIES: {
     LIST: `${API_BASE_URL}/vulnerabilities/list`,
-    DETAIL: (cveId) => `${API_BASE_URL}/vulnerabilities/${cveId}`,  // ✅ Añadido
+    DETAIL: (cveId) => `${API_BASE_URL}/vulnerabilities/${cveId}`,
+    CPES: (cveId) => `${API_BASE_URL}/vulnerabilities/${cveId}/cpes`, // ✅ Añadido
     STATS: (deviceId) => `${API_BASE_URL}/devices/${deviceId}/vulnerability-stats`,
   },
   NVD: {
@@ -18,6 +21,9 @@ export const API_ROUTES = {
     CPE_IMPORT_CANCEL: `${API_BASE_URL}/nvd/cpe-import-cancel`,
     CPE_DELETE_ALL: `${API_BASE_URL}/nvd/cpe-delete-all`,
     CPE_LIST: `${API_BASE_URL}/nvd/cpe-list`,
+  },
+  WEAKNESSES: {
+    DETAIL: (cweId) => `${API_BASE_URL}/weaknesses/${cweId}`,
   },
   DEVICES: {
     UPLOAD: `${API_BASE_URL}/devices/`,
@@ -33,5 +39,6 @@ export const API_ROUTES = {
     DEVICE_CONFIG_BY_TYPE: (id, type) => `${API_BASE_URL}/devices/${id}/config/${type}`,
     GET_ENRICHED_CONFIG: (deviceId) => `${API_BASE_URL}/devices/${deviceId}/config/with-cves`,
     MATCH_DELETE: (deviceId) => `${API_BASE_URL}/devices/${deviceId}/match-platforms`,
+    DELETE_DEVICE: (id) => `${API_BASE_URL}/devices/${id}`,
   },
 };

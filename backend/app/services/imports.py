@@ -40,7 +40,7 @@ from app.services.utils import (
     extract_text,
     serialize_blocks,
     serialize_elements,
-    extract_multiple_as_json,
+    extract_multiple_as_list,
     decompress_once
 )
 from app.services.cpe_importer import (

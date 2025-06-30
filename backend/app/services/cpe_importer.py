@@ -263,22 +263,31 @@ async def import_cpes_from_xml(filepath: str = CPE_XML_PATH) -> int:
 
 
 
-def extract_all_cpes(configurations: list) -> list[str]:
+def extract_all_cpes(configurations: list) -> list[dict]:
     cpes = []
     for config in configurations:
-        nodes = config.get('nodes', [])
+        nodes = config.get("nodes", [])
         collect_cpes_from_nodes(nodes, cpes)
     return cpes
 
-
-def collect_cpes_from_nodes(nodes: list, cpes: list[str]):
+def collect_cpes_from_nodes(nodes: list, cpes: list[dict]):
     for node in nodes:
-        for match in node.get('cpeMatch', []):
-            criteria = match.get('criteria') or match.get('cpe23Uri')
-            if criteria:
-                cpes.append(criteria)
-        for child in node.get('children', []):
+        for match in node.get("cpeMatch", []):
+            if not match.get("vulnerable", False):
+                continue
+            criteria = match.get("cpe23Uri") or match.get("criteria")
+            if not criteria:
+                continue
+            cpes.append({
+                "cpe_uri": criteria,
+                "version_start_including": match.get("versionStartIncluding"),
+                "version_start_excluding": match.get("versionStartExcluding"),
+                "version_end_including": match.get("versionEndIncluding"),
+                "version_end_excluding": match.get("versionEndExcluding"),
+            })
+        for child in node.get("children", []):
             collect_cpes_from_nodes(child, cpes)
+
 
 def miles(n):
     return f"{n:,}".replace(",", ".")            

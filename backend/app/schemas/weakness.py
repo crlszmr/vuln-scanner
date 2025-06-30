@@ -1,6 +1,6 @@
 # backend/app/schemas/weakness.py
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 class WeaknessBase(BaseModel):
     name: str
@@ -10,15 +10,15 @@ class WeaknessBase(BaseModel):
     description: Optional[str] = None
     extended_description: Optional[str] = None
 
-    modes_of_introduction: Optional[str] = None
-    applicable_platforms: Optional[str] = None
-    alternate_terms: Optional[str] = None
-    potential_mitigations: Optional[str] = None
-    consequences: Optional[str] = None
-    demonstrative_examples: Optional[str] = None
-    observed_examples: Optional[str] = None
-    taxonomy_mappings: Optional[str] = None
-    relationships: Optional[str] = None
+    modes_of_introduction: Optional[List[Dict[str, Any]]] = []
+    applicable_platforms: Optional[List[Dict[str, Any]]] = []
+    alternate_terms: Optional[List[Dict[str, Any]]] = []
+    potential_mitigations: Optional[List[Dict[str, Any]]] = []
+    consequences: Optional[List[Dict[str, Any]]] = []
+    demonstrative_examples: Optional[List[Dict[str, Any]]] = []
+    observed_examples: Optional[List[Dict[str, Any]]] = []
+    taxonomy_mappings: Optional[List[Dict[str, Any]]] = []
+    relationships: Optional[List[Dict[str, Any]]] = []
     background_details: Optional[str] = None
 
 class WeaknessCreate(WeaknessBase):

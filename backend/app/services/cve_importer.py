@@ -134,11 +134,19 @@ def save_cves_to_db(db: Session, data: List[Tuple[VulnerabilityCreate, list, lis
                 })
 
         seen_cpes = set()
-        for uri in cpe_uris:
+        for cpe in cpe_uris:
+            uri = cpe["cpe_uri"]
             key = (cve_name, uri)
             if key not in seen_cpes:
                 seen_cpes.add(key)
-                all_cpes.append({"cve_name": cve_name, "cpe_uri": uri})
+                all_cpes.append({
+                    "cve_name": cve_name,
+                    "cpe_uri": uri,
+                    "version_start_including": cpe.get("version_start_including"),
+                    "version_start_excluding": cpe.get("version_start_excluding"),
+                    "version_end_including": cpe.get("version_end_including"),
+                    "version_end_excluding": cpe.get("version_end_excluding"),
+                })
 
         seen_cwes = set()
         for cwe in cwe_ids:

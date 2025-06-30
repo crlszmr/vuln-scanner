@@ -19,7 +19,7 @@ from .cpe_importer import (
 from .utils import (
     extract_cvss_data_from_feed,    
     extract_text,
-    extract_multiple_as_json,
+    extract_multiple_as_list,
     serialize_elements,
     serialize_blocks,
     extract_cvss_data,

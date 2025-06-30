@@ -24,11 +24,15 @@ export default function DeviceMatching() {
         credentials: "include",
       });
       const data = await res.json();
+
       if (data && data.timestamp) {
         setLastMatching(data.timestamp);
+      } else {
+        setLastMatching(null); // ✅ fuerza mostrar el mensaje alternativo
       }
     } catch (err) {
       console.error("[❌] Error cargando último matching:", err);
+      setLastMatching(null); // ✅ también en caso de error
     }
   };
 
