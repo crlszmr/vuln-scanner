@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { API_ROUTES } from "@/config/apiRoutes";
 import { Button } from "@/components/ui/Button";
 
+// Modal para eliminar coincidencias de vulnerabilidades de un equipo
 export default function DeleteMatchingModal({ deviceId, onClose, onDeleted }) {
   const { t } = useTranslation();
   const [status, setStatus] = useState("idle");
@@ -26,42 +27,43 @@ export default function DeleteMatchingModal({ deviceId, onClose, onDeleted }) {
         setStatus("error");
       }
     } catch (err) {
-      console.error("[❌] Error eliminando matching:", err);
+      console.error("❌ Error eliminando matching:", err);
       setStatus("error");
     }
   };
 
   const handleAccept = () => {
-    onDeleted(); // notifica al padre que se actualice
-    onClose();   // cierra el modal
+    onDeleted();
+    onClose();
   };
 
   return ReactDOM.createPortal(
     <div style={styles.backdrop}>
       <div style={styles.modal}>
         <button onClick={onClose} style={styles.closeButton}>✖</button>
-        <h2 style={styles.title}>{t("Eliminar Matching")}</h2>
+
+        <h2 style={styles.title}>{t("matching_delete.title")}</h2>
 
         {status === "idle" && (
           <>
-            <p style={styles.message}>
-              {t("¿Estás seguro que deseas eliminar el matching de vulnerabilidades existente?")}
-            </p>
+            <p style={styles.message}>{t("matching_delete.confirmation")}</p>
             <div style={styles.buttonRow}>
-              <button onClick={onClose} style={styles.cancelButton}>{t("Cancelar")}</button>
-              <button onClick={handleDelete} style={styles.deleteButton}>{t("Eliminar")}</button>
+              <button onClick={onClose} style={styles.cancelButton}>{t("matching_delete.cancel")}</button>
+              <button onClick={handleDelete} style={styles.deleteButton}>{t("matching_delete.delete")}</button>
             </div>
           </>
         )}
 
-        {status === "deleting" && <p style={styles.message}>{t("Eliminando coincidencias...")}</p>}
+        {status === "deleting" && (
+          <p style={styles.message}>{t("matching_delete.deleting")}</p>
+        )}
 
         {status === "deleted" && (
           <>
-            <p style={styles.message}>{t("Coincidencias eliminadas correctamente")}</p>
+            <p style={styles.message}>{t("matching_delete.success")}</p>
             <div style={{ marginTop: "2rem" }}>
               <Button onClick={handleAccept} variant="primary">
-                {t("Aceptar")}
+                {t("matching_delete.accept")}
               </Button>
             </div>
           </>
@@ -69,10 +71,10 @@ export default function DeleteMatchingModal({ deviceId, onClose, onDeleted }) {
 
         {status === "no_matches" && (
           <>
-            <p style={styles.message}>{t("No se puede eliminar porque no hay ningún matching asociado a este dispositivo")}</p>
+            <p style={styles.message}>{t("matching_delete.no_matches")}</p>
             <div style={{ marginTop: "2rem" }}>
               <Button onClick={onClose} variant="primary">
-                {t("Aceptar")}
+                {t("matching_delete.accept")}
               </Button>
             </div>
           </>
@@ -80,7 +82,7 @@ export default function DeleteMatchingModal({ deviceId, onClose, onDeleted }) {
 
         {status === "error" && (
           <p style={{ ...styles.message, color: "red" }}>
-            {t("Error al eliminar coincidencias")}
+            {t("matching_delete.error")}
           </p>
         )}
       </div>

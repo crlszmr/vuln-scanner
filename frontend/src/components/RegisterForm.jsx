@@ -11,7 +11,6 @@ import { useAuth } from "@/context/AuthContext";
 import { APP_ROUTES } from "@/config/appRoutes";
 
 function RegisterForm() {
-  // Estados locales para los campos del formulario
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,7 +21,6 @@ function RegisterForm() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Redirección si ya hay sesión iniciada
   useEffect(() => {
     if (user?.role === "admin") {
       navigate(APP_ROUTES.ADMIN_DASHBOARD);
@@ -31,7 +29,6 @@ function RegisterForm() {
     }
   }, [user, navigate]);
 
-  // Validación de entradas antes de enviar el formulario
   const validateInputs = () => {
     const usernameRegex = /^[a-zA-Z0-9_-]{3,20}$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -47,7 +44,6 @@ function RegisterForm() {
     const emailErrors = [];
     const passwordErrors = [];
 
-    // Validaciones individuales
     if (!username.trim()) {
       usernameErrors.push(t("messages.username_required"));
     } else if (!usernameRegex.test(username)) {
@@ -75,7 +71,6 @@ function RegisterForm() {
       passwordErrors.push(t("messages.password_mismatch"));
     }
 
-    // Mostrar errores si los hay
     if (usernameErrors.length > 0) addNotification(usernameErrors.join("\n"), "error");
     if (emailErrors.length > 0) addNotification(emailErrors.join("\n"), "error");
     if (passwordErrors.length > 0) addNotification(passwordErrors.join("\n"), "error");
@@ -83,7 +78,6 @@ function RegisterForm() {
     return usernameErrors.length === 0 && emailErrors.length === 0 && passwordErrors.length === 0;
   };
 
-  // Manejo del envío del formulario
   const handleRegister = async (e) => {
     e.preventDefault();
     if (!validateInputs()) return;
@@ -99,7 +93,6 @@ function RegisterForm() {
         const data = await response.json();
         const detail = data?.detail;
 
-        // Mapeo de errores del backend al sistema de notificaciones
         if (typeof detail === "string") {
           const cleanKey = detail.toLowerCase().replace(/\s+/g, "_").replace(/[^\w_]/g, "");
           addNotification(t(`messages.${cleanKey}`) || detail, "error");
@@ -119,7 +112,6 @@ function RegisterForm() {
         return;
       }
 
-      // Éxito: notificación + limpieza de formulario + redirección al login
       addNotification(t("messages.user_created"), "success");
       setUsername("");
       setEmail("");
@@ -147,7 +139,6 @@ function RegisterForm() {
             textAlign: "center",
           }}
         >
-          {/* Título */}
           <h1
             style={{
               fontSize: "2.5rem",
@@ -159,7 +150,6 @@ function RegisterForm() {
             {t("register.title")}
           </h1>
 
-          {/* Subtítulo */}
           <p
             style={{
               fontSize: "1.125rem",
@@ -171,7 +161,6 @@ function RegisterForm() {
             {t("register.subtitle")}
           </p>
 
-          {/* Tarjeta del formulario */}
           <div
             style={{
               maxWidth: "700px",
@@ -226,7 +215,6 @@ function RegisterForm() {
   );
 }
 
-// Estilos comunes para inputs del formulario
 const inputStyle = {
   padding: "12px",
   borderRadius: theme.radius.md,

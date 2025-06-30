@@ -2,19 +2,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useNotification } from '@/context/NotificationContext';
 
+//Componente Toast individual que muestra un mensaje tipo notificación.
 export function Toast({ id, message, type = 'success' }) {
   const { removeNotification } = useNotification();
 
   const getBackground = () => {
     switch (type) {
-      case 'success': return '#bbf7d0';
-      case 'error': return '#fecaca';
-      case 'warning': return '#fef08a';
-      default: return '#bfdbfe';
+      case 'success': return '#bbf7d0';  // Verde claro
+      case 'error': return '#fecaca';    // Rojo claro
+      case 'warning': return '#fef08a';  // Amarillo claro
+      default: return '#bfdbfe';         // Azul claro por defecto
     }
   };
 
-  const getTextColor = () => '#1e293b';
+  const getTextColor = () => '#1e293b'; // Texto oscuro para buena legibilidad
 
   return (
     <AnimatePresence mode="wait">
@@ -39,6 +40,7 @@ export function Toast({ id, message, type = 'success' }) {
           overflow: 'hidden',
         }}
       >
+        {/* Botón de cierre (icono X) */}
         <button
           onClick={() => removeNotification(id)}
           style={{
@@ -54,6 +56,8 @@ export function Toast({ id, message, type = 'success' }) {
         >
           <X size={16} />
         </button>
+
+        {/* Mensaje del toast */}
         <div>{message}</div>
       </motion.div>
     </AnimatePresence>

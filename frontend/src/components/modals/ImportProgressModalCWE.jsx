@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 
+// Modal de progreso para importación de debilidades (CWE)
 export default function ImportProgressModalCWE({
   isOpen,
   onClose,
@@ -81,7 +82,7 @@ export default function ImportProgressModalCWE({
     }
   }, [isOpen]);
 
-  function getImportLabel() {
+  const getImportLabel = () => {
     if (displayedLabel)
       return t(displayedLabel, {
         imported,
@@ -93,128 +94,12 @@ export default function ImportProgressModalCWE({
     if (pendingImport) return t("cwe.from_xml");
     if (status === "error") return t("cwe.connection_error");
     return t("cwe.ready");
-  }
+  };
 
   if (!isOpen) return null;
 
   const canClose = status !== "running";
   const isWarning = status === "warning";
-
-  const localTheme = {
-    colors: {
-      surface: "#1e293b",
-      text: "white",
-      textSecondary: "#94a3b8",
-    },
-    font: {
-      family: "Inter, sans-serif",
-    },
-    shadow: {
-      medium: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-    },
-  };
-
-  const styles = {
-    backdrop: {
-      position: "fixed",
-      zIndex: 9999,
-      top: 0,
-      left: 0,
-      width: "100vw",
-      height: "100vh",
-      backgroundColor: "rgba(15, 23, 42, 0.8)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    modal: {
-      backgroundColor: localTheme.colors.surface,
-      borderRadius: "16px",
-      padding: "2rem",
-      width: "450px",
-      textAlign: "center",
-      position: "relative",
-      color: localTheme.colors.text,
-      fontFamily: localTheme.font.family,
-    },
-    closeButton: {
-      position: "absolute",
-      top: "16px",
-      right: "16px",
-      fontSize: "20px",
-      background: "none",
-      border: "none",
-      color: "white",
-    },
-    title: {
-      fontSize: "1.75rem",
-      fontWeight: 700,
-      marginBottom: "1.5rem",
-    },
-    progressWrapper: {
-      textAlign: "center",
-    },
-    progressText: {
-      fontSize: "1.25rem",
-      fontWeight: 600,
-      marginBottom: "0.5rem",
-    },
-    barOuter: {
-      width: "100%",
-      backgroundColor: "#334155",
-      borderRadius: "8px",
-      overflow: "hidden",
-      height: "20px",
-      marginBottom: "0.75rem",
-    },
-    barInner: {
-      backgroundColor: "#22c55e",
-      height: "100%",
-      transition: "width 0.3s ease",
-    },
-    statusText: {
-      marginTop: "0.75rem",
-      color: localTheme.colors.textSecondary,
-    },
-    startButton: {
-      marginTop: "2rem",
-      padding: "0.75rem 1.5rem",
-      fontSize: "1rem",
-      fontWeight: 600,
-      borderRadius: "8px",
-      backgroundColor: "#3b82f6",
-      color: "white",
-      border: "none",
-      cursor: "pointer",
-    },
-    stopButton: {
-      marginTop: "2rem",
-      padding: "0.75rem 1.5rem",
-      fontSize: "1rem",
-      fontWeight: 600,
-      borderRadius: "8px",
-      backgroundColor: "#ef4444",
-      color: "white",
-      border: "none",
-      cursor: "pointer",
-    },
-    spinnerWrapper: {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      marginTop: "1.5rem",
-      gap: "1rem",
-    },
-    spinner: {
-      width: "36px",
-      height: "36px",
-      border: "4px solid #94a3b8",
-      borderTop: "4px solid #22c55e",
-      borderRadius: "50%",
-      animation: "spin 1s linear infinite",
-    },
-  };
 
   return ReactDOM.createPortal(
     <div style={styles.backdrop}>
@@ -230,7 +115,9 @@ export default function ImportProgressModalCWE({
         >
           ✖
         </button>
+
         <h2 style={styles.title}>{t("cwe.import_modal_title")}</h2>
+
         {!isInsertPhase && !waitingForSSE && status !== "running" && (
           <div style={styles.statusText}>{getImportLabel()}</div>
         )}
@@ -247,7 +134,7 @@ export default function ImportProgressModalCWE({
                     ...styles.barInner,
                     width: `${percentage || 0}%`,
                   }}
-                ></div>
+                />
               </div>
               <div style={styles.statusText}>{t("cwe.importing_from_nvd")}</div>
             </>
@@ -263,7 +150,7 @@ export default function ImportProgressModalCWE({
 
         {(status === "idle" || pendingImport) &&
           !waitingForSSE &&
-          status !== "warning" && (
+          !isWarning && (
             <button onClick={onStart} style={styles.startButton}>
               {t("cwe.start")}
             </button>
@@ -285,3 +172,105 @@ export default function ImportProgressModalCWE({
     document.getElementById("modal-root")
   );
 }
+
+const styles = {
+  backdrop: {
+    position: "fixed",
+    zIndex: 9999,
+    top: 0,
+    left: 0,
+    width: "100vw",
+    height: "100vh",
+    backgroundColor: "rgba(15, 23, 42, 0.8)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modal: {
+    backgroundColor: "#1e293b",
+    borderRadius: "16px",
+    padding: "2rem",
+    width: "450px",
+    textAlign: "center",
+    position: "relative",
+    color: "white",
+    fontFamily: "Inter, sans-serif",
+  },
+  closeButton: {
+    position: "absolute",
+    top: "16px",
+    right: "16px",
+    fontSize: "20px",
+    background: "none",
+    border: "none",
+    color: "white",
+  },
+  title: {
+    fontSize: "1.75rem",
+    fontWeight: 700,
+    marginBottom: "1.5rem",
+  },
+  progressWrapper: {
+    textAlign: "center",
+  },
+  progressText: {
+    fontSize: "1.25rem",
+    fontWeight: 600,
+    marginBottom: "0.5rem",
+  },
+  barOuter: {
+    width: "100%",
+    backgroundColor: "#334155",
+    borderRadius: "8px",
+    overflow: "hidden",
+    height: "20px",
+    marginBottom: "0.75rem",
+  },
+  barInner: {
+    backgroundColor: "#22c55e",
+    height: "100%",
+    transition: "width 0.3s ease",
+  },
+  statusText: {
+    marginTop: "0.75rem",
+    color: "#94a3b8",
+  },
+  startButton: {
+    marginTop: "2rem",
+    padding: "0.75rem 1.5rem",
+    fontSize: "1rem",
+    fontWeight: 600,
+    borderRadius: "8px",
+    backgroundColor: "#3b82f6",
+    color: "white",
+    border: "none",
+    cursor: "pointer",
+  },
+  stopButton: {
+    marginTop: "2rem",
+    padding: "0.75rem 1.5rem",
+    fontSize: "1rem",
+    fontWeight: 600,
+    borderRadius: "8px",
+    backgroundColor: "#ef4444",
+    color: "white",
+    border: "none",
+    cursor: "pointer",
+  },
+  spinnerWrapper: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: "1.5rem",
+    gap: "1rem",
+  },
+  spinner: {
+    width: "36px",
+    height: "36px",
+    border: "4px solid #94a3b8",
+    borderTop: "4px solid #22c55e",
+    borderRadius: "50%",
+    animation: "spin 1s linear infinite",
+  },
+};

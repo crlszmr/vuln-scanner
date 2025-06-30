@@ -1,16 +1,19 @@
 import { useEffect, useState } from "react";
-import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { PageWrapper } from "@/components/layouts/PageWrapper";
 import { APP_ROUTES } from "@/config/appRoutes";
 import { theme } from "@/styles/theme";
 import { Button } from "@/components/ui/Button";
+import { useTranslation } from "react-i18next";
 
 export default function DeviceVulnerabilitiesList() {
   const { deviceId, configId, severity } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
+  const { t } = useTranslation();
+
+  // Estados para vulnerabilidades, filtros, paginación y selección
   const [vulns, setVulns] = useState([]);
   const [startYear, setStartYear] = useState("");
   const [endYear, setEndYear] = useState("");
@@ -18,13 +21,15 @@ export default function DeviceVulnerabilitiesList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [deviceAlias, setDeviceAlias] = useState("");
   const [configDetails, setConfigDetails] = useState(null);
-  const pageSize = 100;
 
+  const pageSize = 100;
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: currentYear - 1998 }, (_, i) => 1999 + i);
 
+  // Validación rango años
   const isInvalidRange = startYear && endYear && parseInt(startYear) > parseInt(endYear);
 
+  // Función para cargar vulnerabilidades según filtros
   const fetchVulnerabilities = async () => {
     if (isInvalidRange) {
       setVulns([]);
@@ -32,7 +37,7 @@ export default function DeviceVulnerabilitiesList() {
     }
 
     const normalizedSeverity = severity?.toUpperCase();
-    const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const baseURL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
     let allResults = [];
     let yearRange = [];
@@ -62,72 +67,82 @@ export default function DeviceVulnerabilitiesList() {
         const data = Array.isArray(res.data) ? res.data : [];
         allResults = [...allResults, ...data];
       } catch (err) {
-        console.error(`❌ Error año ${year}:`, err);
+        console.error(t("deviceVulnerabilitiesList.error_loading_year", { year }), err);
       }
     }
 
+    // Eliminar duplicados por cve_id
     const unique = {};
-    for (const v of allResults) unique[v.cve_id] = v;
+    allResults.forEach((v) => {
+      unique[v.cve_id] = v;
+    });
+
     setVulns(Object.values(unique));
     setCurrentPage(1);
     setSelected([]);
   };
 
+  // Obtener alias del dispositivo
   const fetchDeviceAlias = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/devices/${deviceId}/config`, { withCredentials: true });
+      const baseURL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+      const res = await axios.get(`${baseURL}/devices/${deviceId}/config`, { withCredentials: true });
       setDeviceAlias(res.data.alias || "");
     } catch (err) {
-      console.error("❌ Error obteniendo alias del dispositivo:", err);
+      console.error(t("deviceVulnerabilitiesList.error_loading_alias"), err);
     }
   };
 
+  // Obtener detalles de configuración (cuando aplica)
   const fetchConfigDetails = async () => {
     if (!configId) return;
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/devices/${deviceId}/configs`, { withCredentials: true });
-      const match = res.data.find(c => String(c.id) === String(configId));
+      const baseURL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+      const res = await axios.get(`${baseURL}/devices/${deviceId}/configs`, { withCredentials: true });
+      const match = res.data.find((c) => String(c.id) === String(configId));
       if (match) setConfigDetails(match);
     } catch (err) {
-      console.error("❌ Error obteniendo configuración:", err);
+      console.error(t("deviceVulnerabilitiesList.error_loading_config"), err);
     }
   };
 
+  // Recargar datos cuando cambian los filtros o IDs
   useEffect(() => {
     fetchVulnerabilities();
     fetchDeviceAlias();
     fetchConfigDetails();
   }, [deviceId, configId, severity, startYear, endYear]);
 
+  // Generar título dinámico según filtros
   const getTitle = () => {
     if (configId && configDetails) {
-      return (
-        <span>
-          Vulnerabilidades que afectan a <b>{configDetails.vendor}</b> - <b>{configDetails.product}</b> - <b>{configDetails.version}</b> en equipo <b>{deviceAlias}</b>
-        </span>
-      );
-    } else if (severity && deviceAlias) {
-      return (
-        <span>
-          Vulnerabilidades con criticidad <b>{severity.toUpperCase()}</b> que afectan a <b>{deviceAlias}</b>
-        </span>
-      );
+      return t("deviceVulnerabilitiesList.title_with_config", {
+        vendor: configDetails.vendor,
+        product: configDetails.product,
+        version: configDetails.version,
+        alias: deviceAlias,
+      });
     }
-    return "Vulnerabilidades";
+    if (severity && deviceAlias) {
+      return t("deviceVulnerabilitiesList.title_with_severity", {
+        severity: severity.toUpperCase(),
+        alias: deviceAlias,
+      });
+    }
+    return t("deviceVulnerabilitiesList.title_default");
   };
 
+  // Maneja selección/deselección de CVEs
   const toggleSelection = (cve_id) => {
     setSelected((prev) =>
-      prev.includes(cve_id)
-        ? prev.filter((id) => id !== cve_id)
-        : [...prev, cve_id]
+      prev.includes(cve_id) ? prev.filter((id) => id !== cve_id) : [...prev, cve_id]
     );
   };
 
+  // Marca CVEs seleccionados como solucionados
   const markAsSolved = () => {
     if (selected.length === 0) return;
-
-    const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const baseURL = import.meta.env.VITE_API_URL || "http://localhost:8000";
     const endpoint = configId
       ? `${baseURL}/devices/${deviceId}/config/${configId}/vulnerabilities/mark-solved`
       : `${baseURL}/devices/${deviceId}/vulnerabilities/mark-solved`;
@@ -135,9 +150,10 @@ export default function DeviceVulnerabilitiesList() {
     axios
       .post(endpoint, { cve_ids: selected }, { withCredentials: true })
       .then(() => fetchVulnerabilities())
-      .catch((err) => console.error("❌ Error marcando como solucionadas:", err));
+      .catch((err) => console.error(t("deviceVulnerabilitiesList.error_marking_solved"), err));
   };
 
+  // Paginación
   const totalPages = Math.ceil(vulns.length / pageSize);
   const paginatedVulns = vulns.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
@@ -157,21 +173,45 @@ export default function DeviceVulnerabilitiesList() {
 
   const Pagination = () => (
     <div style={{ margin: "2rem 0", display: "flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "center" }}>
-      <button onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)} disabled={currentPage === 1} style={paginationButtonStyle(currentPage === 1)}>«</button>
+      <button
+        onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
+        disabled={currentPage === 1}
+        style={paginationButtonStyle(currentPage === 1)}
+        aria-label={t("deviceVulnerabilitiesList.pagination_prev")}
+      >
+        «
+      </button>
+
       {getPageButtons().map((btn, idx) =>
         btn === "..." ? (
-          <span key={idx} style={{ padding: "8px 12px", color: "#ccc" }}>…</span>
+          <span key={idx} style={{ padding: "8px 12px", color: "#ccc" }} aria-hidden="true">…</span>
         ) : (
-          <button key={idx} onClick={() => handlePageClick(btn)} style={paginationButtonStyle(false, btn === currentPage)}>{btn}</button>
+          <button
+            key={idx}
+            onClick={() => handlePageClick(btn)}
+            style={paginationButtonStyle(false, btn === currentPage)}
+            aria-current={btn === currentPage ? "page" : undefined}
+            aria-label={t("deviceVulnerabilitiesList.pagination_page", { page: btn })}
+          >
+            {btn}
+          </button>
         )
       )}
-      <button onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)} disabled={currentPage === totalPages} style={paginationButtonStyle(currentPage === totalPages)}>»</button>
+
+      <button
+        onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        style={paginationButtonStyle(currentPage === totalPages)}
+        aria-label={t("deviceVulnerabilitiesList.pagination_next")}
+      >
+        »
+      </button>
     </div>
   );
 
   const paginationButtonStyle = (disabled, active = false) => ({
     padding: "8px 14px",
-    borderRadius: "8px",
+    borderRadius: 8,
     border: "none",
     backgroundColor: active ? "#0ea5e9" : disabled ? "#64748b" : "#334155",
     color: "white",
@@ -180,6 +220,7 @@ export default function DeviceVulnerabilitiesList() {
     transition: "transform 0.2s ease",
   });
 
+  // Regresa a vista previa o anterior según contexto
   const handleBack = () => {
     if (severity) navigate(`/devices/${deviceId}/vulnerabilities/overview`);
     else navigate(-1);
@@ -188,14 +229,24 @@ export default function DeviceVulnerabilitiesList() {
   return (
     <MainLayout>
       <PageWrapper>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.5rem 2rem 0.5rem", flexWrap: "wrap" }}>
+        {/* Header con botón volver y título */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "1.5rem 2rem 0.5rem",
+            flexWrap: "wrap",
+          }}
+        >
           <button
             onClick={handleBack}
+            aria-label={t("deviceVulnerabilitiesList.back_button_aria")}
             style={{
               backgroundColor: "#334155",
               color: "white",
               border: "none",
-              borderRadius: "12px",
+              borderRadius: 12,
               padding: "6px 14px",
               fontSize: "1.5rem",
               fontWeight: "bold",
@@ -214,34 +265,58 @@ export default function DeviceVulnerabilitiesList() {
             &lt;
           </button>
 
-          <h1 style={{ fontSize: "2.5rem", fontWeight: "bold", textAlign: "center", flex: 1, margin: 0, marginBottom: "1rem" }}>
+          <h1
+            style={{
+              fontSize: "2.5rem",
+              fontWeight: "bold",
+              textAlign: "center",
+              flex: 1,
+              margin: 0,
+              marginBottom: "1rem",
+            }}
+          >
             {getTitle()}
           </h1>
 
-          <div style={{ width: "52px" }}></div>
+          <div style={{ width: 52 }}></div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "1rem 2rem 0", flexWrap: "wrap", justifyContent: "flex-start" }}>
+        {/* Filtros por año */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "1rem",
+            padding: "1rem 2rem 0",
+            flexWrap: "wrap",
+            justifyContent: "flex-start",
+          }}
+        >
           <span style={{ fontWeight: 600, color: theme.colors.text }}>
-            Filtrar por años:
+            {t("deviceVulnerabilitiesList.filter_by_years")}
           </span>
 
           <select
             value={startYear}
             onChange={(e) => setStartYear(e.target.value)}
+            aria-label={t("deviceVulnerabilitiesList.start_year_aria")}
             style={{
               backgroundColor: "#1f2937",
               color: "white",
               border: `1px solid ${theme.colors.border}`,
-              borderRadius: "8px",
+              borderRadius: 8,
               padding: "6px 12px",
-              fontSize: "14px",
+              fontSize: 14,
               appearance: "none",
-              cursor: "pointer"
+              cursor: "pointer",
             }}
           >
-            <option value="">Desde</option>
-            {years.map((y) => <option key={y} value={y}>{y}</option>)}
+            <option value="">{t("deviceVulnerabilitiesList.start_year_placeholder")}</option>
+            {years.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
           </select>
 
           <span style={{ fontSize: "1.3rem", color: theme.colors.text }}>›</span>
@@ -249,93 +324,127 @@ export default function DeviceVulnerabilitiesList() {
           <select
             value={endYear}
             onChange={(e) => setEndYear(e.target.value)}
+            aria-label={t("deviceVulnerabilitiesList.end_year_aria")}
             style={{
               backgroundColor: "#1f2937",
               color: "white",
               border: `1px solid ${theme.colors.border}`,
-              borderRadius: "8px",
+              borderRadius: 8,
               padding: "6px 12px",
-              fontSize: "14px",
+              fontSize: 14,
               appearance: "none",
-              cursor: "pointer"
+              cursor: "pointer",
             }}
           >
-            <option value="">Hasta</option>
-            {years.map((y) => <option key={y} value={y}>{y}</option>)}
+            <option value="">{t("deviceVulnerabilitiesList.end_year_placeholder")}</option>
+            {years.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
           </select>
 
+          {/* Mensaje rango inválido */}
           {isInvalidRange && (
-            <span style={{ color: theme.colors.error, fontSize: "14px" }}>
-              Año desde no puede ser superior a año hasta.
+            <span style={{ color: theme.colors.error, fontSize: 14 }}>
+              {t("deviceVulnerabilitiesList.invalid_range_msg")}
             </span>
           )}
         </div>
 
+        {/* Paginación superior */}
         {totalPages > 1 && <Pagination />}
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "1rem", marginBottom: "2rem" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: theme.colors.text }}>
-            <input type="checkbox" checked={selected.length === vulns.length && vulns.length > 0} onChange={(e) => setSelected(e.target.checked ? vulns.map(v => v.cve_id) : [])} />
-            Seleccionar todo
+        {/* Selección y acción */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "1rem",
+            marginTop: "4rem",
+            marginBottom: "1rem",
+            padding: "0 2rem",
+            flexWrap: "wrap",
+          }}
+        >
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              color: theme.colors.text,
+              cursor: "pointer",
+              userSelect: "none",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={selected.length === vulns.length && vulns.length > 0}
+              onChange={(e) => setSelected(e.target.checked ? vulns.map((v) => v.cve_id) : [])}
+              aria-label={t("deviceVulnerabilitiesList.select_all_aria")}
+            />
+            {t("deviceVulnerabilitiesList.select_all")}
           </label>
 
-          <Button
-            onClick={markAsSolved}
-            disabled={selected.length === 0 || isInvalidRange}
-          >
-            Marcar como solucionadas
+          <Button onClick={markAsSolved} disabled={selected.length === 0 || isInvalidRange}>
+            {t("deviceVulnerabilitiesList.mark_solved_button")}
           </Button>
         </div>
 
-<ul
-  style={{
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-    gap: "1rem",
-    padding: "2rem",
-    listStyle: "none",
-  }}
->
-  {paginatedVulns.map((v) => (
-    <li
-      key={v.cve_id}
-      style={{
-        backgroundColor: theme.colors.surface,
-        color: theme.colors.text,
-        border: `1px solid ${theme.colors.border}`,
-        borderRadius: theme.radius.xl,
-        padding: "1rem",
-        height: "50px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "0.5rem",
-        transition: theme.transition.base,
-        boxShadow: theme.shadow.soft,
-      }}
-      onMouseEnter={(e) => (e.currentTarget.style.boxShadow = theme.shadow.medium)}
-      onMouseLeave={(e) => (e.currentTarget.style.boxShadow = theme.shadow.soft)}
-    >
-      <input
-        type="checkbox"
-        checked={selected.includes(v.cve_id)}
-        onChange={() => toggleSelection(v.cve_id)}
-      />
-      <Link
-        to={APP_ROUTES.VULNERABILITY_DETAILS(v.cve_id)}
-        style={{
-          fontWeight: 600,
-          fontSize: "16px",
-          color: "#1e88e5",
-          textDecoration: "none",
-        }}
-      >
-        {v.cve_id}
-      </Link>
-    </li>
-  ))}
-</ul>
+        {/* Lista de vulnerabilidades */}
+        <ul
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+            gap: "1rem",
+            padding: "2rem",
+            listStyle: "none",
+          }}
+        >
+          {paginatedVulns.map((v) => (
+            <li
+              key={v.cve_id}
+              style={{
+                backgroundColor: theme.colors.surface,
+                color: theme.colors.text,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: theme.radius.xl,
+                padding: "1rem",
+                height: 50,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "0.5rem",
+                transition: theme.transition.base,
+                boxShadow: theme.shadow.soft,
+                cursor: "default",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.boxShadow = theme.shadow.medium)}
+              onMouseLeave={(e) => (e.currentTarget.style.boxShadow = theme.shadow.soft)}
+            >
+              <input
+                type="checkbox"
+                checked={selected.includes(v.cve_id)}
+                onChange={() => toggleSelection(v.cve_id)}
+                aria-label={t("deviceVulnerabilitiesList.select_cve_aria", { cve_id: v.cve_id })}
+              />
+              <Link
+                to={APP_ROUTES.VULNERABILITY_DETAILS(v.cve_id)}
+                style={{
+                  fontWeight: 600,
+                  fontSize: 16,
+                  color: "#1e88e5",
+                  textDecoration: "none",
+                }}
+              >
+                {v.cve_id}
+              </Link>
+            </li>
+          ))}
+        </ul>
 
+        {/* Paginación inferior */}
         {totalPages > 1 && <Pagination />}
       </PageWrapper>
     </MainLayout>

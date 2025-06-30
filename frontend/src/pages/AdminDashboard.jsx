@@ -16,7 +16,7 @@ const AdminDashboard = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  // Función para lanzar importaciones con notificación
+  // Función para lanzar una importación con notificación
   const handleImport = async (endpoint) => {
     try {
       addNotification(t("admin.import_start"), "info");
@@ -54,7 +54,7 @@ const AdminDashboard = () => {
             fontFamily: theme.font.family,
           }}
         >
-          {/* Título */}
+          {/* Título principal */}
           <h1
             style={{
               fontSize: "2.5rem",
@@ -78,7 +78,7 @@ const AdminDashboard = () => {
             {t("admin.subtitle")}
           </p>
 
-          {/* Paneles de acción */}
+          {/* Paneles del dashboard */}
           <div
             style={{
               display: "flex",
@@ -109,12 +109,6 @@ const AdminDashboard = () => {
               subtitle={t("admin.cwe_code")}
               onClick={() => navigate("/cwes")}
             />
-
-            <AdminPanel
-              icon={<Users size={64} />}
-              title={t("admin.user_title")}
-              onClick={() => {}}
-            />
           </div>
         </div>
       </PageWrapper>
@@ -122,7 +116,7 @@ const AdminDashboard = () => {
   );
 };
 
-// Panel visual reutilizable
+// Componente reutilizable para cada tarjeta/panel del dashboard
 function AdminPanel({ icon, title, subtitle, onClick }) {
   return (
     <div

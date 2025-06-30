@@ -8,16 +8,20 @@ import MatchingProgressModal from "@/components/modals/MatchingProgressModal";
 import DeleteMatchingModal from "@/components/modals/DeleteMatchingModal";
 import { RefreshCcw, Trash2 } from "lucide-react";
 import { theme } from "@/styles/theme";
-import { APP_ROUTES } from "../config/appRoutes";
+import { APP_ROUTES } from "@/config/appRoutes";
+import { useTranslation } from "react-i18next";
 
 export default function DeviceMatching() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
+
   const [lastMatching, setLastMatching] = useState(null);
   const [deviceAlias, setDeviceAlias] = useState("...");
   const [showMatchingModal, setShowMatchingModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+  // Obtener la fecha del último matching para el dispositivo
   const fetchLastMatching = async () => {
     try {
       const res = await fetch(API_ROUTES.DEVICES.GET_LAST_MATCHING(id), {
@@ -28,24 +32,32 @@ export default function DeviceMatching() {
       if (data && data.timestamp) {
         setLastMatching(data.timestamp);
       } else {
-        setLastMatching(null); // ✅ fuerza mostrar el mensaje alternativo
+        setLastMatching(null);
       }
     } catch (err) {
       console.error("[❌] Error cargando último matching:", err);
-      setLastMatching(null); // ✅ también en caso de error
+      setLastMatching(null);
     }
   };
 
+  // Obtener alias del dispositivo
+  const fetchDeviceAlias = async () => {
+    try {
+      const res = await fetch(API_ROUTES.DEVICES.GET_CONFIG(id), { credentials: "include" });
+      const data = await res.json();
+      if (data && data.alias) setDeviceAlias(data.alias);
+    } catch (err) {
+      console.error("[❌] Error cargando alias del dispositivo:", err);
+    }
+  };
+
+  // Al montar el componente, obtener datos
   useEffect(() => {
     fetchLastMatching();
-
-    fetch(API_ROUTES.DEVICES.GET_CONFIG(id), { credentials: "include" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && data.alias) setDeviceAlias(data.alias);
-      });
+    fetchDeviceAlias();
   }, [id]);
 
+  // Comprobar si un matching está en ejecución para mostrar modal
   useEffect(() => {
     const checkIfMatchingIsRunning = async () => {
       try {
@@ -55,27 +67,29 @@ export default function DeviceMatching() {
         if (res.ok) {
           const data = await res.json();
           if (data.running) {
-            console.log("[🔄 DeviceMatching] Matching activo al cargar. Mostrando modal...");
             setShowMatchingModal(true);
           }
         }
       } catch (err) {
-        console.error("[❌ DeviceMatching] Error al comprobar el estado de matching:", err);
+        console.error("[❌ DeviceMatching] Error comprobando estado de matching:", err);
       }
     };
 
     checkIfMatchingIsRunning();
   }, [id]);
 
+  // Abre modal para iniciar matching
   const handleStartMatching = () => {
     setShowMatchingModal(true);
   };
 
+  // Cierra modal de matching y refresca la fecha del último matching
   const handleCloseMatchingModal = () => {
     setShowMatchingModal(false);
-    fetchLastMatching(); // ✅ actualiza la fecha
+    fetchLastMatching();
   };
 
+  // Cierra modal de confirmación de borrado
   const handleCloseDeleteModal = () => {
     setShowDeleteModal(false);
   };
@@ -89,31 +103,32 @@ export default function DeviceMatching() {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            padding: "0rem",
+            padding: 0,
             fontFamily: theme.font.family,
             color: theme.colors.text,
             textAlign: "center",
           }}
         >
-          {/* Encabezado */}
+          {/* Encabezado con botón volver y título */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               width: "100%",
-              maxWidth: "960px",
-              marginBottom: "1rem",
+              maxWidth: 960,
               marginTop: "2rem",
+              marginBottom: "1rem",
             }}
           >
             <button
               onClick={() => navigate(APP_ROUTES.DEVICE_LIST)}
+              aria-label={t("deviceMatching.back_button_aria") || "Volver a lista de dispositivos"}
               style={{
                 backgroundColor: "#334155",
                 color: "white",
                 border: "none",
-                borderRadius: "12px",
+                borderRadius: 12,
                 padding: "6px 14px",
                 fontSize: "1.5rem",
                 fontWeight: "bold",
@@ -133,12 +148,12 @@ export default function DeviceMatching() {
             </button>
 
             <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
-              <h1 style={{ fontSize: "3rem", fontWeight: "700", margin: 0 }}>
-                Matching de CVEs para {deviceAlias}
+              <h1 style={{ fontSize: "3rem", fontWeight: 700, margin: 0 }}>
+                {t("deviceMatching.title", { alias: deviceAlias })}
               </h1>
             </div>
 
-            <div style={{ width: "52px" }}></div>
+            <div style={{ width: 52 }}></div>
           </div>
 
           {/* Subtítulo */}
@@ -146,55 +161,57 @@ export default function DeviceMatching() {
             style={{
               fontSize: "1.125rem",
               color: theme.colors.textSecondary || "#94a3b8",
+              marginTop: 0,
               marginBottom: "5rem",
-              marginTop: "0rem"
             }}
           >
-            Análisis para detectar qué vulnerabilidades afectan a su equipo.
+            {t("deviceMatching.subtitle")}
           </p>
 
+          {/* Estado último matching */}
           <div
             style={{
               backgroundColor: "#1e293b",
               color: "#cbd5e1",
               padding: "1rem 1.5rem",
-              borderRadius: "12px",
+              borderRadius: 12,
               fontWeight: 500,
               fontSize: "1rem",
-              width: "600px",
+              width: 600,
               marginBottom: "2rem",
               boxShadow: theme.shadow.medium,
             }}
           >
             {lastMatching
-              ? `Último matching realizado el ${getDateTimeString(lastMatching)}`
-              : "No hay matching disponible para este equipo. Si quiere lanzar uno, pulse en Analizar este equipo."}
+              ? t("deviceMatching.last_matching_done", { datetime: getDateTimeString(lastMatching) })
+              : t("deviceMatching.no_matching_yet")}
           </div>
 
+          {/* Paneles de acción para analizar o eliminar matching */}
           <div
             style={{
               display: "flex",
-              flexDirection: "row",
-              gap: "40px",
+              gap: 40,
               flexWrap: "wrap",
               justifyContent: "center",
             }}
           >
-            <CVEPanel
-              icon={<RefreshCcw size={64} />}
-              title="Analizar este equipo"
+            <ActionPanel
+              icon={<RefreshCcw size={64} aria-hidden="true" />}
+              label={t("deviceMatching.analyze_button")}
               color="#16a34a"
               onClick={handleStartMatching}
             />
-            <CVEPanel
-              icon={<Trash2 size={64} />}
-              title="Eliminar matching"
+            <ActionPanel
+              icon={<Trash2 size={64} aria-hidden="true" />}
+              label={t("deviceMatching.delete_button")}
               color="#dc2626"
               onClick={() => setShowDeleteModal(true)}
             />
           </div>
         </div>
 
+        {/* Modales condicionales */}
         {showMatchingModal && (
           <MatchingProgressModal
             deviceId={id}
@@ -215,23 +232,28 @@ export default function DeviceMatching() {
   );
 }
 
-function CVEPanel({ icon, title, color, onClick }) {
+// Componente reutilizable para botones de acción con icono y texto
+function ActionPanel({ icon, label, color, onClick }) {
   return (
     <div
       onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick(); }}
       style={{
-        width: "400px",
-        height: "200px",
+        width: 400,
+        height: 200,
         cursor: "pointer",
         backgroundColor: color || "#334155",
         color: "white",
-        borderRadius: "16px",
+        borderRadius: 16,
         padding: "2.5rem",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         transition: "transform 0.2s ease, box-shadow 0.2s ease",
+        userSelect: "none",
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = "scale(1.02)";
@@ -241,10 +263,11 @@ function CVEPanel({ icon, title, color, onClick }) {
         e.currentTarget.style.transform = "scale(1)";
         e.currentTarget.style.boxShadow = "none";
       }}
+      aria-label={label}
     >
       {icon}
-      <div style={{ textAlign: "center", marginTop: "1rem", fontSize: "1.5rem", fontWeight: 600 }}>
-        {title}
+      <div style={{ marginTop: "1rem", fontSize: "1.5rem", fontWeight: 600, textAlign: "center" }}>
+        {label}
       </div>
     </div>
   );

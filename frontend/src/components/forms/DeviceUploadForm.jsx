@@ -2,6 +2,7 @@ import { useState, useContext, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { UploadCloud } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { API_ROUTES } from '@/config/apiRoutes';
 import { Button } from '@/components/ui/Button';
 import { theme } from '@/styles/theme';
@@ -9,20 +10,21 @@ import { AuthContext } from '@/context/AuthContext';
 import { useNotification } from '@/context/NotificationContext';
 
 export default function DeviceUploadForm({ onClose, onSuccess }) {
+  const { t } = useTranslation();
   const [alias, setAlias] = useState('');
   const [type, setType] = useState('');
   const [osName, setOsName] = useState('');
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState('');
-  const { user } = useContext(AuthContext);
   const { addNotification } = useNotification();
   const closeButtonRef = useRef(null);
 
+  // Enfocar el botón de cerrar al montar el componente
   useEffect(() => {
-    // Enfocar ❌ al abrir
     closeButtonRef.current?.focus();
   }, []);
 
+  // Maneja la selección del archivo .json
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -30,28 +32,29 @@ export default function DeviceUploadForm({ onClose, onSuccess }) {
     setFileName(file.name);
   };
 
+  // Envía el formulario al backend
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!file) {
-      addNotification("❌ Debes seleccionar un archivo system_config.json", "error");
+      addNotification(t('device_upload.error_no_file'), 'error');
       return;
     }
 
     try {
       const formData = new FormData();
-      formData.append("file", file);
-      formData.append("alias", alias);
-      formData.append("type", type);
-      formData.append("os_name", osName);
+      formData.append('file', file);
+      formData.append('alias', alias);
+      formData.append('type', type);
+      formData.append('os_name', osName);
 
       await axios.post(API_ROUTES.DEVICES.UPLOAD, formData, { withCredentials: true });
 
-      addNotification("✅ Configuración subida correctamente.", "success");
+      addNotification(t('device_upload.success'), 'success');
       onSuccess?.();
       onClose?.();
     } catch (err) {
       console.error(err);
-      addNotification("❌ Error al subir la configuración del equipo.", "error");
+      addNotification(t('device_upload.error_upload'), 'error');
     }
   };
 
@@ -65,54 +68,75 @@ export default function DeviceUploadForm({ onClose, onSuccess }) {
       style={formWrapper}
     >
       {/* Botón de cerrar */}
-      <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={closeRowStyle}>
         <button
           ref={closeButtonRef}
           onClick={() => {
             onClose?.();
-            document.getElementById('crear-nuevo-btn')?.focus(); // volver al botón
+            document.getElementById('crear-nuevo-btn')?.focus();
           }}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: theme.colors.textSecondary,
-            fontSize: '22px',
-            cursor: 'pointer',
-            lineHeight: '1',
-          }}
-          aria-label="Cerrar formulario"
-          title="Cerrar"
+          style={closeButtonStyle}
+          aria-label={t('device_upload.close_aria_label')}
+          title={t('device_upload.close_title')}
         >
           ×
         </button>
       </div>
 
-      <h2 style={formTitle}>Subir configuración de equipo</h2>
+      <h2 style={formTitle}>{t('device_upload.title')}</h2>
 
       <div style={{ width: '100%', maxWidth: '420px' }}>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <input type="text" value={alias} onChange={(e) => setAlias(e.target.value)} placeholder="Alias" required style={inputStyle} />
-          <select value={type} onChange={(e) => setType(e.target.value)} required style={inputStyle}>
-            <option value="">Tipo de equipo</option>
-            <option value="laptop">Portátil</option>
-            <option value="desktop">Sobremesa</option>
-            <option value="server">Servidor</option>
+        <form onSubmit={handleSubmit} style={formStyle}>
+          <input
+            type="text"
+            value={alias}
+            onChange={(e) => setAlias(e.target.value)}
+            placeholder={t('device_upload.alias')}
+            required
+            style={inputStyle}
+          />
+
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            required
+            style={inputStyle}
+          >
+            <option value="">{t('device_upload.type_placeholder')}</option>
+            <option value="laptop">{t('device_upload.type_laptop')}</option>
+            <option value="desktop">{t('device_upload.type_desktop')}</option>
+            <option value="server">{t('device_upload.type_server')}</option>
           </select>
-          <input type="text" value={osName} onChange={(e) => setOsName(e.target.value)} placeholder="Sistema operativo" style={inputStyle} />
+
+          <input
+            type="text"
+            value={osName}
+            onChange={(e) => setOsName(e.target.value)}
+            placeholder={t('device_upload.os_placeholder')}
+            style={inputStyle}
+          />
 
           <div>
-            <label>Archivo de configuración (.json)</label>
+            <label>{t('device_upload.config_label')}</label>
             <div style={fileUploadWrapper}>
               <label htmlFor="fileUpload" style={uploadButtonStyle}>
-                <UploadCloud size={18} /> Subir archivo
+                <UploadCloud size={18} /> {t('device_upload.upload_button')}
               </label>
-              <span style={fileNameStyle}>{fileName || 'Ningún archivo seleccionado'}</span>
-              <input id="fileUpload" type="file" accept=".json" onChange={handleFileUpload} style={fileInputHidden} />
+              <span style={fileNameStyle}>
+                {fileName || t('device_upload.no_file_selected')}
+              </span>
+              <input
+                id="fileUpload"
+                type="file"
+                accept=".json"
+                onChange={handleFileUpload}
+                style={fileInputHidden}
+              />
             </div>
           </div>
 
           <Button type="submit" variant="success" fullWidth>
-            Subir configuración
+            {t('device_upload.submit_button')}
           </Button>
         </form>
       </div>
@@ -120,12 +144,13 @@ export default function DeviceUploadForm({ onClose, onSuccess }) {
   );
 }
 
+// Estilos
 const formWrapper = {
   backgroundColor: theme.colors.surface,
   borderRadius: theme.radius.xl,
   padding: '1.5rem',
   width: '100%',
-  maxWidth: '500px', // ancho similar a 2 tarjetas
+  maxWidth: '500px',
   boxShadow: theme.shadow.soft,
   color: theme.colors.text,
   fontFamily: theme.font.family,
@@ -134,11 +159,32 @@ const formWrapper = {
   alignItems: 'center',
 };
 
+const closeRowStyle = {
+  width: '100%',
+  display: 'flex',
+  justifyContent: 'flex-end',
+};
+
+const closeButtonStyle = {
+  background: 'transparent',
+  border: 'none',
+  color: theme.colors.textSecondary,
+  fontSize: '22px',
+  cursor: 'pointer',
+  lineHeight: '1',
+};
+
 const formTitle = {
   fontSize: '24px',
   textAlign: 'center',
   fontWeight: 600,
   marginBottom: '1rem',
+};
+
+const formStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '16px',
 };
 
 const inputStyle = {

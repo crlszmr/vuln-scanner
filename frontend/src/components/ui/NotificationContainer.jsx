@@ -1,6 +1,7 @@
 import { useNotification } from "@/context/NotificationContext";
 import { Toast } from "./Toast";
 
+// Contenedor de notificaciones. Muestra una lista de toasts activos en la esquina superior derecha.
 export default function NotificationContainer() {
   const { notifications } = useNotification();
 

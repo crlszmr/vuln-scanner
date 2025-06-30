@@ -12,7 +12,7 @@ export default function Home() {
   const { user } = useAuth();
   const { t } = useTranslation();
 
-  // Redirigir según estado de sesión
+  // Redirige según el estado y rol del usuario
   const handleGetStarted = () => {
     if (!user) {
       navigate(APP_ROUTES.LOGIN);
@@ -21,7 +21,7 @@ export default function Home() {
     } else if (user.role === "user") {
       navigate(APP_ROUTES.USER_DASHBOARD);
     } else {
-      navigate(APP_ROUTES.LOGIN); // fallback
+      navigate(APP_ROUTES.LOGIN); // fallback por seguridad
     }
   };
 
@@ -35,15 +35,15 @@ export default function Home() {
             alignItems: "center",
             justifyContent: "center",
             textAlign: "center",
-            minHeight: "calc(100vh - 160px)", // consistente con diseño anterior
+            minHeight: "calc(100vh - 160px)", // consistente con otras pantallas
             padding: "2rem",
             transition: theme.transition.base,
           }}
         >
-          {/* Título */}
+          {/* Título principal */}
           <h1
             style={{
-              fontSize: "40px",
+              fontSize: 40,
               fontWeight: "bold",
               color: theme.colors.text,
               marginBottom: "1.5rem",
@@ -53,20 +53,20 @@ export default function Home() {
             {t("home.title")}
           </h1>
 
-          {/* Descripción */}
+          {/* Descripción o subtítulo */}
           <p
             style={{
               color: theme.colors.textSecondary,
-              fontSize: "18px",
+              fontSize: 18,
               marginBottom: "2rem",
-              maxWidth: "600px",
+              maxWidth: 600,
               fontFamily: theme.font.family,
             }}
           >
             {t("home.description")}
           </p>
 
-          {/* Botón principal */}
+          {/* Botón principal para empezar */}
           <Button variant="primary" onClick={handleGetStarted}>
             {t("home.get_started")}
           </Button>

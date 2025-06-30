@@ -1,4 +1,3 @@
-// DeleteDeviceModal.jsx
 import ReactDOM from "react-dom";
 import { useState } from "react";
 import { theme } from "@/styles/theme";
@@ -6,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { API_ROUTES } from "@/config/apiRoutes";
 import { Button } from "@/components/ui/Button";
 
+// Modal para confirmar la eliminación de un equipo
 export default function DeleteDeviceModal({ deviceId, onClose, onDeleted }) {
   const { t } = useTranslation();
   const [status, setStatus] = useState("idle");
@@ -35,35 +35,44 @@ export default function DeleteDeviceModal({ deviceId, onClose, onDeleted }) {
     onClose();
   };
 
+  if (!deviceId) return null;
+
   return ReactDOM.createPortal(
     <div style={styles.backdrop}>
       <div style={styles.modal}>
         <button onClick={onClose} style={styles.closeButton}>✖</button>
-        <h2 style={styles.title}>{t("Eliminar equipo")}</h2>
+
+        <h2 style={styles.title}>{t("device_delete.title")}</h2>
 
         {status === "idle" && (
           <>
-            <p style={styles.message}>{t("¿Está seguro que desea eliminar este equipo?")}</p>
+            <p style={styles.message}>{t("device_delete.confirmation")}</p>
             <div style={styles.buttonRow}>
-              <button onClick={onClose} style={styles.cancelButton}>{t("Cancelar")}</button>
-              <button onClick={handleDelete} style={styles.deleteButton}>{t("Eliminar")}</button>
+              <button onClick={onClose} style={styles.cancelButton}>{t("device_delete.cancel")}</button>
+              <button onClick={handleDelete} style={styles.deleteButton}>{t("device_delete.delete")}</button>
             </div>
           </>
         )}
 
-        {status === "deleting" && <p style={styles.message}>{t("Eliminando equipo...")}</p>}
+        {status === "deleting" && (
+          <p style={styles.message}>{t("device_delete.deleting")}</p>
+        )}
 
         {status === "deleted" && (
           <>
-            <p style={styles.message}>{t("Equipo eliminado correctamente")}</p>
+            <p style={styles.message}>{t("device_delete.success")}</p>
             <div style={{ marginTop: "2rem" }}>
-              <Button onClick={handleAccept} variant="primary">{t("Aceptar")}</Button>
+              <Button onClick={handleAccept} variant="primary">
+                {t("device_delete.accept")}
+              </Button>
             </div>
           </>
         )}
 
         {status === "error" && (
-          <p style={{ ...styles.message, color: "red" }}>{t("Error al eliminar equipo")}</p>
+          <p style={{ ...styles.message, color: "red" }}>
+            {t("device_delete.error")}
+          </p>
         )}
       </div>
     </div>,

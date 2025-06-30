@@ -20,31 +20,23 @@ export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  // Redirección automática si ya hay sesión iniciada
   useEffect(() => {
-    if (user?.role === "admin") {
-      navigate(APP_ROUTES.ADMIN_DASHBOARD);
-    } else if (user?.role === "user") {
-      navigate(APP_ROUTES.USER_DASHBOARD);
-    }
+    if (user?.role === "admin") navigate(APP_ROUTES.ADMIN_DASHBOARD);
+    else if (user?.role === "user") navigate(APP_ROUTES.USER_DASHBOARD);
   }, [user, navigate]);
 
+  // Validación de campos antes de enviar
   const validateInputs = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const errors = [];
 
-    if (!email.trim()) {
-      errors.push(t("messages.email_required"));
-    } else if (!emailRegex.test(email)) {
-      errors.push(t("messages.email_invalid"));
-    } else if (email.length > 254) {
-      errors.push(t("messages.email_too_long"));
-    }
+    if (!email.trim()) errors.push(t("messages.email_required"));
+    else if (!emailRegex.test(email)) errors.push(t("messages.email_invalid"));
+    else if (email.length > 254) errors.push(t("messages.email_too_long"));
 
-    if (!password.trim()) {
-      errors.push(t("messages.password_required"));
-    } else if (password.length > 128) {
-      errors.push(t("messages.password_too_long"));
-    }
+    if (!password.trim()) errors.push(t("messages.password_required"));
+    else if (password.length > 128) errors.push(t("messages.password_too_long"));
 
     if (errors.length > 0) {
       errors.forEach((msg) => addNotification(msg, "error"));
@@ -54,6 +46,7 @@ export default function LoginForm() {
     return true;
   };
 
+  // Envío del formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateInputs()) return;
@@ -63,28 +56,23 @@ export default function LoginForm() {
       params.append("username", email);
       params.append("password", password);
 
-      const response = await axios.post(API_ROUTES.AUTH.LOGIN, params, {
+      const res = await axios.post(API_ROUTES.AUTH.LOGIN, params, {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         withCredentials: true,
       });
 
-      const { access_token, role, email: userEmail, username } = response.data;
-
+      const { access_token, role, email: userEmail, username } = res.data;
       login({ token: access_token, role, email: userEmail, username });
       addNotification(t("messages.login_success"), "success");
 
-      if (role.toLowerCase() === "admin") {
-        navigate(APP_ROUTES.ADMIN_DASHBOARD);
-      } else if (role.toLowerCase() === "user") {
-        navigate(APP_ROUTES.USER_DASHBOARD);
-      } else {
-        addNotification(t("messages.role_unknown"), "warning");
-      }
+      if (role === "admin") navigate(APP_ROUTES.ADMIN_DASHBOARD);
+      else if (role === "user") navigate(APP_ROUTES.USER_DASHBOARD);
+      else addNotification(t("messages.role_unknown"), "warning");
 
-    } catch (error) {
-      console.error("Error de login:", error);
-      if (error.response) {
-        if ([400, 401].includes(error.response.status)) {
+    } catch (err) {
+      console.error("❌ Error de login:", err);
+      if (err.response) {
+        if ([400, 401].includes(err.response.status)) {
           addNotification(t("messages.login_failed"), "error");
         } else {
           addNotification(t("messages.error_generic"), "error");
@@ -109,34 +97,25 @@ export default function LoginForm() {
             textAlign: "center",
           }}
         >
-          <h1
-            style={{
-              fontSize: "2.5rem",
-              fontWeight: "700",
-              color: theme.colors.text,
-              marginBottom: "0.5rem",
-            }}
-          >
+          {/* Título y subtítulo */}
+          <h1 style={{ fontSize: "2.5rem", fontWeight: "700", color: theme.colors.text, marginBottom: "0.5rem" }}>
             {t("login.title")}
           </h1>
-
-          <p
-            style={{
-              fontSize: "1.125rem",
-              color: theme.colors.textSecondary || "#94a3b8",
-              marginBottom: "2.5rem",
-              maxWidth: "600px",
-            }}
-          >
+          <p style={{
+            fontSize: "1.125rem",
+            color: theme.colors.textSecondary,
+            marginBottom: "2.5rem",
+            maxWidth: "600px",
+          }}>
             {t("login.subtitle")}
           </p>
 
+          {/* Formulario de login */}
           <div
             style={{
               maxWidth: "700px",
               width: "100%",
-              padding: "4rem 8rem",
-              paddingBottom: "2rem",
+              padding: "4rem 8rem 2rem",
               borderRadius: theme.radius.lg,
               backgroundColor: theme.colors.surface,
               boxShadow: theme.shadow.soft,
@@ -164,12 +143,16 @@ export default function LoginForm() {
                 </Button>
               </div>
 
-              {/* Enlace al registro */}
+              {/* Enlace a registro */}
               <p style={{ textAlign: "center", marginTop: "24px", fontSize: "0.95rem", color: "#94a3b8" }}>
                 {t("login.no_account")}{" "}
                 <a
                   href={APP_ROUTES.REGISTER}
-                  style={{ color: theme.colors.primary, fontWeight: "bold", textDecoration: "underline" }}
+                  style={{
+                    color: theme.colors.primary,
+                    fontWeight: "bold",
+                    textDecoration: "underline",
+                  }}
                 >
                   {t("login.create_here")}
                 </a>
@@ -182,6 +165,7 @@ export default function LoginForm() {
   );
 }
 
+// Estilo común para los inputs
 const inputStyle = {
   padding: "12px",
   borderRadius: theme.radius.md,

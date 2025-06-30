@@ -165,6 +165,7 @@ export default function CVEManagement() {
     checkImportStatus();
   }, []);
 
+  // Inicia la importación de CVEs
   const handleStartImport = async () => {
     try {
       setStatus("idle");
@@ -200,6 +201,7 @@ export default function CVEManagement() {
     }
   };
 
+  // Solicita número de CVEs para confirmar eliminación y abre modal
   const handleDeleteAll = async () => {
     try {
       const res = await fetch("http://localhost:8000/nvd/cve-count");
@@ -211,6 +213,7 @@ export default function CVEManagement() {
     }
   };
 
+  // Confirma y ejecuta la eliminación de todos los CVEs
   const handleConfirmDelete = async () => {
     setDeleting(true);
     try {
@@ -229,10 +232,12 @@ export default function CVEManagement() {
     }
   };
 
+  // Cancela la eliminación de CVEs
   const handleCancelDelete = () => {
     setShowDeleteModal(false);
   };
 
+  // Cierra el modal de importación y limpia estado
   const handleCloseModal = () => {
     setShowModal(false);
     setStatus("idle");
@@ -252,6 +257,7 @@ export default function CVEManagement() {
     }
   };
 
+  // Detiene la importación en curso
   const handleStopImport = async () => {
     setStatus("idle");
     setLoading(false);
@@ -311,7 +317,6 @@ export default function CVEManagement() {
             <CVEPanel
               icon={<Trash2 size={64} />}
               title={t("cve.delete_button")}
-              subtitle={t("cve.all")}
               color="#dc2626"
               onClick={handleDeleteAll}
             />
@@ -365,6 +370,7 @@ export default function CVEManagement() {
   );
 }
 
+// Componente reutilizable para los paneles de importación y eliminación
 function CVEPanel({ icon, title, subtitle, color, onClick }) {
   return (
     <div

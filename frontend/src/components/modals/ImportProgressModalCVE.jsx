@@ -2,10 +2,7 @@ import ReactDOM from "react-dom";
 import { theme } from "@/styles/theme";
 import { useTranslation } from "react-i18next";
 
-/**
- * Modal que muestra el progreso de importación de CVEs con soporte para
- * estados de advertencia, carga y progreso visual.
- */
+// Modal de progreso para importación de vulnerabilidades CVE
 export default function ImportProgressModalCVE({
   isOpen,
   onClose,
@@ -25,14 +22,13 @@ export default function ImportProgressModalCVE({
   if (!isOpen) return null;
 
   const canClose = status !== "running";
+  const isWarning = status === "warning";
   const formattedImported = imported.toLocaleString("es-ES");
   const formattedTotal = total.toLocaleString("es-ES");
-  const isWarning = status === "warning";
 
   return ReactDOM.createPortal(
     <div style={styles.backdrop}>
       <div style={styles.modal}>
-        {/* Botón para cerrar el modal */}
         <button
           onClick={canClose ? onClose : null}
           disabled={!canClose}
@@ -45,25 +41,23 @@ export default function ImportProgressModalCVE({
           ✖
         </button>
 
-        {/* Título del modal */}
         <h2 style={styles.title}>{t("cve.import_modal_title")}</h2>
 
-        {/* Contenido dinámico del modal según estado */}
         <div style={styles.progressWrapper}>
           {isWarning ? (
             <div style={styles.statusText}>
               {t("cve.too_many_new_warning")}
             </div>
-          ) : waitingForSSE && status !== "warning" ? (
+          ) : waitingForSSE ? (
             <div style={styles.spinnerWrapper}>
               <div style={styles.spinner}></div>
               <div style={styles.statusText}>
                 {label || t("cve.loading_status")}
               </div>
             </div>
-          ) : (status === "idle" || pendingImport) && !waitingForSSE ? (
+          ) : (status === "idle" || pendingImport) ? (
             <div style={styles.statusText}>{t("cve.from_api")}</div>
-          ) : status === "completed" && !waitingForSSE ? (
+          ) : status === "completed" ? (
             <div style={styles.statusText}>
               {label || t("cve.no_new_cves")}
             </div>
@@ -79,10 +73,9 @@ export default function ImportProgressModalCVE({
                   <>
                     <div style={styles.progressText}>
                       {stage === "fetching_ids"
-                        ? `${percentage}% completado`
+                        ? `${percentage}%`
                         : `${formattedImported} ${t("cve.of")} ${formattedTotal} ${t("cve.cves_imported")}`}
                     </div>
-
                     <div style={styles.barOuter}>
                       <div
                         style={{
@@ -91,11 +84,9 @@ export default function ImportProgressModalCVE({
                             stage === "fetching_ids"
                               ? `${percentage}%`
                               : `${(imported / total) * 100}%`,
-                          transition: "width 0.5s ease",
                         }}
                       />
                     </div>
-
                     <div style={styles.statusText}>{label}</div>
                   </>
                 )}
@@ -104,10 +95,9 @@ export default function ImportProgressModalCVE({
           )}
         </div>
 
-        {/* Botones de acción */}
         {(status === "idle" || pendingImport) &&
           !waitingForSSE &&
-          status !== "warning" && (
+          !isWarning && (
             <button onClick={onStart} style={styles.startButton}>
               {t("cve.start")}
             </button>

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { theme } from '@/styles/theme';
 
+//Componente visual que muestra un spinner animado.
 export function Loader() {
   return (
     <div
@@ -12,10 +13,11 @@ export function Loader() {
       }}
     >
       <motion.div
+        // Rotación infinita para simular carga
         animate={{ rotate: 360 }}
         transition={{
           repeat: Infinity,
-          ease: "linear",
+          ease: 'linear',
           duration: 1,
         }}
         style={{

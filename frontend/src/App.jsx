@@ -12,12 +12,10 @@ import Home from '@/pages/Home';
 import AdminDashboard from '@/pages/AdminDashboard';
 import NotAuthorized from '@/pages/NotAuthorized';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import DeviceUpload from '@/pages/DeviceUpload';
 import CPEManagement from "@/pages/CPEManagement";
 import { NotificationProvider } from "@/context/NotificationContext";
 import NotificationContainer from "@/components/ui/NotificationContainer";
 import CVEManagement from "@/pages/CVEManagement";
-import DeviceMatchPlatforms from '@/pages/DeviceMatchPlatforms';
 import Dashboard from '@/pages/Dashboard';
 import DevicesList from '@/pages/DevicesList';
 import DeviceConfig from '@/pages/DeviceConfig';
@@ -39,7 +37,6 @@ function Vulnerabilities() {
   const [data, setData] = useState(null);
 
   useEffect(() => {
-    console.log("🔐 TOKEN:", token);
 
     if (!token) {
       console.warn("No token found.");
@@ -97,7 +94,6 @@ function App() {
               <Route path={APP_ROUTES.VULNERABILITY_LIST} element={<ProtectedRoute><Vulnerabilities /></ProtectedRoute>} />
               <Route path={APP_ROUTES.ADMIN_DASHBOARD} element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
               <Route path={APP_ROUTES.NOT_AUTHORIZED} element={<NotAuthorized />} />
-              <Route path={APP_ROUTES.DEVICE_UPLOAD} element={<ProtectedRoute><DeviceUpload /></ProtectedRoute>} />
               <Route path={APP_ROUTES.USER_DASHBOARD} element={<ProtectedRoute requiredRole="user"><Dashboard /></ProtectedRoute>} />
               <Route path={APP_ROUTES.DEVICE_LIST} element={<ProtectedRoute requiredRole="user"><DevicesList /></ProtectedRoute>} />
               <Route path="/devices/:deviceId/config" element={<ProtectedRoute requiredRole="user"><DeviceConfig /></ProtectedRoute>} />
@@ -106,7 +102,6 @@ function App() {
               <Route path="/cves" element={<ProtectedRoute requiredRole="admin"><CVEManagement /></ProtectedRoute>} />
               <Route path="/cwes" element={<ProtectedRoute requiredRole="admin"><CWEManagement /></ProtectedRoute>} />
 
-              <Route path="/devices/:deviceId/match-platforms" element={<DeviceMatchPlatforms />} />
               <Route path="/devices/:id/matching" element={<DeviceMatching />} />
 
               {/* 📊 Vistas de vulnerabilidades */}
