@@ -117,10 +117,8 @@ function RegisterForm() {
       setEmail("");
       setPassword("");
       setConfirm("");
-
-      setTimeout(() => navigate("/auth/login"), 800);
+      setTimeout(() => navigate(APP_ROUTES.LOGIN), 800);
     } catch (err) {
-      console.error("Registration error:", err);
       addNotification(t("messages.error_generic"), "error");
     }
   };

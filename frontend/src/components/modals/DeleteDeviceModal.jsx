@@ -25,7 +25,6 @@ export default function DeleteDeviceModal({ deviceId, onClose, onDeleted }) {
         setStatus("error");
       }
     } catch (err) {
-      console.error("[❌] Error eliminando dispositivo:", err);
       setStatus("error");
     }
   };

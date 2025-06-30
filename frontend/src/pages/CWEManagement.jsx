@@ -7,6 +7,7 @@ import { Bug, Trash2 } from "lucide-react";
 import ImportProgressModalCWE from "@/components/modals/ImportProgressModalCWE";
 import DeleteConfirmationModal from "@/components/modals/DeleteConfirmationModal";
 import { useNotification } from "@/context/NotificationContext";
+import { API_ROUTES } from "@/config/apiRoutes";
 
 export default function CWEManagement() {
   const { t } = useTranslation();
@@ -46,10 +47,10 @@ export default function CWEManagement() {
       setPendingImport(false);
       setWarningMessage("");
 
-      const res = await fetch("http://localhost:8000/nvd/cwe-import-start", { method: "POST" });
+      const res = await fetch(API_ROUTES.NVD.CWE_IMPORT_START, { method: "POST" });
       if (!res.ok) throw new Error();
 
-      const eventSource = new EventSource("http://localhost:8000/nvd/cwe-import-stream");
+      const eventSource = new EventSource(API_ROUTES.NVD.CWE_IMPORT_STREAM);
       eventSourceRef.current = eventSource;
 
       eventSource.onmessage = (event) => {
@@ -85,7 +86,6 @@ export default function CWEManagement() {
             eventSource.close();
           }
         } catch (err) {
-          console.error("[CWE SSE ERROR]", err, event.data);
           setStatus("error");
           setLabel("cwe.connection_error");
           setWaitingForSSE(false);
@@ -120,7 +120,7 @@ export default function CWEManagement() {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
-    fetch("http://localhost:8000/nvd/cwe-import-stop", { method: "POST" }).catch(() => {});
+    fetch(API_ROUTES.NVD.CWE_IMPORT_STOP, { method: "POST" }).catch(() => {});
   };
 
   // Cierra el modal y limpia estados relacionados
@@ -149,7 +149,7 @@ export default function CWEManagement() {
   const handleConfirmDelete = async () => {
     setDeleting(true);
     try {
-      const res = await fetch("http://localhost:8000/nvd/cwe-delete-all", { method: "DELETE" });
+      const res = await fetch(API_ROUTES.NVD.CWE_DELETE_ALL, { method: "DELETE" });
       if (!res.ok) throw new Error(t("cwe.delete_error"));
       addNotification(t("cwe.delete_success"), "success");
       setStatus("idle");

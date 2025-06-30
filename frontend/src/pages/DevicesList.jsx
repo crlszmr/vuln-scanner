@@ -12,6 +12,7 @@ import DeleteDeviceModal from "@/components/modals/DeleteDeviceModal";
 import { theme } from "@/styles/theme";
 import { Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useNotification } from "@/context/NotificationContext";
 
 export default function DevicesList() {
   const [devices, setDevices] = useState([]);
@@ -19,13 +20,16 @@ export default function DevicesList() {
   const [deviceToDelete, setDeviceToDelete] = useState(null);
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
+  const { notify } = useNotification();
 
   // Función para cargar los dispositivos del usuario
   const fetchDevices = () => {
     axios
       .get(API_ROUTES.DEVICES.MY_DEVICES, { withCredentials: true })
       .then((res) => setDevices(res.data))
-      .catch((err) => console.error(t("devicesList.error_loading_devices"), err));
+      .catch((err) => {
+        notify("error", `${t("devicesList.errorLoadingDevices")}: ${err.message}`);
+      });
   };
 
   // Carga inicial de dispositivos
@@ -283,7 +287,7 @@ export default function DevicesList() {
                       </Button>
                       <Button
                         width="120px"
-                        onClick={() => navigate(`/devices/${device.id}/vulnerabilities/overview`)}
+                        onClick={() => navigate(APP_ROUTES.DEVICE_VULNERABILITIES_OVERVIEW(device.id))}
                         hoverEffect="brightness"
                         variant="warning"
                         style={{ padding: "6px 10px", fontSize: 13 }}

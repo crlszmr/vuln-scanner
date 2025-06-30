@@ -4,7 +4,7 @@ import axios from "axios";
 import { useTranslation } from "react-i18next";
 import { AuthContext } from "@/context/AuthContext";
 import { useNotification } from "@/context/NotificationContext";
-import { API_ROUTES } from "@/config/apiRoutes";
+import { APP_ROUTES } from "@/config/appRoutes";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { PageWrapper } from "@/components/layouts/PageWrapper";
 import { theme } from "@/styles/theme";
@@ -32,7 +32,6 @@ const AdminDashboard = () => {
         "success"
       );
     } catch (error) {
-      console.error("Error en la importación:", error);
       addNotification(
         `${t("admin.import_error")}: ${error.response?.data?.detail || error.message}`,
         "error"
@@ -93,21 +92,21 @@ const AdminDashboard = () => {
               icon={<ShieldAlert size={64} />}
               title={t("admin.cve_title")}
               subtitle={t("admin.cve_code")}
-              onClick={() => navigate("/cves")}
+              onClick={() => navigate(APP_ROUTES.CVE_MANAGEMENT)}
             />
 
             <AdminPanel
               icon={<ServerCog size={64} />}
               title={t("admin.cpe_title")}
               subtitle={t("admin.cpe_code")}
-              onClick={() => navigate("/cpes")}
+             onClick={() => navigate(APP_ROUTES.CPE_MANAGEMENT)}
             />
 
             <AdminPanel
               icon={<Bug size={64} />}
               title={t("admin.cwe_title")}
               subtitle={t("admin.cwe_code")}
-              onClick={() => navigate("/cwes")}
+              onClick={() => navigate(APP_ROUTES.CWE_MANAGEMENT)}
             />
           </div>
         </div>

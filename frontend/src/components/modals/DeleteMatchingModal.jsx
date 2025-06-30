@@ -27,7 +27,6 @@ export default function DeleteMatchingModal({ deviceId, onClose, onDeleted }) {
         setStatus("error");
       }
     } catch (err) {
-      console.error("❌ Error eliminando matching:", err);
       setStatus("error");
     }
   };

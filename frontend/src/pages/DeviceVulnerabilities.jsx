@@ -8,6 +8,7 @@ import { API_ROUTES } from "@/config/apiRoutes";
 import { APP_ROUTES } from "@/config/appRoutes";
 import { theme } from "@/styles/theme";
 import { useTranslation } from "react-i18next";
+import { useNotification } from "@/context/NotificationContext";
 
 // Orden para mostrar los niveles de criticidad
 const SEVERITY_ORDER = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "NONE", "ALL"];
@@ -16,6 +17,7 @@ export default function DeviceVulnerabilities() {
   const { deviceId } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { notify } = useNotification(); 
 
   // Estado para estadísticas de vulnerabilidades por nivel
   const [stats, setStats] = useState({});
@@ -27,15 +29,18 @@ export default function DeviceVulnerabilities() {
     axios
       .get(API_ROUTES.VULNERABILITIES.STATS(deviceId), { withCredentials: true })
       .then((res) => setStats(res.data))
-      .catch((err) => console.error(t("deviceVulnerabilities.error_loading_stats"), err));
-
+      .catch((err) => {
+        notify("error", `${t("deviceVulnerabilities.errorLoadingStats")}: ${err.message}`);
+      });
     // Obtener alias del dispositivo
     axios
-      .get(API_ROUTES.DEVICES.GET_CONFIG(deviceId), { withCredentials: true })
+      .get(API_ROUTES.DEVICES.DEVICE_CONFIG(deviceId), { withCredentials: true })
       .then((res) => {
         if (res.data?.alias) setAlias(res.data.alias);
       })
-      .catch((err) => console.error(t("deviceVulnerabilities.error_loading_alias"), err));
+      .catch((err) => {
+        notify("error", `${t("deviceVulnerabilities.errorLoadingMatches")}: ${err.message}`);
+      });
   }, [deviceId, t]);
 
   return (

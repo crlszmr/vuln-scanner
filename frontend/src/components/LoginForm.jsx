@@ -70,7 +70,6 @@ export default function LoginForm() {
       else addNotification(t("messages.role_unknown"), "warning");
 
     } catch (err) {
-      console.error("❌ Error de login:", err);
       if (err.response) {
         if ([400, 401].includes(err.response.status)) {
           addNotification(t("messages.login_failed"), "error");

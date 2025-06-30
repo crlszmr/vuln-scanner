@@ -35,7 +35,6 @@ export default function DeviceMatching() {
         setLastMatching(null);
       }
     } catch (err) {
-      console.error("[❌] Error cargando último matching:", err);
       setLastMatching(null);
     }
   };
@@ -47,7 +46,6 @@ export default function DeviceMatching() {
       const data = await res.json();
       if (data && data.alias) setDeviceAlias(data.alias);
     } catch (err) {
-      console.error("[❌] Error cargando alias del dispositivo:", err);
     }
   };
 
@@ -71,7 +69,6 @@ export default function DeviceMatching() {
           }
         }
       } catch (err) {
-        console.error("[❌ DeviceMatching] Error comprobando estado de matching:", err);
       }
     };
 

@@ -43,7 +43,6 @@ export default function DeviceConfigDetail() {
         const allConfigs = Array.isArray(res.data) ? res.data : [];
         const typeKey = TYPE_INTERNAL[type];
         if (!typeKey) {
-          console.warn("❌ Tipo inválido:", type);
           return;
         }
 
@@ -64,7 +63,6 @@ export default function DeviceConfigDetail() {
         setConfigs(filtered);
         setCurrentPage(1); // Reinicia paginación al cambiar tipo o dispositivo
       } catch (error) {
-        console.error(t("deviceConfig.error_loading_configs"), error);
       }
     };
 
@@ -76,7 +74,6 @@ export default function DeviceConfigDetail() {
         });
         setDeviceInfo(res.data);
       } catch (error) {
-        console.error(t("deviceConfig.error_loading_device_info"), error);
         setDeviceInfo({ alias: t("deviceConfig.default_alias") });
       }
     };

@@ -6,12 +6,13 @@ import { PageWrapper } from "@/components/layouts/PageWrapper";
 import { API_ROUTES } from "@/config/apiRoutes";
 import { theme } from "@/styles/theme";
 import { useTranslation } from "react-i18next";
+import { useNotification } from "@/context/NotificationContext";
 
 export default function WeaknessDetails() {
   const { cweId } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
-
+  const { notify } = useNotification()
   const [weakness, setWeakness] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -19,7 +20,9 @@ export default function WeaknessDetails() {
     axios
       .get(API_ROUTES.WEAKNESSES.DETAIL(cweId), { withCredentials: true })
       .then((res) => setWeakness(res.data))
-      .catch((err) => console.error(t("weaknessDetails.error_loading_weakness"), err))
+      .catch((err) => {
+        notify("error", `${t("weaknessDetails.error_loading_weakness")}: ${err.message}`);
+      })
       .finally(() => setLoading(false));
   }, [cweId, t]);
 

@@ -1,4 +1,4 @@
-import { useState, useContext, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { UploadCloud } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import { API_ROUTES } from '@/config/apiRoutes';
 import { Button } from '@/components/ui/Button';
 import { theme } from '@/styles/theme';
-import { AuthContext } from '@/context/AuthContext';
 import { useNotification } from '@/context/NotificationContext';
 
 export default function DeviceUploadForm({ onClose, onSuccess }) {
@@ -53,7 +52,6 @@ export default function DeviceUploadForm({ onClose, onSuccess }) {
       onSuccess?.();
       onClose?.();
     } catch (err) {
-      console.error(err);
       addNotification(t('device_upload.error_upload'), 'error');
     }
   };

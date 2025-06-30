@@ -4,14 +4,17 @@ import axios from "axios";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { PageWrapper } from "@/components/layouts/PageWrapper";
 import { APP_ROUTES } from "@/config/appRoutes";
+import { API_ROUTES } from "@/config/apiRoutes";
 import { theme } from "@/styles/theme";
 import { Button } from "@/components/ui/Button";
 import { useTranslation } from "react-i18next";
+import { useNotification } from "@/context/NotificationContext";
 
 export default function DeviceVulnerabilitiesList() {
   const { deviceId, configId, severity } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { notify } = useNotification(); 
 
   // Estados para vulnerabilidades, filtros, paginación y selección
   const [vulns, setVulns] = useState([]);
@@ -37,7 +40,6 @@ export default function DeviceVulnerabilitiesList() {
     }
 
     const normalizedSeverity = severity?.toUpperCase();
-    const baseURL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
     let allResults = [];
     let yearRange = [];
@@ -54,8 +56,8 @@ export default function DeviceVulnerabilitiesList() {
 
     for (const year of yearRange) {
       let url = configId
-        ? `${baseURL}/devices/${deviceId}/config/${configId}/vulnerabilities`
-        : `${baseURL}/devices/${deviceId}/vulnerabilities`;
+        ? API_ROUTES.VULNERABILITIES.BY_CONFIG(deviceId, configId)
+        : API_ROUTES.VULNERABILITIES.BY_DEVICE(deviceId);
 
       const queryParams = [];
       if (normalizedSeverity && normalizedSeverity !== "ALL") queryParams.push(`severity=${normalizedSeverity}`);
@@ -67,7 +69,6 @@ export default function DeviceVulnerabilitiesList() {
         const data = Array.isArray(res.data) ? res.data : [];
         allResults = [...allResults, ...data];
       } catch (err) {
-        console.error(t("deviceVulnerabilitiesList.error_loading_year", { year }), err);
       }
     }
 
@@ -85,11 +86,9 @@ export default function DeviceVulnerabilitiesList() {
   // Obtener alias del dispositivo
   const fetchDeviceAlias = async () => {
     try {
-      const baseURL = import.meta.env.VITE_API_URL || "http://localhost:8000";
-      const res = await axios.get(`${baseURL}/devices/${deviceId}/config`, { withCredentials: true });
+      const res = await axios.get(API_ROUTES.DEVICES.GET_CONFIG(deviceId), { withCredentials: true });
       setDeviceAlias(res.data.alias || "");
     } catch (err) {
-      console.error(t("deviceVulnerabilitiesList.error_loading_alias"), err);
     }
   };
 
@@ -97,12 +96,10 @@ export default function DeviceVulnerabilitiesList() {
   const fetchConfigDetails = async () => {
     if (!configId) return;
     try {
-      const baseURL = import.meta.env.VITE_API_URL || "http://localhost:8000";
-      const res = await axios.get(`${baseURL}/devices/${deviceId}/configs`, { withCredentials: true });
+      const res = await axios.get(API_ROUTES.DEVICES.GET_CONFIG(deviceId), { withCredentials: true });
       const match = res.data.find((c) => String(c.id) === String(configId));
       if (match) setConfigDetails(match);
     } catch (err) {
-      console.error(t("deviceVulnerabilitiesList.error_loading_config"), err);
     }
   };
 
@@ -142,15 +139,17 @@ export default function DeviceVulnerabilitiesList() {
   // Marca CVEs seleccionados como solucionados
   const markAsSolved = () => {
     if (selected.length === 0) return;
-    const baseURL = import.meta.env.VITE_API_URL || "http://localhost:8000";
     const endpoint = configId
-      ? `${baseURL}/devices/${deviceId}/config/${configId}/vulnerabilities/mark-solved`
-      : `${baseURL}/devices/${deviceId}/vulnerabilities/mark-solved`;
+      ? API_ROUTES.VULNERABILITIES.MARK_SOLVED_BY_CONFIG(deviceId, configId)
+      : API_ROUTES.VULNERABILITIES.MARK_SOLVED_BY_DEVICE(deviceId);
+
 
     axios
       .post(endpoint, { cve_ids: selected }, { withCredentials: true })
       .then(() => fetchVulnerabilities())
-      .catch((err) => console.error(t("deviceVulnerabilitiesList.error_marking_solved"), err));
+      .catch((err) => {
+        notify("error", `${t("deviceVulnerabilities.errorFetchingBySeverity")}: ${err.message}`);
+      });
   };
 
   // Paginación

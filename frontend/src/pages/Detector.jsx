@@ -1,4 +1,3 @@
-import React from "react";
 import { useTranslation } from "react-i18next";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { PageWrapper } from "@/components/layouts/PageWrapper";
@@ -87,7 +86,7 @@ const Detector = () => {
 
           {/* Botón de descarga */}
           <a
-            href="/ConfigDetector.exe"
+            href={APP_ROUTES.DETECTOR_DOWNLOAD}
             download
             style={{
               marginBottom: 48,
@@ -138,7 +137,7 @@ const Detector = () => {
               <li>{t("detector.step2")}</li>
               <li>
                 {t("detector.step3_prefix")}
-                <a href="/devices/list" style={{ color: "#3b82f6", textDecoration: "underline" }}>
+                <a href={APP_ROUTES.DEVICE_LIST} style={{ color: "#3b82f6", textDecoration: "underline" }}>
                   {t("detector.step3_link")}
                 </a>
               </li>

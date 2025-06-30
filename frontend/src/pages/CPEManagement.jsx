@@ -7,6 +7,8 @@ import { CloudDownload, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ImportProgressModalCPE from "@/components/modals/ImportProgressModalCPE";
 import DeleteConfirmationModal from "@/components/modals/DeleteConfirmationModal";
+import { API_ROUTES } from "@/config/apiRoutes";
+
 
 const MIN_MSG_DELAY = 2000;
 
@@ -157,7 +159,6 @@ export default function CPEManagement() {
         }
         localStorage.removeItem("cpe_import_status");
         addNotification(t("cpe.connection_error"), "error");
-        console.error("[SSE] Error procesando evento:", err, event.data);
       }
     };
 
@@ -169,7 +170,6 @@ export default function CPEManagement() {
       eventSourceRef.current = null;
       localStorage.removeItem("cpe_import_status");
       addNotification(t("cpe.connection_error"), "error");
-      console.error("[SSE] Error de conexión", err);
     };
   };
 
@@ -183,14 +183,14 @@ export default function CPEManagement() {
         setWaitingForSSE(true);
         setLabel("cpe.importing_from_nvd");
         if (!eventSourceRef.current) {
-          const eventSource = new EventSource("http://localhost:8000/nvd/cpe-import-stream");
+          const eventSource = new EventSource(API_ROUTES.NVD.CPE_IMPORT_STREAM);
           eventSourceRef.current = eventSource;
           setupEventSource(eventSource);
         }
       }
 
       try {
-        const res = await fetch("http://localhost:8000/nvd/cpe-import-status");
+        const res = await fetch(API_ROUTES.NVD.CPE_IMPORT_STATUS);
         const statusData = await res.json();
 
         if (statusData.running) {
@@ -211,7 +211,7 @@ export default function CPEManagement() {
           localStorage.setItem("cpe_import_status", "running");
 
           if (!eventSourceRef.current) {
-            const eventSource = new EventSource("http://localhost:8000/nvd/cpe-import-stream");
+            const eventSource = new EventSource(API_ROUTES.NVD.CPE_IMPORT_STREAM);
             eventSourceRef.current = eventSource;
             setupEventSource(eventSource);
           }
@@ -220,7 +220,6 @@ export default function CPEManagement() {
         setWaitingForSSE(false);
         setStatus("error");
         setLabel("cpe.connection_error");
-        console.error("[STATUS CHECK] Error consultando estado:", err);
       }
     };
 
@@ -249,10 +248,10 @@ export default function CPEManagement() {
         eventSourceRef.current = null;
       }
 
-      const res = await fetch("http://localhost:8000/nvd/cpe-import-start", { method: "POST" });
+      const res = await fetch(API_ROUTES.NVD.CPE_IMPORT_START, { method: "POST" });
       if (!res.ok) throw new Error();
 
-      const eventSource = new EventSource("http://localhost:8000/nvd/cpe-import-stream");
+      const eventSource = new EventSource(API_ROUTES.NVD.CPE_IMPORT_STREAM);
       eventSourceRef.current = eventSource;
       setupEventSource(eventSource);
     } catch (err) {
@@ -261,7 +260,6 @@ export default function CPEManagement() {
       setLabel("cpe.error_starting");
       localStorage.removeItem("cpe_import_status");
       addNotification(t("cpe.error_starting"), "error");
-      console.error("[handleStartImport] Error iniciando importación:", err);
     }
   };
 
@@ -281,7 +279,7 @@ export default function CPEManagement() {
       eventSourceRef.current = null;
     }
     try {
-      await fetch("http://localhost:8000/nvd/cpe-import-stop", { method: "POST" });
+      await fetch(API_ROUTES.NVD.CPE_IMPORT_STOP, { method: "POST" });
     } catch {
       // no-op
     }
@@ -315,7 +313,7 @@ export default function CPEManagement() {
   const handleConfirmDelete = async () => {
     setDeleting(true);
     try {
-      const res = await fetch("http://localhost:8000/nvd/cpe-delete-all", { method: "DELETE" });
+      const res = await fetch(API_ROUTES.NVD.CPE_DELETE_ALL, { method: "DELETE" });
       if (!res.ok) throw new Error("Server error");
       addNotification(t("cpe.delete_success"), "success");
       setStatus("idle");

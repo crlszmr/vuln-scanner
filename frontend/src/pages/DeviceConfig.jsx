@@ -41,7 +41,6 @@ export default function DeviceConfig() {
         setConfigs(allConfigs);
         setCveCounts(counts);
       } catch (error) {
-        console.error(t("deviceConfig.error_loading_configs"), error);
       }
     };
 
@@ -53,7 +52,6 @@ export default function DeviceConfig() {
         });
         setDeviceInfo(res.data);
       } catch (error) {
-        console.error(t("deviceConfig.error_loading_device_info"), error);
         // En caso de error, se puede asignar alias genérico
         setDeviceInfo({ alias: t("deviceConfig.default_alias") });
       }

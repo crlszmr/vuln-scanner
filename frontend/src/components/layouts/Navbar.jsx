@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { APP_ROUTES } from '@/config/appRoutes';
@@ -39,7 +39,7 @@ const Navbar = () => {
     setMenuOpen(false);
     setTimeout(() => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      navigate('/');
+      navigate(APP_ROUTES.HOME);
     }, 200);
   };
 
@@ -52,17 +52,17 @@ const Navbar = () => {
     },
     {
       label: t('navbar.vulnerabilities_management'),
-      action: () => navigate('/cves'),
+      action: () => navigate(APP_ROUTES.CVE_MANAGEMENT),
       icon: <ShieldAlert size={16} color="#94a3b8" />,
     },
     {
       label: t('navbar.platforms_management'),
-      action: () => navigate('/cpes'),
+      action: () => navigate(APP_ROUTES.CPE_MANAGEMENT),
       icon: <ServerCog size={16} color="#94a3b8" />,
     },
     {
       label: t('navbar.cwes_management'),
-      action: () => navigate('/cwes'),
+      action: () => navigate(APP_ROUTES.CWE_MANAGEMENT),
       icon: <Bug size={16} color="#94a3b8" />,
     },
   ];
