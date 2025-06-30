@@ -23,24 +23,57 @@ export default function Dashboard() {
             fontFamily: theme.font.family,
           }}
         >
-          {/* Título */}
-          <h1
+          {/* Encabezado con botón y título */}
+          <div
             style={{
-              fontSize: "2.5rem",
-              fontWeight: "700",
-              color: theme.colors.text,
-              marginBottom: "0.5rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              width: "100%",
+              maxWidth: "960px",
+              marginBottom: "0rem", // Espacio mayor con los paneles
             }}
           >
-            {t("dashboard.title")}
-          </h1>
+            <button
+              onClick={() => navigate("/")}
+              style={{
+                backgroundColor: "#334155",
+                color: "white",
+                border: "none",
+                borderRadius: "12px",
+                padding: "6px 14px",
+                fontSize: "1.5rem",
+                fontWeight: "bold",
+                cursor: "pointer",
+                transition: "transform 0.2s ease, box-shadow 0.2s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "scale(1.1)";
+                e.currentTarget.style.boxShadow = theme.shadow.medium;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "scale(1)";
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              &lt;
+            </button>
+
+            <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
+              <h1 style={{ fontSize: "3rem", fontWeight: "700", color: theme.colors.text, margin: 0 }}>
+                {t("dashboard.title")}
+              </h1>
+            </div>
+
+            <div style={{ width: "52px" }}></div>
+          </div>
 
           {/* Subtítulo */}
           <p
             style={{
               fontSize: "1.125rem",
               color: theme.colors.textSecondary || "#94a3b8",
-              marginBottom: "2rem",
+              marginBottom: "5rem",
               maxWidth: "600px",
             }}
           >
@@ -58,14 +91,11 @@ export default function Dashboard() {
               maxWidth: "960px",
             }}
           >
-            {/* Botón: Mis equipos */}
             <DashboardPanel
               icon={<MonitorSmartphone size={64} />}
               label={t("dashboard.my_devices")}
               onClick={() => navigate("/devices/list")}
             />
-
-            {/* Botón: Detector de configuración */}
             <DashboardPanel
               icon={<Settings2 size={64} />}
               label={t("dashboard.config_detector")}

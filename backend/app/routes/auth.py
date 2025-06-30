@@ -107,7 +107,9 @@ def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends(), 
         secure=False
     ) # Cambia a True en producción
 
-    return {"access_token": access_token, "token_type": "bearer", "role": role, "email": user.email}
+    print("👤 [DEBUG] Login → user.username:", user.username)
+
+    return {"access_token": access_token, "token_type": "bearer", "role": role, "email": user.email, "username": user.username}
 
 
 @router.put(UPDATE_USER)
@@ -146,3 +148,15 @@ def delete_user(username: str, db: Session = Depends(get_db)):
         db.commit()
         return {"message": get_message("user_deleted", "en")}
     return {"message": get_message("user_not_found", "en")}
+
+@router.get("/session")
+def check_session(current_user: User = Depends(get_current_user)):
+    return {
+        "username": current_user.username,
+        "email": current_user.email,
+        "role": current_user.role
+    }
+
+@router.get("/me")
+def get_logged_user(current_user: User = Depends(get_current_user)):
+    return {"username": current_user.username, "email": current_user.email, "role": current_user.role}

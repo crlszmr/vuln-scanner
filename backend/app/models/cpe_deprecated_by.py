@@ -11,5 +11,5 @@ class CpeDeprecatedBy(Base):
     platform_id = Column(Integer, ForeignKey("platforms.id", ondelete="CASCADE"), nullable=False)
     cpe_uri = Column(String, nullable=False)
 
-platform = relationship("Platform", back_populates="cpe_deprecated_by")
+    platform = relationship("Platform", back_populates="cpe_deprecated_by")
 

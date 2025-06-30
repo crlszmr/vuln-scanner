@@ -107,7 +107,7 @@ const AdminDashboard = () => {
               icon={<Bug size={64} />}
               title={t("admin.cwe_title")}
               subtitle={t("admin.cwe_code")}
-              onClick={() => handleImport(API_ROUTES.NVD.IMPORT_WEAKNESSES)}
+              onClick={() => navigate("/cwes")}
             />
 
             <AdminPanel

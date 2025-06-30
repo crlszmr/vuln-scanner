@@ -15,17 +15,16 @@ from .cpe_importer import (
     collect_cpes_from_nodes,
 )
 
-from .cwe_importer import (
-    download_weakness_xml_if_needed,
-    import_all_weaknesses_from_file,
-)
-
 from .utils import (
     extract_cvss_data_from_feed,
     extract_text,
-    extract_multiple_as_json,
+    extract_multiple_as_list,
     serialize_elements,
     serialize_blocks,
     extract_cvss_data,
     decompress_once,
+)
+
+from .cwe_importer import (
+    import_all_cwes_stream,
 )

@@ -14,6 +14,8 @@ from typing import List
 from app.crud import device_matches
 from app.schemas import user as User
 from app.models.device import Device
+from app.models.cve_cpe import CveCpe
+
 
 
 
@@ -81,3 +83,13 @@ def get_vulnerability_detail(cve_id: str, db: Session = Depends(get_db), user: d
         "references": [{"url": r.url} for r in references],
         "cwe": [c.cwe_id for c in cwes],
     }
+
+@router.get("/{cve_id}/cpes", response_model=List[str])
+def get_cpes_for_cve(cve_id: str, db: Session = Depends(get_db)):
+    cpes = (
+        db.query(CveCpe.cpe_uri)
+        .filter(CveCpe.cve_name == cve_id)
+        .distinct()
+        .all()
+    )
+    return [cpe[0] for cpe in cpes]

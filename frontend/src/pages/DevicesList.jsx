@@ -8,11 +8,15 @@ import { MainLayout } from "@/components/layouts/MainLayout";
 import { PageWrapper } from "@/components/layouts/PageWrapper";
 import { Button } from "@/components/ui/Button";
 import DeviceUploadForm from "@/components/forms/DeviceUploadForm";
+import DeleteDeviceModal from "@/components/modals/DeleteDeviceModal";
 import { theme } from "@/styles/theme";
+import { Trash2 } from "lucide-react";
+
 
 export default function DevicesList() {
   const [devices, setDevices] = useState([]);
   const [showForm, setShowForm] = useState(false);
+  const [deviceToDelete, setDeviceToDelete] = useState(null);
   const navigate = useNavigate();
 
   const fetchDevices = () => {
@@ -37,23 +41,45 @@ export default function DevicesList() {
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "flex-start",
-            padding: "2rem",
+            padding: "24px",
             fontFamily: theme.font.family,
           }}
         >
-          <div
-            style={{
-              width: "100%",
-              maxWidth: "800px",
-              marginBottom: "2rem",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "1.5rem",
-            }}
-          >
-            <h1 style={{ fontSize: "24px", fontWeight: "700" }}>Mis equipos</h1>
-
+          {/* Encabezado y botón crear */}
+          <div style={{ width: "100%", maxWidth: "100%", marginBottom: "2rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+              <button
+                onClick={() => navigate(APP_ROUTES.USER_DASHBOARD)}
+                style={{
+                  backgroundColor: "#334155",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "12px",
+                  padding: "6px 14px",
+                  fontSize: "1.5rem",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                  transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "scale(1.1)";
+                  e.currentTarget.style.boxShadow = theme.shadow.medium;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "scale(1)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                &lt;
+              </button>
+              <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
+                <h1 style={{ fontSize: "3rem", fontWeight: "bold", margin: 0 }}>Mis equipos</h1>
+              </div>
+              <div style={{ width: "52px" }}></div>
+            </div>
+            <p style={{ fontSize: "1.125rem", color: theme.colors.textSecondary || "#94a3b8", marginTop: "0rem", marginBottom: "5rem", textAlign: "center" }}>
+              Gestiona tus equipos y analiza sus vulnerabilidades
+            </p>
             <AnimatePresence mode="wait">
               {!showForm && (
                 <motion.div
@@ -64,15 +90,14 @@ export default function DevicesList() {
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.2 }}
                 >
-                <motion.div layoutId="crear-formulario" style={{ width: "auto" }}>
-                  <Button onClick={() => setShowForm(true)} variant="success">
-                    Crear nuevo equipo
-                  </Button>
-                </motion.div>
+                  <motion.div layoutId="crear-formulario" style={{ width: "auto" }}>
+                    <Button onClick={() => setShowForm(true)} variant="success">
+                      Crear nuevo equipo
+                    </Button>
+                  </motion.div>
                 </motion.div>
               )}
             </AnimatePresence>
-
             <AnimatePresence>
               {showForm && (
                 <motion.div
@@ -96,6 +121,7 @@ export default function DevicesList() {
             </AnimatePresence>
           </div>
 
+          {/* Lista de equipos */}
           {devices.length === 0 ? (
             <p style={{ color: theme.colors.muted }}>
               Aún no tienes ningún equipo registrado.
@@ -124,8 +150,28 @@ export default function DevicesList() {
                     padding: "1.25rem",
                     boxShadow: theme.shadow.soft,
                     transition: theme.transition.base,
+                    position: "relative",
                   }}
                 >
+                  {/* Botón eliminar */}
+<button
+  onClick={() => setDeviceToDelete(device.id)}
+  style={{
+    position: "absolute",
+    top: "12px",
+    right: "12px",
+    backgroundColor: "transparent",
+    border: "none",
+    color: "#dc2626",
+    cursor: "pointer",
+  }}
+  title="Eliminar equipo"
+>
+  <Trash2 size={20} />
+</button>
+
+
+
                   <div
                     style={{
                       display: "grid",
@@ -165,8 +211,8 @@ export default function DevicesList() {
                       style={{
                         display: "flex",
                         flexDirection: "column",
-                        alignItems: "center",
                         gap: "8px",
+                        alignItems: "center",
                       }}
                     >
                       <Button
@@ -195,7 +241,6 @@ export default function DevicesList() {
                       >
                         Vulns
                       </Button>
-
                     </div>
                   </div>
                 </motion.div>
@@ -204,6 +249,18 @@ export default function DevicesList() {
           )}
         </motion.div>
       </PageWrapper>
+
+      {/* Modal eliminar */}
+      {deviceToDelete && (
+        <DeleteDeviceModal
+          deviceId={deviceToDelete}
+          onClose={() => setDeviceToDelete(null)}
+          onDeleted={() => {
+            setDeviceToDelete(null);
+            fetchDevices();
+          }}
+        />
+      )}
     </MainLayout>
   );
 }

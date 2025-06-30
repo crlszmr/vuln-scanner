@@ -20,7 +20,6 @@ export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Redirección si ya hay sesión iniciada
   useEffect(() => {
     if (user?.role === "admin") {
       navigate(APP_ROUTES.ADMIN_DASHBOARD);
@@ -29,7 +28,6 @@ export default function LoginForm() {
     }
   }, [user, navigate]);
 
-  // Validación personalizada del formulario
   const validateInputs = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const errors = [];
@@ -56,7 +54,6 @@ export default function LoginForm() {
     return true;
   };
 
-  // Envío del formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateInputs()) return;
@@ -71,9 +68,9 @@ export default function LoginForm() {
         withCredentials: true,
       });
 
-      const { access_token, role, email: userEmail } = response.data;
+      const { access_token, role, email: userEmail, username } = response.data;
 
-      login({ token: access_token, role, email: userEmail });
+      login({ token: access_token, role, email: userEmail, username });
       addNotification(t("messages.login_success"), "success");
 
       if (role.toLowerCase() === "admin") {
@@ -86,7 +83,6 @@ export default function LoginForm() {
 
     } catch (error) {
       console.error("Error de login:", error);
-
       if (error.response) {
         if ([400, 401].includes(error.response.status)) {
           addNotification(t("messages.login_failed"), "error");
@@ -113,7 +109,6 @@ export default function LoginForm() {
             textAlign: "center",
           }}
         >
-          {/* Título */}
           <h1
             style={{
               fontSize: "2.5rem",
@@ -125,7 +120,6 @@ export default function LoginForm() {
             {t("login.title")}
           </h1>
 
-          {/* Subtítulo */}
           <p
             style={{
               fontSize: "1.125rem",
@@ -137,12 +131,12 @@ export default function LoginForm() {
             {t("login.subtitle")}
           </p>
 
-          {/* Caja del formulario */}
           <div
             style={{
               maxWidth: "700px",
               width: "100%",
               padding: "4rem 8rem",
+              paddingBottom: "2rem",
               borderRadius: theme.radius.lg,
               backgroundColor: theme.colors.surface,
               boxShadow: theme.shadow.soft,
@@ -157,7 +151,6 @@ export default function LoginForm() {
                 onChange={(e) => setEmail(e.target.value)}
                 style={inputStyle}
               />
-
               <input
                 type="password"
                 placeholder={t("login.password")}
@@ -165,13 +158,22 @@ export default function LoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 style={inputStyle}
               />
-
-              {/* Botón de envío */}
               <div style={{ marginTop: "16px", display: "flex", justifyContent: "center" }}>
                 <Button type="submit" style={{ width: "240px" }}>
                   {t("login.button")}
                 </Button>
               </div>
+
+              {/* Enlace al registro */}
+              <p style={{ textAlign: "center", marginTop: "24px", fontSize: "0.95rem", color: "#94a3b8" }}>
+                {t("login.no_account")}{" "}
+                <a
+                  href={APP_ROUTES.REGISTER}
+                  style={{ color: theme.colors.primary, fontWeight: "bold", textDecoration: "underline" }}
+                >
+                  {t("login.create_here")}
+                </a>
+              </p>
             </form>
           </div>
         </div>
@@ -180,7 +182,6 @@ export default function LoginForm() {
   );
 }
 
-// Estilos comunes para los inputs
 const inputStyle = {
   padding: "12px",
   borderRadius: theme.radius.md,

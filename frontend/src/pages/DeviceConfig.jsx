@@ -1,170 +1,174 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { PageWrapper } from "@/components/layouts/PageWrapper";
-import { API_ROUTES } from "@/config/apiRoutes";
-import { APP_ROUTES } from "@/config/appRoutes";
+import { theme } from "@/styles/theme";
+import { API_ROUTES } from "../config/apiRoutes";
+import { APP_ROUTES } from "../config/appRoutes";
+import { MonitorSmartphone, Cpu, Boxes } from "lucide-react";
 
-export default function DeviceVulnerabilitiesList() {
-  const { deviceId, severity } = useParams();
-  const [vulns, setVulns] = useState([]);
-  const [startYear, setStartYear] = useState("");
-  const [endYear, setEndYear] = useState("");
-  const [selected, setSelected] = useState([]);
-
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: currentYear - 1998 }, (_, i) => 1999 + i);
-
-  const fetchVulnerabilities = async () => {
-    const normalizedSeverity = severity?.toUpperCase();
-    const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
-    let allResults = [];
-
-    const yearRange =
-      startYear && endYear
-        ? years.filter((y) => y >= parseInt(startYear) && y <= parseInt(endYear))
-        : [""];
-
-    for (const year of yearRange) {
-      let url = `${baseURL}/devices/${deviceId}/vulnerabilities`;
-      const queryParams = [];
-
-      if (normalizedSeverity && normalizedSeverity !== "ALL") {
-        queryParams.push(`severity=${normalizedSeverity}`);
-      }
-      if (year) {
-        queryParams.push(`year=${year}`);
-      }
-      if (queryParams.length > 0) {
-        url += `?${queryParams.join("&")}`;
-      }
-
-      try {
-        const res = await axios.get(url, { withCredentials: true });
-        const data = Array.isArray(res.data) ? res.data : [];
-        allResults = [...allResults, ...data];
-      } catch (err) {
-        console.error(`❌ Error año ${year}:`, err);
-      }
-    }
-
-    // Eliminar duplicados por cve_id
-    const unique = {};
-    for (const v of allResults) {
-      unique[v.cve_id] = v;
-    }
-
-    setVulns(Object.values(unique));
-    setSelected([]);
-  };
+export default function DeviceConfig() {
+  const { deviceId } = useParams();
+  const navigate = useNavigate();
+  const [configs, setConfigs] = useState([]);
+  const [deviceInfo, setDeviceInfo] = useState(null);
+  const [cveCounts, setCveCounts] = useState({ o: 0, h: 0, a: 0 });
 
   useEffect(() => {
-    fetchVulnerabilities();
-  }, [deviceId, severity, startYear, endYear]);
+    const fetchConfigs = async () => {
+      try {
+        const res = await axios.get(API_ROUTES.DEVICES.GET_ENRICHED_CONFIG(deviceId), {
+          withCredentials: true,
+        });
 
-  const toggleSelection = (cve_id) => {
-    setSelected((prev) =>
-      prev.includes(cve_id)
-        ? prev.filter((id) => id !== cve_id)
-        : [...prev, cve_id]
-    );
+        setDeviceInfo({ alias: "Equipo" });
+        const allConfigs = Array.isArray(res.data) ? res.data : [];
+
+        const counts = { o: 0, h: 0, a: 0 };
+        for (const item of allConfigs) {
+          const unsolved = (item.cves || []).filter(cve => !cve.solved);
+          counts[item.type] += unsolved.length;
+        }
+
+        setConfigs(allConfigs);
+        setCveCounts(counts);
+      } catch (error) {
+        console.error("❌ Error al obtener configuraciones enriquecidas:", error);
+      }
+    };
+
+    fetchConfigs();
+  }, [deviceId]);
+
+  const handleNavigate = (type) => {
+    navigate(APP_ROUTES.DEVICE_CONFIG_BY_TYPE(deviceId, type));
   };
 
-  const toggleSelectAll = () => {
-    if (selected.length === vulns.length) {
-      setSelected([]);
-    } else {
-      setSelected(vulns.map((v) => v.cve_id));
-    }
-  };
-
-  const markAsSolved = () => {
-    if (selected.length === 0) return;
-
-    axios
-      .post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/devices/${deviceId}/vulnerabilities/mark-solved`,
-        { cve_ids: selected },
-        { withCredentials: true }
-      )
-      .then(() => {
-        fetchVulnerabilities();
-      })
-      .catch((err) => {
-        console.error("❌ Error marcando como solucionadas:", err);
-      });
-  };
+  const panels = [
+    { label: "Sistema Operativo", type: "os", internal: "o", icon: <MonitorSmartphone size={64} /> },
+    { label: "Hardware", type: "hardware", internal: "h", icon: <Cpu size={64} /> },
+    { label: "Software", type: "software", internal: "a", icon: <Boxes size={64} /> },
+  ];
 
   return (
     <MainLayout>
-      <PageWrapper title={`Vulnerabilidades: ${severity}`}>
-        <div style={{ padding: "1rem 2rem", display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
-          <label>Filtrar por años:</label>
-          <select value={startYear} onChange={(e) => setStartYear(e.target.value)}>
-            <option value="">Desde</option>
-            {years.map((y) => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
-          <span>→</span>
-          <select value={endYear} onChange={(e) => setEndYear(e.target.value)}>
-            <option value="">Hasta</option>
-            {years.map((y) => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
-
-          <button
-            onClick={markAsSolved}
-            disabled={selected.length === 0}
+      <PageWrapper>
+        <div
+          style={{
+            minHeight: "calc(100vh - 64px)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            padding: "2rem 1rem",
+            fontFamily: theme.font.family,
+            color: theme.colors.text,
+            textAlign: "center",
+          }}
+        >
+          <div
             style={{
-              padding: "6px 12px",
-              backgroundColor: selected.length > 0 ? "#1e88e5" : "#999",
-              color: "#fff",
-              border: "none",
-              borderRadius: "4px",
-              cursor: selected.length > 0 ? "pointer" : "not-allowed"
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              width: "100%",
+              maxWidth: "960px",
             }}
           >
-            Marcar como solucionadas
-          </button>
-        </div>
+            <button
+              onClick={() => navigate(APP_ROUTES.DEVICE_LIST)}
+              style={{
+                backgroundColor: "#334155",
+                color: "white",
+                border: "none",
+                borderRadius: "12px",
+                padding: "6px 14px",
+                fontSize: "1.5rem",
+                fontWeight: "bold",
+                cursor: "pointer",
+                transition: "transform 0.2s ease, box-shadow 0.2s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "scale(1.1)";
+                e.currentTarget.style.boxShadow = theme.shadow.medium;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "scale(1)";
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              &lt;
+            </button>
 
-        <ul style={{ padding: "2rem", listStyle: "none" }}>
-          {vulns.length > 0 && (
-            <li style={{ marginBottom: "1rem", display: "flex", alignItems: "center", gap: "1rem" }}>
-              <input
-                type="checkbox"
-                checked={selected.length === vulns.length}
-                onChange={toggleSelectAll}
-              />
-              <strong>Seleccionar/Deseleccionar todo</strong>
-            </li>
-          )}
+            <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
+              <h1 style={{ fontSize: "2.5rem", fontWeight: "700", margin: 0 }}>
+                Vulnerabilidades de {deviceInfo?.alias || "..."}
+              </h1>
+            </div>
 
-          {vulns.map((v) => (
-            <li key={v.cve_id} style={{ marginBottom: "1rem", display: "flex", alignItems: "center", gap: "1rem" }}>
-              <input
-                type="checkbox"
-                checked={selected.includes(v.cve_id)}
-                onChange={() => toggleSelection(v.cve_id)}
-              />
-              <div>
-                <Link
-                  to={APP_ROUTES.VULNERABILITY_DETAILS(v.cve_id)}
-                  style={{ fontWeight: 600, color: "#1e88e5" }}
-                >
-                  {v.cve_id}
-                </Link>
-                <div style={{ fontSize: "14px", color: "#ccc" }}>
-                  {v.description || "Sin descripción"}
+            <div style={{ width: "52px" }}></div>
+          </div>
+
+          {/* Subtítulo */}
+          <p
+            style={{
+              fontSize: "1.125rem",
+              color: theme.colors.textSecondary || "#94a3b8",
+              marginTop: "1rem",
+              marginBottom: "5rem",
+              textAlign: "center",
+            }}
+          >
+            Consulta las vulnerabilidades detectadas, clasificadas por tipo de componente
+          </p>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "40px",
+              flexWrap: "wrap",
+              justifyContent: "center",
+              width: "100%",
+              maxWidth: "960px",
+              marginTop: "2rem",
+            }}
+          >
+            {panels.map((panel) => (
+              <div
+                key={panel.type}
+                onClick={() => handleNavigate(panel.type)}
+                style={{
+                  flex: "1 1 300px",
+                  cursor: "pointer",
+                  backgroundColor: "#334155",
+                  color: "white",
+                  borderRadius: "16px",
+                  padding: "2.5rem",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "scale(1.02)";
+                  e.currentTarget.style.boxShadow = theme.shadow.medium;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "scale(1)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                {panel.icon}
+                <h3 style={{ fontSize: "1.5rem", fontWeight: "600", margin: "1rem 0 0.5rem" }}>
+                  {panel.label}
+                </h3>
+                <div style={{ fontSize: "1.25rem" }}>
+                  {cveCounts[panel.internal]?.toLocaleString("es-ES")} CVEs encontrados
                 </div>
               </div>
-            </li>
-          ))}
-        </ul>
+            ))}
+          </div>
+        </div>
       </PageWrapper>
     </MainLayout>
   );

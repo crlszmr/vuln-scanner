@@ -46,3 +46,4 @@ class Config:
 
 class CVEMarkRequest(BaseModel):
     cve_ids: List[str]
+    

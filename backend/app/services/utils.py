@@ -97,36 +97,51 @@ def extract_cvss_data(metrics: dict) -> dict:
 def extract_text(element):
     return element.text.strip() if element is not None and element.text else None
 
-def extract_multiple_as_json(parent, tag, namespace):
-    if parent is None:
-        return None
-    return json.dumps(
-        [extract_text(e) for e in parent.findall(tag, namespace) if extract_text(e)],
-        ensure_ascii=False
-    )
-
-def serialize_elements(parent, path, namespace):
-    if parent is None:
-        return None
-    return json.dumps(
-        [{child.tag.split('}')[-1]: child.text.strip() if child.text else ''}
-         for child in parent.findall(path, namespace)],
-        ensure_ascii=False
-    )
-
 def serialize_blocks(parent, path, namespace, attribs=(), text_fields=()):
     if parent is None:
-        return None
+        return []
+
     result = []
     for elem in parent.findall(path, namespace):
         block = {}
         for attr in attribs:
-            block[attr] = elem.attrib.get(attr)
+            val = elem.attrib.get(attr)
+            if val:
+                block[attr] = val
         for tf in text_fields:
-            sub = elem.find(tf, namespace)
-            block[tf] = extract_text(sub)
-        result.append(block)
-    return json.dumps(result, ensure_ascii=False)
+            sub = elem.find(f"cwe:{tf}", namespace)
+            if sub is not None and sub.text and sub.text.strip():
+                block[tf] = sub.text.strip()
+        if block:
+            result.append(block)
+    return result
+
+
+
+def serialize_elements(parent, path, namespace):
+    if parent is None:
+        return []
+
+    elements = []
+    for child in parent.findall(path, namespace):
+        tag = child.tag.split('}')[-1]
+        if child.text and child.text.strip():
+            elements.append({tag: child.text.strip()})
+    return elements
+
+
+
+def extract_multiple_as_list(parent, tag, namespace):
+    if parent is None:
+        return []
+    result = []
+    for e in parent.findall(tag, namespace):
+        if e.text and e.text.strip():
+            result.append({"value": e.text.strip()})
+    return result
+
+
+
 
 def decompress_once(filepath: str) -> str:
     print(f"🔍 decompress_once() llamada con: {filepath}")

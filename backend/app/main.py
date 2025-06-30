@@ -7,6 +7,8 @@ from app.database import engine, Base
 from app.models import device_config
 import logging
 from rich.logging import RichHandler
+from app.routes import weaknesses
+
 
 
 
@@ -38,6 +40,7 @@ app.include_router(vulnerabilities.router)
 app.include_router(nvd.router)
 app.include_router(devices.router)
 app.include_router(devices_config.router)
+app.include_router(weaknesses.router)
 
 @app.get("/")
 def read_root():
