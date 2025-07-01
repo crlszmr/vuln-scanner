@@ -29,7 +29,11 @@ logger.info("🚀 Iniciando aplicación...")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # 👉 tu frontend
+    # allow_origins=["http://localhost:5173"],  # 👉 tu frontend
+    allow_origins=[
+        "http://localhost:5173", 
+        "https://vuln-scanner-z.vercel.app"
+    ],
     allow_credentials=True,  # 👈 muy importante para cookies
     allow_methods=["*"],
     allow_headers=["*"],
