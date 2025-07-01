@@ -75,6 +75,6 @@ urllib3==2.3.0
 uvicorn==0.34.0
 watchfiles==1.0.5
 websockets==15.0.1
-winapps==0.2.0
-WMI==1.5.1
+#winapps==0.2.0
+#WMI==1.5.1
 xmltodict==0.14.2
