@@ -1,5 +1,6 @@
 // URL base de la API (puede ser cambiada por variable de entorno)
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://vuln-scanner-backend.onrender.com';
 
 export const API_ROUTES = {
   // -----------------------------
