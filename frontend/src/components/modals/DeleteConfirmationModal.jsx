@@ -2,7 +2,7 @@ import ReactDOM from "react-dom";
 import { theme } from "@/styles/theme";
 import { useTranslation } from "react-i18next";
 
-// Modal de confirmación para eliminación de todos los CVEs
+// Modal de confirmación para eliminar CVEs
 export default function DeleteConfirmationModal({
   isOpen,
   onCancel,
@@ -17,7 +17,7 @@ export default function DeleteConfirmationModal({
   return ReactDOM.createPortal(
     <div style={styles.backdrop}>
       <div style={styles.modal}>
-        {/* Botón de cierre en esquina superior */}
+        {/* Botón de cierre */}
         <button
           onClick={deleting ? null : onClose}
           disabled={deleting}
@@ -32,7 +32,6 @@ export default function DeleteConfirmationModal({
 
         <h2 style={styles.title}>{t("cve.delete_title")}</h2>
 
-        {/* Contenido principal del modal */}
         {deleting ? (
           <div style={styles.spinnerWrapper}>
             <div style={styles.spinner}></div>

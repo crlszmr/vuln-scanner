@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 
 export function LanguageSwitcher() {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const toggleLanguage = () => {
     const newLang = i18n.language === "es" ? "en" : "es";
@@ -23,7 +23,8 @@ export function LanguageSwitcher() {
         cursor: "pointer",
         fontSize: "0.875rem",
       }}
-      aria-label="Cambiar idioma"
+      aria-label={t("language_switcher.aria_label")}
+      title={t("language_switcher.tooltip")}
     >
       {i18n.language === "es" ? "EN" : "ES"}
     </button>

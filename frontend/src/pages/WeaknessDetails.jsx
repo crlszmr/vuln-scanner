@@ -5,10 +5,14 @@ import { MainLayout } from "@/components/layouts/MainLayout";
 import { PageWrapper } from "@/components/layouts/PageWrapper";
 import { API_ROUTES } from "@/config/apiRoutes";
 import { theme } from "@/styles/theme";
+import { useTranslation } from "react-i18next";
+import { useNotification } from "@/context/NotificationContext";
 
 export default function WeaknessDetails() {
   const { cweId } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { notify } = useNotification()
   const [weakness, setWeakness] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -16,13 +20,15 @@ export default function WeaknessDetails() {
     axios
       .get(API_ROUTES.WEAKNESSES.DETAIL(cweId), { withCredentials: true })
       .then((res) => setWeakness(res.data))
-      .catch((err) => console.error("Error loading Weakness detail:", err))
+      .catch((err) => {
+        notify("error", `${t("weaknessDetails.error_loading_weakness")}: ${err.message}`);
+      })
       .finally(() => setLoading(false));
-  }, [cweId]);
+  }, [cweId, t]);
 
   const sectionStyle = {
     backgroundColor: theme.colors.surface,
-    border: "1px solid #334155",
+    border: `1px solid ${theme.colors.border}`,
     borderRadius: theme.radius.xl,
     padding: "1.5rem",
     boxShadow: theme.shadow.soft,
@@ -30,7 +36,7 @@ export default function WeaknessDetails() {
   };
 
   const headingStyle = {
-    fontSize: "20px",
+    fontSize: 20,
     fontWeight: "700",
     color: theme.colors.primary,
     marginBottom: "1rem",
@@ -40,13 +46,15 @@ export default function WeaknessDetails() {
     <section style={sectionStyle}>
       <h2 style={headingStyle}>{title}</h2>
       {list?.length ? (
-        <ul style={{ fontSize: "14px", color: theme.colors.muted, paddingLeft: "1rem" }}>
+        <ul style={{ fontSize: 14, color: theme.colors.muted, paddingLeft: "1rem" }}>
           {list.map((item, i) => (
-            <li key={i}>{Object.values(item).filter(Boolean).join(" - ") || "[Entrada vacía]"}</li>
+            <li key={i}>
+              {Object.values(item).filter(Boolean).join(" - ") || t("weaknessDetails.empty_entry")}
+            </li>
           ))}
         </ul>
       ) : (
-        <p style={{ fontSize: "14px", color: theme.colors.muted }}>No disponible.</p>
+        <p style={{ fontSize: 14, color: theme.colors.muted }}>{t("weaknessDetails.not_available")}</p>
       )}
     </section>
   );
@@ -55,7 +63,7 @@ export default function WeaknessDetails() {
     return (
       <MainLayout>
         <PageWrapper>
-          <p style={{ color: theme.colors.muted }}>Cargando detalles de la debilidad...</p>
+          <p style={{ color: theme.colors.muted }}>{t("weaknessDetails.loading")}</p>
         </PageWrapper>
       </MainLayout>
     );
@@ -65,7 +73,9 @@ export default function WeaknessDetails() {
     return (
       <MainLayout>
         <PageWrapper>
-          <p style={{ color: theme.colors.error }}>No se encontró información para {cweId}</p>
+          <p style={{ color: theme.colors.error }}>
+            {t("weaknessDetails.not_found", { cweId })}
+          </p>
         </PageWrapper>
       </MainLayout>
     );
@@ -111,21 +121,22 @@ export default function WeaknessDetails() {
               alignItems: "center",
               justifyContent: "space-between",
               width: "100%",
-              maxWidth: "960px",
+              maxWidth: 960,
             }}
           >
             <button
               onClick={() => navigate(-1)}
+              aria-label={t("weaknessDetails.back_button_aria")}
               style={{
                 backgroundColor: "#334155",
                 color: "white",
                 border: "none",
-                borderRadius: "12px",
+                borderRadius: 12,
                 padding: "6px 14px",
                 fontSize: "1.5rem",
                 fontWeight: "bold",
                 cursor: "pointer",
-                transition: "transform 0.2s ease, boxShadow 0.2s ease",
+                transition: "transform 0.2s ease, box-shadow 0.2s ease",
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = "scale(1.1)";
@@ -140,50 +151,52 @@ export default function WeaknessDetails() {
             </button>
 
             <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
-              <h1 style={{ fontSize: "2.5rem", fontWeight: "700", margin: 0 }}>CWE-{id}</h1>
+              <h1 style={{ fontSize: 32, fontWeight: "700", margin: 0 }}>
+                CWE-{id}
+              </h1>
             </div>
 
-            <div style={{ width: "52px" }}></div>
+            <div style={{ width: 52 }}></div>
           </div>
 
           <p
             style={{
-              fontSize: "1.125rem",
+              fontSize: 18,
               color: theme.colors.textSecondary || "#94a3b8",
               marginTop: "1rem",
               marginBottom: "3rem",
               textAlign: "center",
-              maxWidth: "960px",
+              maxWidth: 960,
             }}
           >
             {name}
           </p>
 
-          <div style={{ width: "100%", maxWidth: "960px" }}>
+          <div style={{ width: "100%", maxWidth: 960 }}>
             <section style={sectionStyle}>
-              <h2 style={headingStyle}>Descripción</h2>
-              <p style={{ fontSize: "14px", color: theme.colors.muted }}>{description || "No disponible."}</p>
+              <h2 style={headingStyle}>{t("weaknessDetails.description")}</h2>
+              <p style={{ fontSize: 14, color: theme.colors.muted }}>{description || t("weaknessDetails.not_available")}</p>
             </section>
 
             <section style={sectionStyle}>
-              <h2 style={headingStyle}>Descripción extendida</h2>
-              <p style={{ fontSize: "14px", color: theme.colors.muted }}>{extended_description || "No disponible."}</p>
+              <h2 style={headingStyle}>{t("weaknessDetails.extended_description")}</h2>
+              <p style={{ fontSize: 14, color: theme.colors.muted }}>{extended_description || t("weaknessDetails.not_available")}</p>
             </section>
 
-            {renderListSection("Modos de introducción", modes_of_introduction)}
-            {renderListSection("Plataformas aplicables", applicable_platforms)}
-            {renderListSection("Términos alternativos", alternate_terms)}
-            {renderListSection("Mitigaciones", potential_mitigations)}
-            {renderListSection("Consecuencias", consequences)}
-            {renderListSection("Ejemplos demostrativos", demonstrative_examples)}
-            {renderListSection("Ejemplos observados", observed_examples)}
-            {renderListSection("Mapeos de taxonomía", taxonomy_mappings)}
-            {renderListSection("Relaciones", relationships)}
+            {renderListSection(t("weaknessDetails.modes_of_introduction"), modes_of_introduction)}
+            {renderListSection(t("weaknessDetails.applicable_platforms"), applicable_platforms)}
+            {renderListSection(t("weaknessDetails.alternate_terms"), alternate_terms)}
+            {renderListSection(t("weaknessDetails.potential_mitigations"), potential_mitigations)}
+            {renderListSection(t("weaknessDetails.consequences"), consequences)}
+            {renderListSection(t("weaknessDetails.demonstrative_examples"), demonstrative_examples)}
+            {renderListSection(t("weaknessDetails.observed_examples"), observed_examples)}
+            {renderListSection(t("weaknessDetails.taxonomy_mappings"), taxonomy_mappings)}
+            {renderListSection(t("weaknessDetails.relationships"), relationships)}
 
             {background_details && (
               <section style={sectionStyle}>
-                <h2 style={headingStyle}>Detalles de fondo</h2>
-                <p style={{ fontSize: "14px", color: theme.colors.muted }}>{background_details}</p>
+                <h2 style={headingStyle}>{t("weaknessDetails.background_details")}</h2>
+                <p style={{ fontSize: 14, color: theme.colors.muted }}>{background_details}</p>
               </section>
             )}
           </div>

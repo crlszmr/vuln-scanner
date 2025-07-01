@@ -11,24 +11,52 @@ import DeviceUploadForm from "@/components/forms/DeviceUploadForm";
 import DeleteDeviceModal from "@/components/modals/DeleteDeviceModal";
 import { theme } from "@/styles/theme";
 import { Trash2 } from "lucide-react";
-
+import { useTranslation } from "react-i18next";
+import { useNotification } from "@/context/NotificationContext";
 
 export default function DevicesList() {
   const [devices, setDevices] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [deviceToDelete, setDeviceToDelete] = useState(null);
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+  const { notify } = useNotification();
 
+  // Función para cargar los dispositivos del usuario
   const fetchDevices = () => {
     axios
       .get(API_ROUTES.DEVICES.MY_DEVICES, { withCredentials: true })
       .then((res) => setDevices(res.data))
-      .catch((err) => console.error("Error loading devices:", err));
+      .catch((err) => {
+        notify("error", `${t("devicesList.errorLoadingDevices")}: ${err.message}`);
+      });
   };
 
+  // Carga inicial de dispositivos
   useEffect(() => {
     fetchDevices();
   }, []);
+
+  // Función para traducir el tipo de dispositivo según idioma
+  const translateDeviceType = (type) => {
+    const lang = i18n.language || "es";
+    const mapping = {
+      laptop: {
+        es: "Portátil",
+        en: "Laptop",
+      },
+      desktop: {
+        es: "Sobremesa",
+        en: "Desktop",
+      },
+      server: {
+        es: "Servidor",
+        en: "Server",
+      },
+    };
+    // Retorna traducción si existe, sino el mismo valor
+    return mapping[type]?.[lang] ?? type;
+  };
 
   return (
     <MainLayout>
@@ -41,20 +69,37 @@ export default function DevicesList() {
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "flex-start",
-            padding: "24px",
+            padding: 24,
             fontFamily: theme.font.family,
           }}
         >
-          {/* Encabezado y botón crear */}
-          <div style={{ width: "100%", maxWidth: "100%", marginBottom: "2rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+          {/* Encabezado y botón para crear nuevo equipo */}
+          <div
+            style={{
+              width: "100%",
+              marginBottom: "2rem",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "1rem",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                width: "100%",
+              }}
+            >
               <button
                 onClick={() => navigate(APP_ROUTES.USER_DASHBOARD)}
+                aria-label={t("devicesList.back_button_aria") || "Volver al dashboard"}
                 style={{
                   backgroundColor: "#334155",
                   color: "white",
                   border: "none",
-                  borderRadius: "12px",
+                  borderRadius: 12,
                   padding: "6px 14px",
                   fontSize: "1.5rem",
                   fontWeight: "bold",
@@ -73,13 +118,25 @@ export default function DevicesList() {
                 &lt;
               </button>
               <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
-                <h1 style={{ fontSize: "3rem", fontWeight: "bold", margin: 0 }}>Mis equipos</h1>
+                <h1 style={{ fontSize: 24, fontWeight: "bold", margin: 0 }}>
+                  {t("devicesList.title")}
+                </h1>
               </div>
-              <div style={{ width: "52px" }}></div>
+              <div style={{ width: 52 }}></div>
             </div>
-            <p style={{ fontSize: "1.125rem", color: theme.colors.textSecondary || "#94a3b8", marginTop: "0rem", marginBottom: "5rem", textAlign: "center" }}>
-              Gestiona tus equipos y analiza sus vulnerabilidades
+
+            <p
+              style={{
+                fontSize: "1.125rem",
+                color: theme.colors.textSecondary || "#94a3b8",
+                marginTop: 0,
+                marginBottom: "5rem",
+                textAlign: "center",
+              }}
+            >
+              {t("devicesList.subtitle")}
             </p>
+
             <AnimatePresence mode="wait">
               {!showForm && (
                 <motion.div
@@ -92,12 +149,13 @@ export default function DevicesList() {
                 >
                   <motion.div layoutId="crear-formulario" style={{ width: "auto" }}>
                     <Button onClick={() => setShowForm(true)} variant="success">
-                      Crear nuevo equipo
+                      {t("devicesList.create_new_device")}
                     </Button>
                   </motion.div>
                 </motion.div>
               )}
             </AnimatePresence>
+
             <AnimatePresence>
               {showForm && (
                 <motion.div
@@ -121,11 +179,9 @@ export default function DevicesList() {
             </AnimatePresence>
           </div>
 
-          {/* Lista de equipos */}
+          {/* Lista de dispositivos */}
           {devices.length === 0 ? (
-            <p style={{ color: theme.colors.muted }}>
-              Aún no tienes ningún equipo registrado.
-            </p>
+            <p style={{ color: theme.colors.muted }}>{t("devicesList.no_devices")}</p>
           ) : (
             <motion.div
               layout
@@ -133,7 +189,7 @@ export default function DevicesList() {
                 width: "100%",
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
-                gap: "20px",
+                gap: 20,
               }}
             >
               {devices.map((device) => (
@@ -154,23 +210,22 @@ export default function DevicesList() {
                   }}
                 >
                   {/* Botón eliminar */}
-<button
-  onClick={() => setDeviceToDelete(device.id)}
-  style={{
-    position: "absolute",
-    top: "12px",
-    right: "12px",
-    backgroundColor: "transparent",
-    border: "none",
-    color: "#dc2626",
-    cursor: "pointer",
-  }}
-  title="Eliminar equipo"
->
-  <Trash2 size={20} />
-</button>
-
-
+                  <button
+                    onClick={() => setDeviceToDelete(device.id)}
+                    style={{
+                      position: "absolute",
+                      top: 12,
+                      right: 12,
+                      backgroundColor: "transparent",
+                      border: "none",
+                      color: "#dc2626",
+                      cursor: "pointer",
+                    }}
+                    title={t("devicesList.delete_device_button_title")}
+                    aria-label={t("devicesList.delete_device_button_aria")}
+                  >
+                    <Trash2 size={20} />
+                  </button>
 
                   <div
                     style={{
@@ -180,30 +235,28 @@ export default function DevicesList() {
                       justifyItems: "center",
                       textAlign: "center",
                       gap: "1rem",
-                      minHeight: "160px",
+                      minHeight: 160,
                     }}
                   >
                     <div>
-                      <h2 style={{ fontSize: "24px", fontWeight: "700", margin: 0 }}>
-                        {device.alias}
-                      </h2>
+                      <h2 style={{ fontSize: 24, fontWeight: "700", margin: 0 }}>{device.alias}</h2>
                     </div>
                     <div
                       style={{
                         display: "flex",
                         flexDirection: "column",
-                        gap: "4px",
+                        gap: 4,
                         alignItems: "center",
                       }}
                     >
-                      <p style={{ fontSize: "15px", margin: 0, color: theme.colors.textSecondary }}>
-                        <span style={{ fontWeight: 700 }}>Tipo:</span> {device.type}
+                      <p style={{ fontSize: 15, margin: 0, color: theme.colors.textSecondary }}>
+                        <strong>{t("devicesList.type_label")}:</strong> {translateDeviceType(device.type)}
                       </p>
-                      <p style={{ fontSize: "15px", margin: 0, color: theme.colors.textSecondary }}>
-                        <span style={{ fontWeight: 700 }}>SO:</span> {device.os_name}
+                      <p style={{ fontSize: 15, margin: 0, color: theme.colors.textSecondary }}>
+                        <strong>{t("devicesList.os_label")}:</strong> {device.os_name}
                       </p>
-                      <p style={{ fontSize: "15px", margin: 0, color: theme.colors.textSecondary }}>
-                        <span style={{ fontWeight: 700 }}>Nº Apps:</span>{" "}
+                      <p style={{ fontSize: 15, margin: 0, color: theme.colors.textSecondary }}>
+                        <strong>{t("devicesList.apps_label")}:</strong>{" "}
                         {device.config?.filter((c) => c.type === "a").length ?? 0}
                       </p>
                     </div>
@@ -211,7 +264,7 @@ export default function DevicesList() {
                       style={{
                         display: "flex",
                         flexDirection: "column",
-                        gap: "8px",
+                        gap: 8,
                         alignItems: "center",
                       }}
                     >
@@ -219,27 +272,27 @@ export default function DevicesList() {
                         width="120px"
                         onClick={() => navigate(APP_ROUTES.DEVICE_MATCHING(device.id))}
                         hoverEffect="brightness"
-                        style={{ padding: "6px 10px", fontSize: "13px" }}
+                        style={{ padding: "6px 10px", fontSize: 13 }}
                       >
-                        Matching
+                        {t("devicesList.matching_button")}
                       </Button>
                       <Button
                         width="120px"
                         onClick={() => navigate(APP_ROUTES.DEVICE_CONFIG(device.id))}
                         hoverEffect="brightness"
                         variant="textSecondary"
-                        style={{ padding: "6px 10px", fontSize: "13px" }}
+                        style={{ padding: "6px 10px", fontSize: 13 }}
                       >
-                        Config
+                        {t("devicesList.config_button")}
                       </Button>
                       <Button
                         width="120px"
-                        onClick={() => navigate(`/devices/${device.id}/vulnerabilities/overview`)}
+                        onClick={() => navigate(APP_ROUTES.DEVICE_VULNERABILITIES_OVERVIEW(device.id))}
                         hoverEffect="brightness"
                         variant="warning"
-                        style={{ padding: "6px 10px", fontSize: "13px" }}
+                        style={{ padding: "6px 10px", fontSize: 13 }}
                       >
-                        Vulns
+                        {t("devicesList.vulns_button")}
                       </Button>
                     </div>
                   </div>
@@ -250,7 +303,7 @@ export default function DevicesList() {
         </motion.div>
       </PageWrapper>
 
-      {/* Modal eliminar */}
+      {/* Modal eliminar dispositivo */}
       {deviceToDelete && (
         <DeleteDeviceModal
           deviceId={deviceToDelete}

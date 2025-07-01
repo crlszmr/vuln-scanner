@@ -4,7 +4,7 @@ import axios from "axios";
 import { useTranslation } from "react-i18next";
 import { AuthContext } from "@/context/AuthContext";
 import { useNotification } from "@/context/NotificationContext";
-import { API_ROUTES } from "@/config/apiRoutes";
+import { APP_ROUTES } from "@/config/appRoutes";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { PageWrapper } from "@/components/layouts/PageWrapper";
 import { theme } from "@/styles/theme";
@@ -16,7 +16,7 @@ const AdminDashboard = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  // Función para lanzar importaciones con notificación
+  // Función para lanzar una importación con notificación
   const handleImport = async (endpoint) => {
     try {
       addNotification(t("admin.import_start"), "info");
@@ -32,7 +32,6 @@ const AdminDashboard = () => {
         "success"
       );
     } catch (error) {
-      console.error("Error en la importación:", error);
       addNotification(
         `${t("admin.import_error")}: ${error.response?.data?.detail || error.message}`,
         "error"
@@ -54,7 +53,7 @@ const AdminDashboard = () => {
             fontFamily: theme.font.family,
           }}
         >
-          {/* Título */}
+          {/* Título principal */}
           <h1
             style={{
               fontSize: "2.5rem",
@@ -78,7 +77,7 @@ const AdminDashboard = () => {
             {t("admin.subtitle")}
           </p>
 
-          {/* Paneles de acción */}
+          {/* Paneles del dashboard */}
           <div
             style={{
               display: "flex",
@@ -93,27 +92,21 @@ const AdminDashboard = () => {
               icon={<ShieldAlert size={64} />}
               title={t("admin.cve_title")}
               subtitle={t("admin.cve_code")}
-              onClick={() => navigate("/cves")}
+              onClick={() => navigate(APP_ROUTES.CVE_MANAGEMENT)}
             />
 
             <AdminPanel
               icon={<ServerCog size={64} />}
               title={t("admin.cpe_title")}
               subtitle={t("admin.cpe_code")}
-              onClick={() => navigate("/cpes")}
+             onClick={() => navigate(APP_ROUTES.CPE_MANAGEMENT)}
             />
 
             <AdminPanel
               icon={<Bug size={64} />}
               title={t("admin.cwe_title")}
               subtitle={t("admin.cwe_code")}
-              onClick={() => navigate("/cwes")}
-            />
-
-            <AdminPanel
-              icon={<Users size={64} />}
-              title={t("admin.user_title")}
-              onClick={() => {}}
+              onClick={() => navigate(APP_ROUTES.CWE_MANAGEMENT)}
             />
           </div>
         </div>
@@ -122,7 +115,7 @@ const AdminDashboard = () => {
   );
 };
 
-// Panel visual reutilizable
+// Componente reutilizable para cada tarjeta/panel del dashboard
 function AdminPanel({ icon, title, subtitle, onClick }) {
   return (
     <div

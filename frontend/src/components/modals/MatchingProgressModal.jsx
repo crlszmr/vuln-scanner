@@ -6,8 +6,8 @@ import { API_ROUTES } from "@/config/apiRoutes";
 
 export default function MatchingProgressModal({ deviceId, onClose }) {
   const { t } = useTranslation();
-  const [status, setStatus] = useState("checking"); // 🛠️ cambio aquí
-  const [imported, setImported] = useState(0);
+  const [status, setStatus] = useState("checking");
+  const [progress, setProgress] = useState(0);
   const [total, setTotal] = useState(0);
   const [label, setLabel] = useState("");
   const [queue, setQueue] = useState([]);
@@ -15,53 +15,13 @@ export default function MatchingProgressModal({ deviceId, onClose }) {
   const queueRef = useRef([]);
   const processingRef = useRef(false);
   const eventSourceRef = useRef(null);
-  const [progress, setProgress] = useState(0);
 
   const percentage = total > 0 ? Math.round((progress / total) * 100) : 0;
   const canClose = status !== "running";
 
-  const setupEventSource = () => {
-    const url = API_ROUTES.DEVICES.MATCH_PROGRESS(deviceId);
-    const eventSource = new EventSource(url, { withCredentials: true });
-    eventSourceRef.current = eventSource;
-
-    eventSource.onmessage = (event) => {
-      const message = event.data;
-
-      if (message === "[DONE]") {
-        setStatus("completed");
-        localStorage.removeItem(`matching_status_${deviceId}`);
-        eventSource.close();
-        return;
-      }
-
-      const match = message.match(/(\d+)\s*\/\s*(\d+)/);
-      if (match) {
-        const current = parseInt(match[1], 10);
-        const total = parseInt(match[2], 10);
-        setProgress(current);
-        setTotal(total);
-        const remaining = message.replace(match[0], "").trim();
-        setLabel(remaining);
-      } else {
-        setLabel(message);
-      }
-    };
-
-    eventSource.onerror = (err) => {
-      console.error("[❌ SSE ERROR] Conexión SSE interrumpida:", err);
-      setStatus("error");
-      eventSource.close();
-    };
-  };
-
   const startMatching = async () => {
     setStatus("running");
-    setImported(0);
-    setTotal(0);
-    setQueue([]);
-    setLabel("Iniciando análisis...");
-    setDisplayedLabel("");
+    resetState();
     localStorage.setItem(`matching_status_${deviceId}`, "running");
 
     try {
@@ -70,52 +30,84 @@ export default function MatchingProgressModal({ deviceId, onClose }) {
         credentials: "include",
       });
 
-      if (res.ok) {
-        setupEventSource();
-      } else {
-        setStatus("error");
-        setLabel("No se pudo iniciar el análisis.");
-      }
-    } catch (err) {
-      console.error("[❌ Matching] Error al iniciar matching:", err);
-      setStatus("error");
-      setLabel("Error al iniciar el análisis.");
+      res.ok ? setupEventSource() : handleError("matching.error");
+    } catch {
+      handleError("matching.error");
     }
   };
 
-  useEffect(() => {
-    const checkMatchingStatus = async () => {
-      try {
-        const res = await fetch(API_ROUTES.DEVICES.MATCH_STATUS(deviceId), {
-          credentials: "include",
-        });
+  const setupEventSource = () => {
+    const url = API_ROUTES.DEVICES.MATCH_PROGRESS(deviceId);
+    const eventSource = new EventSource(url, { withCredentials: true });
+    eventSourceRef.current = eventSource;
 
-        if (!res.ok) {
-          console.warn(`[⚠️ MatchingModal] Error HTTP: ${res.status}`);
-          setStatus("idle");
-          return;
-        }
+    eventSource.onmessage = (event) => {
+      if (event.data === "[DONE]") {
+        setStatus("completed");
+        localStorage.removeItem(`matching_status_${deviceId}`);
+        eventSource.close();
+        return;
+      }
 
-        const data = await res.json();
-        if (data.running) {
-          setStatus("running");
-          setImported(0);
-          setProgress(0);
-          setTotal(0);
-          setQueue([]);
-          setLabel("Recuperando estado del análisis...");
-          setDisplayedLabel("");
-          localStorage.setItem(`matching_status_${deviceId}`, "running");
-          setupEventSource();
-        } else {
-          setStatus("idle");
-        }
-      } catch (err) {
-        console.error("[❌ MatchingModal] Error al consultar estado:", err);
-        setStatus("idle");
+      const match = event.data.match(/(\d+)\s*\/\s*(\d+)/);
+      if (match) {
+        setProgress(parseInt(match[1], 10));
+        setTotal(parseInt(match[2], 10));
+        setLabel(event.data.replace(match[0], "").trim());
+      } else {
+        setLabel(event.data);
       }
     };
 
+    eventSource.onerror = () => {
+      handleError("matching.error");
+      eventSource.close();
+    };
+  };
+
+  const stopMatching = () => {
+    eventSourceRef.current?.close();
+    localStorage.removeItem(`matching_status_${deviceId}`);
+    setStatus("aborted");
+  };
+
+  const checkMatchingStatus = async () => {
+    try {
+      const res = await fetch(API_ROUTES.DEVICES.MATCH_STATUS(deviceId), {
+        credentials: "include",
+      });
+
+      if (!res.ok) return setStatus("idle");
+
+      const data = await res.json();
+      if (data.running) {
+        setStatus("running");
+        resetState();
+        setLabel("matching.checking_status");
+        localStorage.setItem(`matching_status_${deviceId}`, "running");
+        setupEventSource();
+      } else {
+        setStatus("idle");
+      }
+    } catch {
+      setStatus("idle");
+    }
+  };
+
+  const resetState = () => {
+    setProgress(0);
+    setTotal(0);
+    setQueue([]);
+    setLabel("");
+    setDisplayedLabel("");
+  };
+
+  const handleError = (labelKey) => {
+    setStatus("error");
+    setLabel(labelKey);
+  };
+
+  useEffect(() => {
     checkMatchingStatus();
   }, [deviceId]);
 
@@ -150,31 +142,24 @@ export default function MatchingProgressModal({ deviceId, onClose }) {
     }
   }, [queue]);
 
-  const stopMatching = () => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      localStorage.removeItem(`matching_status_${deviceId}`);
-      setStatus("aborted");
-    }
-  };
-
   const renderFormattedLabel = () => {
     if (!displayedLabel.toLowerCase().includes("procesando:")) return displayedLabel;
+
     const vendor = displayedLabel.match(/Vendor=([^,]*)/)?.[1];
     const product = displayedLabel.match(/Product=([^,]*)/)?.[1];
     const version = displayedLabel.match(/Version=([^\s]*)/)?.[1];
 
     return (
       <>
-        <div><strong>Procesando plataforma...</strong></div>
-        {vendor && <div style={styles.truncatedLine}>- Vendor: {vendor.trim()}</div>}
-        {product && <div style={styles.truncatedLine}>- Product: {product.trim()}</div>}
-        {version && <div style={styles.truncatedLine}>- Version: {version.trim()}</div>}
+        <div><strong>{t("matching.processing_platform")}</strong></div>
+        {vendor && <div style={styles.truncatedLine}>{t("matching.vendor", { vendor: vendor.trim() })}</div>}
+        {product && <div style={styles.truncatedLine}>{t("matching.product", { product: product.trim() })}</div>}
+        {version && <div style={styles.truncatedLine}>{t("matching.version", { version: version.trim() })}</div>}
       </>
     );
   };
 
-  if (!deviceId || status === "checking") return null; // ✅ previene parpadeo
+  if (!deviceId || status === "checking") return null;
 
   return ReactDOM.createPortal(
     <div style={styles.backdrop}>
@@ -191,13 +176,13 @@ export default function MatchingProgressModal({ deviceId, onClose }) {
           ✖
         </button>
 
-        <h2 style={styles.title}>{t("Proceso de Matching")}</h2>
+        <h2 style={styles.title}>{t("matching.modal_title")}</h2>
 
         <div style={styles.progressWrapper}>
           {status === "running" ? (
             percentage > 0 ? (
               <>
-                <div style={styles.progressText}>{`${percentage}% completado`}</div>
+                <div style={styles.progressText}>{t("matching.progress", { percentage })}</div>
                 <div style={styles.barOuter}>
                   <div style={{ ...styles.barInner, width: `${percentage}%` }}></div>
                 </div>
@@ -208,41 +193,31 @@ export default function MatchingProgressModal({ deviceId, onClose }) {
             ) : (
               <div style={styles.spinnerWrapper}>
                 <div style={styles.spinner}></div>
-                <div style={styles.statusText}>
-                  {label || t("Preparando el análisis...")}
-                </div>
+                <div style={styles.statusText}>{t("matching.preparing")}</div>
               </div>
             )
           ) : (
             <div style={styles.statusText}>
-              {status === "idle"
-                ? t("Listo para comenzar el análisis")
-                : status === "completed"
-                ? t("Análisis completado")
-                : status === "aborted"
-                ? t("Análisis cancelado")
-                : status === "error"
-                ? t("Error en el análisis")
-                : ""}
+              {t(`matching.${status}`)}
             </div>
           )}
         </div>
 
         {status === "idle" && (
           <button onClick={startMatching} style={styles.startButton}>
-            {t("Analizar este equipo")}
+            {t("matching.start")}
           </button>
         )}
 
         {status === "running" && (
           <button onClick={stopMatching} style={styles.stopButton}>
-            {t("Detener")}
+            {t("matching.stop")}
           </button>
         )}
 
-        {(status === "completed" || status === "aborted" || status === "error") && (
+        {["completed", "aborted", "error"].includes(status) && (
           <button onClick={onClose} style={styles.startButton}>
-            {t("Cerrar")}
+            {t("matching.close")}
           </button>
         )}
       </div>

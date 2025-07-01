@@ -7,6 +7,8 @@ import { CloudDownload, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ImportProgressModalCVE from "@/components/modals/ImportProgressModalCVE";
 import DeleteConfirmationModal from "@/components/modals/DeleteConfirmationModal";
+import { API_ROUTES } from "@/config/apiRoutes";
+
 
 export default function CVEManagement() {
   // Estado principal del flujo de importación de CVEs
@@ -130,14 +132,14 @@ export default function CVEManagement() {
         setLabel(t("cve.importing"));
 
         if (!eventSourceRef.current) {
-          const eventSource = new EventSource("http://localhost:8000/nvd/cve-import-stream");
+          const eventSource = new EventSource(API_ROUTES.NVD.CVE_IMPORT_STREAM);
           eventSourceRef.current = eventSource;
           setupEventSource(eventSource);
         }
       }
 
       try {
-        const res = await fetch("http://localhost:8000/nvd/cve-import-status");
+        const res = await fetch(API_ROUTES.NVD.CVE_IMPORT_STATUS);
         const statusData = await res.json();
 
         if (statusData.running) {
@@ -152,7 +154,7 @@ export default function CVEManagement() {
           localStorage.setItem("cve_import_status", "running");
 
           if (!eventSourceRef.current) {
-            const eventSource = new EventSource("http://localhost:8000/nvd/cve-import-stream");
+            const eventSource = new EventSource(API_ROUTES.NVD.CVE_IMPORT_STREAM);
             eventSourceRef.current = eventSource;
             setupEventSource(eventSource);
           }
@@ -165,6 +167,7 @@ export default function CVEManagement() {
     checkImportStatus();
   }, []);
 
+  // Inicia la importación de CVEs
   const handleStartImport = async () => {
     try {
       setStatus("idle");
@@ -184,10 +187,10 @@ export default function CVEManagement() {
         eventSourceRef.current = null;
       }
 
-      const res = await fetch("http://localhost:8000/nvd/cve-import-start", { method: "POST" });
+      const res = await fetch(API_ROUTES.NVD.CVE_IMPORT_START, { method: "POST" });
       if (!res.ok) throw new Error();
 
-      const eventSource = new EventSource("http://localhost:8000/nvd/cve-import-stream");
+      const eventSource = new EventSource(API_ROUTES.NVD.CVE_IMPORT_STREAM);
       eventSourceRef.current = eventSource;
       setupEventSource(eventSource);
     } catch (_) {
@@ -200,9 +203,10 @@ export default function CVEManagement() {
     }
   };
 
+  // Solicita número de CVEs para confirmar eliminación y abre modal
   const handleDeleteAll = async () => {
     try {
-      const res = await fetch("http://localhost:8000/nvd/cve-count");
+      const res = await fetch(API_ROUTES.NVD.CVE_COUNT);
       const data = await res.json();
       setCveCount(data.count || 0);
       setShowDeleteModal(true);
@@ -211,10 +215,11 @@ export default function CVEManagement() {
     }
   };
 
+  // Confirma y ejecuta la eliminación de todos los CVEs
   const handleConfirmDelete = async () => {
     setDeleting(true);
     try {
-      const res = await fetch("http://localhost:8000/nvd/cve-delete-all", { method: "DELETE" });
+      const res = await fetch(API_ROUTES.NVD.CVE_DELETE_ALL, { method: "DELETE" });
       if (!res.ok) throw new Error("Server error");
       addNotification(t("cve.delete_success"), "success");
       setStatus("idle");
@@ -229,10 +234,12 @@ export default function CVEManagement() {
     }
   };
 
+  // Cancela la eliminación de CVEs
   const handleCancelDelete = () => {
     setShowDeleteModal(false);
   };
 
+  // Cierra el modal de importación y limpia estado
   const handleCloseModal = () => {
     setShowModal(false);
     setStatus("idle");
@@ -252,6 +259,7 @@ export default function CVEManagement() {
     }
   };
 
+  // Detiene la importación en curso
   const handleStopImport = async () => {
     setStatus("idle");
     setLoading(false);
@@ -265,7 +273,7 @@ export default function CVEManagement() {
       eventSourceRef.current = null;
     }
 
-    fetch("http://localhost:8000/nvd/cve-import-stop", { method: "POST" }).catch(() => {});
+    fetch(API_ROUTES.NVD.CVE_IMPORT_STOP, { method: "POST" }).catch(() => {});
   };
 
   return (
@@ -311,7 +319,6 @@ export default function CVEManagement() {
             <CVEPanel
               icon={<Trash2 size={64} />}
               title={t("cve.delete_button")}
-              subtitle={t("cve.all")}
               color="#dc2626"
               onClick={handleDeleteAll}
             />
@@ -365,6 +372,7 @@ export default function CVEManagement() {
   );
 }
 
+// Componente reutilizable para los paneles de importación y eliminación
 function CVEPanel({ icon, title, subtitle, color, onClick }) {
   return (
     <div

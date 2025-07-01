@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { PageWrapper } from "@/components/layouts/PageWrapper";
 import { theme } from "@/styles/theme";
-import { MonitorSmartphone, Settings2 } from "lucide-react"; // Iconos modernos
+import { MonitorSmartphone, Settings2 } from "lucide-react"; 
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -14,7 +14,7 @@ export default function Dashboard() {
       <PageWrapper>
         <div
           style={{
-            minHeight: "calc(100vh - 64px)", // misma altura que Register/Login
+            minHeight: "calc(100vh - 64px)",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -23,7 +23,7 @@ export default function Dashboard() {
             fontFamily: theme.font.family,
           }}
         >
-          {/* Encabezado con botón y título */}
+          {/* Encabezado con botón de regreso y título */}
           <div
             style={{
               display: "flex",
@@ -31,9 +31,10 @@ export default function Dashboard() {
               justifyContent: "space-between",
               width: "100%",
               maxWidth: "960px",
-              marginBottom: "0rem", // Espacio mayor con los paneles
+              marginBottom: "0rem",
             }}
           >
+            {/* Botón para volver a Home */}
             <button
               onClick={() => navigate("/")}
               style={{
@@ -55,20 +56,23 @@ export default function Dashboard() {
                 e.currentTarget.style.transform = "scale(1)";
                 e.currentTarget.style.boxShadow = "none";
               }}
+              aria-label={t("dashboard.back_button_aria") || "Volver"}
             >
               &lt;
             </button>
 
+            {/* Título centrado */}
             <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
               <h1 style={{ fontSize: "3rem", fontWeight: "700", color: theme.colors.text, margin: 0 }}>
                 {t("dashboard.title")}
               </h1>
             </div>
 
+            {/* Espacio para equilibrar layout */}
             <div style={{ width: "52px" }}></div>
           </div>
 
-          {/* Subtítulo */}
+          {/* Subtítulo descriptivo */}
           <p
             style={{
               fontSize: "1.125rem",
@@ -80,7 +84,7 @@ export default function Dashboard() {
             {t("dashboard.subtitle")}
           </p>
 
-          {/* Paneles de acción */}
+          {/* Paneles de acción: Mis equipos y Detector de configuración */}
           <div
             style={{
               display: "flex",
@@ -108,11 +112,14 @@ export default function Dashboard() {
   );
 }
 
-// Componente reutilizable para panel visual
+// Componente reutilizable para paneles con icono y texto
 function DashboardPanel({ icon, label, onClick }) {
   return (
     <div
       onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if(e.key === "Enter" || e.key === " ") onClick(); }}
       style={{
         flex: "1 1 300px",
         cursor: "pointer",
@@ -124,6 +131,7 @@ function DashboardPanel({ icon, label, onClick }) {
         flexDirection: "column",
         alignItems: "center",
         transition: "transform 0.2s ease, box-shadow 0.2s ease",
+        userSelect: "none",
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = "scale(1.02)";
@@ -133,6 +141,7 @@ function DashboardPanel({ icon, label, onClick }) {
         e.currentTarget.style.transform = "scale(1)";
         e.currentTarget.style.boxShadow = "none";
       }}
+      aria-label={label}
     >
       {icon}
       <h3 style={{ fontSize: "1.5rem", fontWeight: "600", marginTop: "1rem" }}>{label}</h3>

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { PageWrapper } from "@/components/layouts/PageWrapper";
@@ -7,11 +7,13 @@ import { Bug, Trash2 } from "lucide-react";
 import ImportProgressModalCWE from "@/components/modals/ImportProgressModalCWE";
 import DeleteConfirmationModal from "@/components/modals/DeleteConfirmationModal";
 import { useNotification } from "@/context/NotificationContext";
+import { API_ROUTES } from "@/config/apiRoutes";
 
 export default function CWEManagement() {
   const { t } = useTranslation();
   const { addNotification } = useNotification();
 
+  // Estados para control del modal y progreso de importación
   const [showModal, setShowModal] = useState(false);
   const [status, setStatus] = useState("idle");
   const [imported, setImported] = useState(0);
@@ -24,12 +26,14 @@ export default function CWEManagement() {
   const [count, setCount] = useState(null);
   const [current, setCurrent] = useState(null);
 
+  // Estados para eliminación masiva
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [cweCount, setCweCount] = useState(0);
 
   const eventSourceRef = useRef(null);
 
+  // Inicia la importación y conecta SSE para recibir progreso
   const handleStartImport = async () => {
     try {
       setStatus("idle");
@@ -43,22 +47,17 @@ export default function CWEManagement() {
       setPendingImport(false);
       setWarningMessage("");
 
-      const res = await fetch("http://localhost:8000/nvd/cwe-import-start", {
-        method: "POST",
-      });
-
+      const res = await fetch(API_ROUTES.NVD.CWE_IMPORT_START, { method: "POST" });
       if (!res.ok) throw new Error();
 
-      const eventSource = new EventSource("http://localhost:8000/nvd/cwe-import-stream");
+      const eventSource = new EventSource(API_ROUTES.NVD.CWE_IMPORT_STREAM);
       eventSourceRef.current = eventSource;
 
       eventSource.onmessage = (event) => {
         try {
-          let dataStr = event.data;
-          if (dataStr.startsWith("data: ")) {
-            dataStr = dataStr.replace("data: ", "");
-          }
+          let dataStr = event.data.startsWith("data: ") ? event.data.slice(6) : event.data;
           const data = JSON.parse(dataStr);
+
           if (data.imported !== undefined) setImported(data.imported);
           if (data.total !== undefined) setTotal(data.total);
           if (data.percentage !== undefined) setPercentage(data.percentage);
@@ -82,12 +81,11 @@ export default function CWEManagement() {
 
           if (data.type === "warning") {
             setStatus("warning");
-            setWarningMessage(data.message || t("cwe.too_many_new"));
+            setWarningMessage(data.message || t("cwe.too_many_new_warning"));
             setWaitingForSSE(false);
             eventSource.close();
           }
         } catch (err) {
-          console.error("[CWE SSE ERROR]", err, event.data);
           setStatus("error");
           setLabel("cwe.connection_error");
           setWaitingForSSE(false);
@@ -110,6 +108,7 @@ export default function CWEManagement() {
     }
   };
 
+  // Detiene la importación y limpia estado SSE
   const handleStopImport = async () => {
     setStatus("idle");
     setLabel("cwe.aborted_by_user");
@@ -121,9 +120,10 @@ export default function CWEManagement() {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
-    fetch("http://localhost:8000/nvd/cwe-import-stop", { method: "POST" }).catch(() => {});
+    fetch(API_ROUTES.NVD.CWE_IMPORT_STOP, { method: "POST" }).catch(() => {});
   };
 
+  // Cierra el modal y limpia estados relacionados
   const handleCloseModal = () => {
     setShowModal(false);
     setStatus("idle");
@@ -142,15 +142,15 @@ export default function CWEManagement() {
     }
   };
 
+  // Abre modal confirmación para eliminar todos los CWEs
   const handleDeleteAll = () => setShowDeleteModal(true);
 
+  // Ejecuta eliminación masiva de CWEs con notificaciones
   const handleConfirmDelete = async () => {
     setDeleting(true);
     try {
-      const res = await fetch("http://localhost:8000/nvd/cwe-delete-all", {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Error al eliminar CWEs.");
+      const res = await fetch(API_ROUTES.NVD.CWE_DELETE_ALL, { method: "DELETE" });
+      if (!res.ok) throw new Error(t("cwe.delete_error"));
       addNotification(t("cwe.delete_success"), "success");
       setStatus("idle");
       setShowDeleteModal(false);
@@ -203,8 +203,8 @@ export default function CWEManagement() {
             <CWEPanel
               icon={<Bug size={64} />}
               title={t("cwe.import_button")}
-              subtitle={t("cwe.from_xml") || "JSON"}
-              color="#0ea5e9"
+              subtitle={t("cwe.from_xml")}
+              color="#16a34a"
               onClick={() => {
                 setShowModal(true);
                 setStatus("idle");
@@ -222,8 +222,7 @@ export default function CWEManagement() {
             <CWEPanel
               icon={<Trash2 size={64} />}
               title={t("cwe.delete_button")}
-              subtitle={t("cwe.all") || "ALL"}
-              color="#ef4444"
+              color="#dc2626"
               onClick={handleDeleteAll}
             />
           </div>

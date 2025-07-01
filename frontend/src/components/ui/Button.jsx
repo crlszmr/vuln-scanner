@@ -1,7 +1,7 @@
-// src/components/ui/Button.jsx
 import { theme } from '@/styles/theme';
 import { motion } from 'framer-motion';
 
+// Componente de botón reutilizable con variantes visuales y efectos al pasar el ratón
 export function Button({
   children,
   onClick,
@@ -9,30 +9,15 @@ export function Button({
   disabled = false,
   fullWidth = false,
   hoverEffect = 'scale',
-  width, // NUEVA PROP
+  width,
 }) {
+  // Define el color de fondo según la variante
   const getBackground = () => {
     if (disabled) return '#374151';
-    switch (variant) {
-      case 'primary':
-        return theme.colors.primary;
-      case 'success':
-        return theme.colors.success;
-      case 'text':
-        return theme.colors.text;
-      case 'textSecondary':
-        return theme.colors.textSecondary;
-      case 'error':
-        return theme.colors.error;
-      case 'warning':
-        return theme.colors.warning;
-      case 'darkgreen':
-        return theme.colors.darkGreen;
-      default:
-        return theme.colors.primary;
-    }
+    return theme.colors[variant] || theme.colors.primary;
   };
 
+  // Define el estilo de hover en función del tipo de efecto
   const getHoverStyle = () => {
     if (disabled) return {};
     switch (hoverEffect) {
@@ -42,7 +27,7 @@ export function Button({
         return { boxShadow: '0 0 8px rgba(255,255,255,0.2)' };
       case 'none':
         return {};
-      default: // 'scale'
+      default:
         return { scale: 1.03 };
     }
   };

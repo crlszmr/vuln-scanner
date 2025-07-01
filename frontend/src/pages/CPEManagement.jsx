@@ -7,8 +7,10 @@ import { CloudDownload, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ImportProgressModalCPE from "@/components/modals/ImportProgressModalCPE";
 import DeleteConfirmationModal from "@/components/modals/DeleteConfirmationModal";
+import { API_ROUTES } from "@/config/apiRoutes";
 
-const MIN_MSG_DELAY = 2000; // 2 segundos para transición inicial
+
+const MIN_MSG_DELAY = 2000;
 
 export default function CPEManagement() {
   const [status, setStatus] = useState("idle");
@@ -28,7 +30,6 @@ export default function CPEManagement() {
   const [totalRefs, setTotalRefs] = useState(0);
   const [totalDeprecated, setTotalDeprecated] = useState(0);
 
-  // Cola de mensajes y transición
   const [messageQueue, setMessageQueue] = useState([]);
   const [currentMessage, setCurrentMessage] = useState(null);
   const lastMessageTimestamp = useRef(Date.now());
@@ -51,18 +52,41 @@ export default function CPEManagement() {
     "cpe.existing_count",
   ];
 
+  // Controla la cola de mensajes para el modal de progreso
   useEffect(() => {
-    console.log("currentMessage cambiado:", currentMessage);
-  }, [currentMessage]);
+    if (messageQueue.length === 0 || currentMessage) return;
 
+    const nextMsg = messageQueue[0];
+    const isProcessing = nextMsg?.label === "cpe.processing_new_items";
+    const needsDelay = DELAYED_KEYS.includes(nextMsg?.label);
+
+    const showNextMessage = () => {
+      setCurrentMessage(nextMsg);
+      setMessageQueue((q) => q.slice(1));
+      lastMessageTimestamp.current = Date.now();
+    };
+
+    const now = Date.now();
+    const elapsed = now - lastMessageTimestamp.current;
+
+    if (isProcessing || !needsDelay || elapsed >= MIN_MSG_DELAY) {
+      showNextMessage();
+    } else {
+      timerRef.current = setTimeout(showNextMessage, MIN_MSG_DELAY - elapsed);
+    }
+
+    return () => clearTimeout(timerRef.current);
+  }, [messageQueue, currentMessage]);
+
+  // Comprueba si ya hay una importación activa al montar
   useEffect(() => {
     fetch("/nvd/cpe-import-status")
       .then((res) => res.json())
       .then((data) => {
         if (data.running) {
-          setIsOpen(true); // muestra el modal
+          setShowModal(true);
           setStatus("running");
-          setLabel(data.label); // ⚠️ esto es clave
+          setLabel(data.label);
           setImported(data.imported);
           setTotal(data.total);
           setPercentage(data.percentage);
@@ -73,45 +97,7 @@ export default function CPEManagement() {
       });
   }, []);
 
-  useEffect(() => {
-    if (messageQueue.length === 0 || currentMessage) return;
-
-    const nextMsg = messageQueue[0];
-    const isProcessing = nextMsg?.label === "cpe.processing_new_items";
-    const needsDelay = DELAYED_KEYS.includes(nextMsg?.label);
-
-    if (isProcessing) {
-      setCurrentMessage(nextMsg);
-      setMessageQueue((q) => q.slice(1));
-      lastMessageTimestamp.current = Date.now();
-      return;
-    }
-
-    const now = Date.now();
-    const elapsed = now - lastMessageTimestamp.current;
-
-    if (!needsDelay) {
-      setCurrentMessage(nextMsg);
-      setMessageQueue((q) => q.slice(1));
-      lastMessageTimestamp.current = now;
-      return;
-    }
-
-    if (elapsed >= MIN_MSG_DELAY) {
-      setCurrentMessage(nextMsg);
-      setMessageQueue((q) => q.slice(1));
-      lastMessageTimestamp.current = now;
-    } else {
-      timerRef.current = setTimeout(() => {
-        setCurrentMessage(messageQueue[0]);
-        setMessageQueue((q) => q.slice(1));
-        lastMessageTimestamp.current = Date.now();
-      }, MIN_MSG_DELAY - elapsed);
-    }
-
-    return () => clearTimeout(timerRef.current);
-  }, [messageQueue, currentMessage]);
-
+  // Configura y gestiona los mensajes recibidos desde el backend vía Server-Sent Events (SSE)
   const setupEventSource = (eventSource) => {
     eventSource.onmessage = (event) => {
       setWaitingForSSE(false);
@@ -119,11 +105,12 @@ export default function CPEManagement() {
         const cleanData = event.data.startsWith("data: ") ? event.data.slice(6) : event.data;
         const data = JSON.parse(cleanData);
 
+        // Añadir a la cola de mensajes si es de tipo válido
         if (["label", "start", "progress", "done", "start_inserting"].includes(data.type)) {
           setMessageQueue((queue) => [...queue, data]);
         }
 
-        // Conversión segura a número eliminando puntos si vienen como string
+        // Actualizar contadores
         if (data.imported !== undefined) setImported(Number(String(data.imported).replace(/\./g, "")));
         if (data.total !== undefined) setTotal(Number(String(data.total).replace(/\./g, "")));
         if (data.total_to_insert !== undefined) setTotal(Number(String(data.total_to_insert).replace(/\./g, "")));
@@ -137,24 +124,19 @@ export default function CPEManagement() {
           setStatus("running");
           setShowModal(true);
           setWaitingForSSE(false);
-          return;
-        }
-        if (data.type === "progress") setStatus("running");
-        if (data.type === "done") {
+        } else if (data.type === "progress") {
+          setStatus("running");
+        } else if (data.type === "done") {
           setStatus("completed");
           setWaitingForSSE(false);
           setPercentage(0);
           if (eventSourceRef.current) eventSourceRef.current.close();
           eventSourceRef.current = null;
           localStorage.removeItem("cpe_import_status");
-          addNotification(
-            t("cpe.import_success", { count: data.imported }),
-            "success"
-          );
-        }
-        if (data.type === "warning") {
+          addNotification(t("cpe.import_finished"), "success");
+        } else if (data.type === "warning") {
           setStatus("warning");
-          setWarningMessage(data.message || t("cpe.too_many_new"));
+          setWarningMessage(data.message || t("cpe.too_many_new_warning"));
           setImported(0);
           setTotal(0);
           setPercentage(0);
@@ -164,9 +146,9 @@ export default function CPEManagement() {
             eventSourceRef.current = null;
           }
           localStorage.removeItem("cpe_import_status");
-          return;
+        } else if (data.type) {
+          setStatus("running");
         }
-        if (data.type) setStatus("running");
       } catch (err) {
         setWaitingForSSE(false);
         setStatus("error");
@@ -177,7 +159,6 @@ export default function CPEManagement() {
         }
         localStorage.removeItem("cpe_import_status");
         addNotification(t("cpe.connection_error"), "error");
-        console.error("[SSE] ERROR parseando SSE:", err, event.data);
       }
     };
 
@@ -189,11 +170,10 @@ export default function CPEManagement() {
       eventSourceRef.current = null;
       localStorage.removeItem("cpe_import_status");
       addNotification(t("cpe.connection_error"), "error");
-      console.error("[SSE] EventSource ERROR", err);
     };
   };
 
-
+  // Comprueba si hay una importación activa (usando localStorage y backend)
   useEffect(() => {
     const checkImportStatus = async () => {
       const runningFlag = localStorage.getItem("cpe_import_status");
@@ -201,18 +181,16 @@ export default function CPEManagement() {
         setShowModal(true);
         setStatus("running");
         setWaitingForSSE(true);
-        setLabel("cpe.importing");
+        setLabel("cpe.importing_from_nvd");
         if (!eventSourceRef.current) {
-          const eventSource = new EventSource(
-            "http://localhost:8000/nvd/cpe-import-stream"
-          );
+          const eventSource = new EventSource(API_ROUTES.NVD.CPE_IMPORT_STREAM);
           eventSourceRef.current = eventSource;
           setupEventSource(eventSource);
         }
       }
 
       try {
-        const res = await fetch("http://localhost:8000/nvd/cpe-import-status");
+        const res = await fetch(API_ROUTES.NVD.CPE_IMPORT_STATUS);
         const statusData = await res.json();
 
         if (statusData.running) {
@@ -229,11 +207,11 @@ export default function CPEManagement() {
           setTotalTitles(statusData.total_titles || 0);
           setTotalRefs(statusData.total_refs || 0);
           setTotalDeprecated(statusData.total_deprecated || 0);
+
           localStorage.setItem("cpe_import_status", "running");
+
           if (!eventSourceRef.current) {
-            const eventSource = new EventSource(
-              "http://localhost:8000/nvd/cpe-import-stream"
-            );
+            const eventSource = new EventSource(API_ROUTES.NVD.CPE_IMPORT_STREAM);
             eventSourceRef.current = eventSource;
             setupEventSource(eventSource);
           }
@@ -242,14 +220,13 @@ export default function CPEManagement() {
         setWaitingForSSE(false);
         setStatus("error");
         setLabel("cpe.connection_error");
-        console.error("[STATUS CHECK] ERROR", err);
       }
     };
 
     checkImportStatus();
-    // eslint-disable-next-line
   }, []);
 
+  // Inicia el proceso de importación de CPEs
   const handleStartImport = async () => {
     try {
       setStatus("idle");
@@ -271,15 +248,10 @@ export default function CPEManagement() {
         eventSourceRef.current = null;
       }
 
-      const res = await fetch("http://localhost:8000/nvd/cpe-import-start", {
-        method: "POST",
-      });
-
+      const res = await fetch(API_ROUTES.NVD.CPE_IMPORT_START, { method: "POST" });
       if (!res.ok) throw new Error();
 
-      const eventSource = new EventSource(
-        "http://localhost:8000/nvd/cpe-import-stream"
-      );
+      const eventSource = new EventSource(API_ROUTES.NVD.CPE_IMPORT_STREAM);
       eventSourceRef.current = eventSource;
       setupEventSource(eventSource);
     } catch (err) {
@@ -288,34 +260,32 @@ export default function CPEManagement() {
       setLabel("cpe.error_starting");
       localStorage.removeItem("cpe_import_status");
       addNotification(t("cpe.error_starting"), "error");
-      console.error("[handleStartImport] ERROR", err);
     }
   };
 
-  const handleDeleteAll = async () => setShowDeleteModal(true);
-
-  const handleConfirmDelete = async () => {
-    setDeleting(true);
+  // Detiene el proceso de importación de CPEs
+  const handleStopImport = async () => {
+    setStatus("idle");
+    setLabel("cpe.aborted_by_user");
+    setWaitingForSSE(false);
+    setPendingImport(true);
+    setCount(null);
+    setCurrent(null);
+    setMessageQueue([]);
+    setCurrentMessage(null);
+    localStorage.removeItem("cpe_import_status");
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
     try {
-      const res = await fetch("http://localhost:8000/nvd/cpe-delete-all", {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Server error");
-      addNotification(t("cpe.delete_success"), "success");
-      setStatus("idle");
-      setImported(0);
-      setTotal(0);
-      setLabel("");
-      setShowDeleteModal(false);
-    } catch (err) {
-      addNotification(t("cpe.delete_error", { error: err.message }), "error");
-    } finally {
-      setDeleting(false);
+      await fetch(API_ROUTES.NVD.CPE_IMPORT_STOP, { method: "POST" });
+    } catch {
+      // no-op
     }
   };
 
-  const handleCancelDelete = () => setShowDeleteModal(false);
-
+  // Cierra el modal de progreso y limpia estados
   const handleCloseModal = () => {
     setShowModal(false);
     setStatus("idle");
@@ -337,29 +307,28 @@ export default function CPEManagement() {
     }
   };
 
-  const handleStopImport = async () => {
-    setStatus("idle");
-    setLabel("cpe.aborted_by_user");
-    setWaitingForSSE(false);
-    setPendingImport(true);
-    setCount(null);
-    setCurrent(null);
-    setMessageQueue([]);
-    setCurrentMessage(null);
-    localStorage.removeItem("cpe_import_status");
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
+  // Eliminar todos los CPEs
+  const handleDeleteAll = () => setShowDeleteModal(true);
+
+  const handleConfirmDelete = async () => {
+    setDeleting(true);
+    try {
+      const res = await fetch(API_ROUTES.NVD.CPE_DELETE_ALL, { method: "DELETE" });
+      if (!res.ok) throw new Error("Server error");
+      addNotification(t("cpe.delete_success"), "success");
+      setStatus("idle");
+      setImported(0);
+      setTotal(0);
+      setLabel("");
+      setShowDeleteModal(false);
+    } catch (err) {
+      addNotification(t("cpe.delete_error", { error: err.message }), "error");
+    } finally {
+      setDeleting(false);
     }
-    fetch("http://localhost:8000/nvd/cpe-import-stop", {
-      method: "POST",
-    }).catch(() => {});
   };
 
-  // Para debug: puedes quitarlo si todo va bien
-  useEffect(() => {
-    console.log("[RENDER]", { status, label, waitingForSSE, imported, total, count, current, currentMessage });
-  }, [status, label, waitingForSSE, imported, total, count, current, currentMessage]);
+  const handleCancelDelete = () => setShowDeleteModal(false);
 
   return (
     <MainLayout>
@@ -376,15 +345,23 @@ export default function CPEManagement() {
             textAlign: "center",
           }}
         >
-          <h1 style={{ fontSize: "2.5rem", fontWeight: "700", marginBottom: "0.5rem" }}>{t("cpe.title")}</h1>
-          <p style={{ fontSize: "1.125rem", color: theme.colors.textSecondary || "#94a3b8", marginBottom: "2rem" }}>{t("cpe.subtitle")}</p>
+          <h1 style={{ fontSize: "2.5rem", fontWeight: "700", marginBottom: "0.5rem" }}>{t("cpe.import_modal_title")}</h1>
+          <p style={{ fontSize: "1.125rem", color: theme.colors.textSecondary || "#94a3b8", marginBottom: "2rem" }}>{t("cpe.ready")}</p>
 
-          <div style={{ display: "flex", flexDirection: "row", gap: "40px", flexWrap: "wrap", justifyContent: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              gap: "40px",
+              flexWrap: "wrap",
+              justifyContent: "center",
+            }}
+          >
             <CPEPanel
               icon={<CloudDownload size={64} />}
               title={t("cpe.import_button")}
-              subtitle={t("cpe.from_xml") || "XML"}
-              color="#0ea5e9"
+              subtitle={t("cpe.from_xml")}
+              color="#16a34a"
               onClick={() => {
                 setShowModal(true);
                 setStatus("idle");
@@ -403,8 +380,7 @@ export default function CPEManagement() {
             <CPEPanel
               icon={<Trash2 size={64} />}
               title={t("cpe.delete_button")}
-              subtitle={t("cpe.all") || "ALL"}
-              color="#ef4444"
+              color="#dc2626"
               onClick={handleDeleteAll}
             />
           </div>
@@ -429,24 +405,24 @@ export default function CPEManagement() {
         </div>
 
         <ImportProgressModalCPE
-            isOpen={showModal}
-            onClose={handleCloseModal}
-            onStart={handleStartImport}
-            onStop={handleStopImport}
-            imported={imported}
-            total={total}
-            label={label}
-            status={status}
-            waitingForSSE={waitingForSSE}
-            pendingImport={pendingImport}
-            warningMessage={warningMessage}
-            percentage={percentage}
-            count={count}
-            current={current}
-            total_platforms={totalPlatforms}
-            total_titles={totalTitles}
-            total_refs={totalRefs}
-            total_deprecated={totalDeprecated}
+          isOpen={showModal}
+          onClose={handleCloseModal}
+          onStart={handleStartImport}
+          onStop={handleStopImport}
+          imported={imported}
+          total={total}
+          label={label}
+          status={status}
+          waitingForSSE={waitingForSSE}
+          pendingImport={pendingImport}
+          warningMessage={warningMessage}
+          percentage={percentage}
+          count={count}
+          current={current}
+          total_platforms={totalPlatforms}
+          total_titles={totalTitles}
+          total_refs={totalRefs}
+          total_deprecated={totalDeprecated}
         />
 
         <DeleteConfirmationModal
@@ -462,6 +438,7 @@ export default function CPEManagement() {
   );
 }
 
+// Panel reutilizable con efecto visual al pasar el ratón
 function CPEPanel({ icon, title, subtitle, color, onClick }) {
   return (
     <div
@@ -478,7 +455,7 @@ function CPEPanel({ icon, title, subtitle, color, onClick }) {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        transition: "transform 0.2s ease, box-shadow 0.2s ease"
+        transition: "transform 0.2s ease, box-shadow 0.2s ease",
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = "scale(1.02)";

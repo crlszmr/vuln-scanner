@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 
+// Modal de progreso para importación de plataformas CPE
 export default function ImportProgressModalCPE({
   isOpen,
   onClose,
@@ -34,30 +35,16 @@ export default function ImportProgressModalCPE({
     total > 0 &&
     (displayedLabel === "cpe.inserting_items" || label === "cpe.inserting_items");
 
-  // Actualizar cola en referencia
   useEffect(() => {
     queueRef.current = queue;
   }, [queue]);
 
-  // Restaurar el label tras recarga si está en fase de inserción
   useEffect(() => {
     if (isOpen && label === "cpe.inserting_items") {
       setDisplayedLabel("cpe.inserting_items");
     }
   }, [label, isOpen]);
 
-  // Registro para depuración
-  useEffect(() => {
-    console.log("🧪 isInsertPhase", {
-      displayedLabel,
-      label,
-      percentage,
-      total,
-      isInsertPhase,
-    });
-  }, [displayedLabel, label, percentage, total]);
-
-  // Añadir label nuevo a la cola (evita duplicados consecutivos)
   useEffect(() => {
     if (!isOpen || !label) return;
     setQueue((q) => {
@@ -66,7 +53,6 @@ export default function ImportProgressModalCPE({
     });
   }, [label, isOpen]);
 
-  // Procesar secuencialmente la cola de labels
   useEffect(() => {
     if (!isOpen || processingRef.current || queueRef.current.length === 0) return;
 
@@ -92,7 +78,6 @@ export default function ImportProgressModalCPE({
     };
   }, [isOpen, queue]);
 
-  // Reset al cerrar modal
   useEffect(() => {
     if (!isOpen) {
       setQueue([]);
@@ -101,8 +86,8 @@ export default function ImportProgressModalCPE({
     }
   }, [isOpen]);
 
-  function getImportLabel() {
-    if (displayedLabel)
+  const getImportLabel = () => {
+    if (displayedLabel) {
       return t(displayedLabel, {
         imported,
         total,
@@ -113,30 +98,18 @@ export default function ImportProgressModalCPE({
         total_refs,
         total_deprecated,
       });
+    }
     if (waitingForSSE) return t("cpe.waiting_sse");
     if (pendingImport) return t("cpe.from_xml");
     if (status === "error") return t("cpe.connection_error");
     return t("cpe.ready");
-  }
+  };
 
   if (!isOpen) return null;
 
   const canClose = status !== "running";
   const isWarning = status === "warning";
 
-  const localTheme = {
-    colors: {
-      surface: "#1e293b",
-      text: "white",
-      textSecondary: "#94a3b8",
-    },
-    font: {
-      family: "Inter, sans-serif",
-    },
-    shadow: {
-      medium: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-    },
-  };
   const styles = {
     backdrop: {
       position: "fixed",
@@ -151,14 +124,14 @@ export default function ImportProgressModalCPE({
       justifyContent: "center",
     },
     modal: {
-      backgroundColor: localTheme.colors.surface,
+      backgroundColor: "#1e293b",
       borderRadius: "16px",
       padding: "2rem",
       width: "450px",
       textAlign: "center",
       position: "relative",
-      color: localTheme.colors.text,
-      fontFamily: localTheme.font.family,
+      color: "white",
+      fontFamily: "Inter, sans-serif",
     },
     closeButton: {
       position: "absolute",
@@ -197,7 +170,7 @@ export default function ImportProgressModalCPE({
     },
     statusText: {
       marginTop: "0.75rem",
-      color: localTheme.colors.textSecondary,
+      color: "#94a3b8",
     },
     startButton: {
       marginTop: "2rem",
@@ -254,6 +227,7 @@ export default function ImportProgressModalCPE({
           ✖
         </button>
         <h2 style={styles.title}>{t("cpe.import_modal_title")}</h2>
+
         {!isInsertPhase && !waitingForSSE && status !== "running" && (
           <div style={styles.statusText}>{getImportLabel()}</div>
         )}
@@ -265,12 +239,7 @@ export default function ImportProgressModalCPE({
                 {t("cpe.completion_percentage", { percentage: Math.round(percentage || 0) })}
               </div>
               <div style={styles.barOuter}>
-                <div
-                  style={{
-                    ...styles.barInner,
-                    width: `${percentage || 0}%`,
-                  }}
-                ></div>
+                <div style={{ ...styles.barInner, width: `${percentage || 0}%` }}></div>
               </div>
               <div style={styles.statusText}>{t("cpe.importing_from_nvd")}</div>
             </>
