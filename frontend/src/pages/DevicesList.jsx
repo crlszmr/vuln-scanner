@@ -118,7 +118,7 @@ export default function DevicesList() {
                 &lt;
               </button>
               <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
-                <h1 style={{ fontSize: 24, fontWeight: "bold", margin: 0 }}>
+                <h1 style={{ fontSize: "3rem", fontWeight: "700", color: theme.colors.text, margin: 0 }}>
                   {t("devicesList.title")}
                 </h1>
               </div>

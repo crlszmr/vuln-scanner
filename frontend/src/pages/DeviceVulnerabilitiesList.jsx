@@ -86,7 +86,7 @@ export default function DeviceVulnerabilitiesList() {
   // Obtener alias del dispositivo
   const fetchDeviceAlias = async () => {
     try {
-      const res = await axios.get(API_ROUTES.DEVICES.GET_CONFIG(deviceId), { withCredentials: true });
+      const res = await axios.get(API_ROUTES.DEVICES.DEVICE_CONFIG(deviceId), { withCredentials: true });
       setDeviceAlias(res.data.alias || "");
     } catch (err) {
     }
@@ -96,7 +96,7 @@ export default function DeviceVulnerabilitiesList() {
   const fetchConfigDetails = async () => {
     if (!configId) return;
     try {
-      const res = await axios.get(API_ROUTES.DEVICES.GET_CONFIG(deviceId), { withCredentials: true });
+      const res = await axios.get(API_ROUTES.DEVICES.GET_ENRICHED_CONFIG(deviceId), { withCredentials: true });
       const match = res.data.find((c) => String(c.id) === String(configId));
       if (match) setConfigDetails(match);
     } catch (err) {

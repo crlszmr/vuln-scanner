@@ -41,12 +41,9 @@ export default function DeviceMatching() {
 
   // Obtener alias del dispositivo
   const fetchDeviceAlias = async () => {
-    try {
-      const res = await fetch(API_ROUTES.DEVICES.GET_CONFIG(id), { credentials: "include" });
-      const data = await res.json();
-      if (data && data.alias) setDeviceAlias(data.alias);
-    } catch (err) {
-    }
+    const res = await fetch(API_ROUTES.DEVICES.DEVICE_CONFIG(id), { credentials: "include" });
+    const data = await res.json();
+    if (data && data.alias) setDeviceAlias(data.alias);
   };
 
   // Al montar el componente, obtener datos

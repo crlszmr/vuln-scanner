@@ -69,12 +69,12 @@ export default function DeviceConfigDetail() {
     // Obtener información básica del dispositivo (alias)
     const fetchDeviceInfo = async () => {
       try {
-        const res = await axios.get(API_ROUTES.DEVICES.GET_CONFIG(deviceId), {
+        const res = await axios.get(API_ROUTES.DEVICES.DEVICE_CONFIG(deviceId), {
           withCredentials: true,
         });
         setDeviceInfo(res.data);
       } catch (error) {
-        setDeviceInfo({ alias: t("deviceConfig.default_alias") });
+        setDeviceInfo({ alias: t("deviceConfig.title") });
       }
     };
 
@@ -220,7 +220,7 @@ export default function DeviceConfigDetail() {
             </button>
 
             <h1 style={{ fontSize: "2.5rem", fontWeight: 700, margin: 0 }}>
-              {t(TYPE_LABELS[type]) || t("deviceConfig.details")} {t("deviceConfig.of")} {deviceInfo?.alias ?? t("deviceConfig.default_alias")}
+              {t(TYPE_LABELS[type]) || t("deviceConfig.details")} {t("deviceConfig.of")} {deviceInfo?.alias ?? t("deviceConfig.title")}
             </h1>
           </div>
 
