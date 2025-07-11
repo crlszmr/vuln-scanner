@@ -103,8 +103,8 @@ def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends(), 
         key="access_token",
         value=access_token,
         httponly=True,
-        samesite="lax",   # 👈 mejor para localhost
-        secure=False
+        samesite="none",   # 👈 mejor para localhost
+        secure=True
     ) # Cambia a True en producción
 
     print("👤 [DEBUG] Login → user.username:", user.username)
