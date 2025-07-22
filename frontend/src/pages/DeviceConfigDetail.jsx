@@ -53,10 +53,15 @@ export default function DeviceConfigDetail() {
             ...c,
             cves: (c.cves || []).filter((cve) => !cve.solved),
           }))
-          // Ordenar por vendor y producto (sin distinción de mayúsculas)
+          // Ordenar por número de CVEs descendente, luego por vendor y producto
           .sort((a, b) => {
+            const aCves = a.cves?.length || 0;
+            const bCves = b.cves?.length || 0;
+            if (bCves !== aCves) return bCves - aCves;
+
             const vendorComp = a.vendor.localeCompare(b.vendor, "es", { sensitivity: "base" });
             if (vendorComp !== 0) return vendorComp;
+
             return a.product.localeCompare(b.product, "es", { sensitivity: "base" });
           });
 

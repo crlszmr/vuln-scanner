@@ -78,7 +78,8 @@ export default function DeviceVulnerabilitiesList() {
       unique[v.cve_id] = v;
     });
 
-    setVulns(Object.values(unique));
+    const sorted = Object.values(unique).sort((a, b) => b.cve_id.localeCompare(a.cve_id));
+    setVulns(sorted);
     setCurrentPage(1);
     setSelected([]);
   };
